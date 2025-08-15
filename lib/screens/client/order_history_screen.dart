@@ -5,6 +5,7 @@ import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
 import '../../models/user.dart';
+import '../../services/auth_service.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -26,39 +27,67 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     _loadOrders();
   }
 
-  void _loadOrders() {
+  Future<void> _loadOrders() async {
     setState(() {
       _isLoading = true;
     });
 
-    final currentUser = context.read<AuthProvider>().currentUser;
-    if (currentUser != null) {
-      _allOrders = OrderService.getOrdersByClient(currentUser.id);
-      _applyFilters();
-    }
+    try {
+      final currentUser = context.read<AuthProvider>().currentUser;
+      final token = AuthService.currentToken;
 
-    setState(() {
-      _isLoading = false;
-    });
+      if (currentUser != null && token != null) {
+        final orders = await OrderService.getOrdersByClient(
+          currentUser.id,
+          token,
+        );
+        setState(() {
+          _allOrders = orders;
+          _applyFilters();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _allOrders = [];
+          _filteredOrders = [];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _allOrders = [];
+        _filteredOrders = [];
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load orders: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
+    }
   }
 
   void _applyFilters() {
-    _filteredOrders = _allOrders.where((order) {
-      // Apply status filter
-      if (_selectedStatus != null && order.status != _selectedStatus) {
-        return false;
-      }
+    _filteredOrders =
+        _allOrders.where((order) {
+          // Apply status filter
+          if (_selectedStatus != null && order.status != _selectedStatus) {
+            return false;
+          }
 
-      // Apply search filter
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
-        return order.description.toLowerCase().contains(query) ||
-               order.id.toLowerCase().contains(query) ||
-               order.statusText.toLowerCase().contains(query);
-      }
+          // Apply search filter
+          if (_searchQuery.isNotEmpty) {
+            final query = _searchQuery.toLowerCase();
+            return order.description.toLowerCase().contains(query) ||
+                order.id.toLowerCase().contains(query) ||
+                order.statusText.toLowerCase().contains(query);
+          }
 
-      return true;
-    }).toList();
+          return true;
+        }).toList();
 
     // Sort by creation date (newest first)
     _filteredOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -74,33 +103,31 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadOrders,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadOrders),
         ],
       ),
       body: Column(
         children: [
           // Search and Filter Section
           _buildSearchAndFilterSection(),
-          
+
           // Orders List
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredOrders.isEmpty
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _filteredOrders.isEmpty
                     ? _buildEmptyState()
                     : RefreshIndicator(
-                        onRefresh: () async => _loadOrders(),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(AppConstants.spacingM),
-                          itemCount: _filteredOrders.length,
-                          itemBuilder: (context, index) {
-                            return _buildOrderCard(_filteredOrders[index]);
-                          },
-                        ),
+                      onRefresh: () async => _loadOrders(),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(AppConstants.spacingM),
+                        itemCount: _filteredOrders.length,
+                        itemBuilder: (context, index) {
+                          return _buildOrderCard(_filteredOrders[index]);
+                        },
                       ),
+                    ),
           ),
         ],
       ),
@@ -152,9 +179,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               ),
             ),
           ),
-          
+
           const SizedBox(height: AppConstants.spacingM),
-          
+
           // Status Filter
           Row(
             children: [
@@ -171,7 +198,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                   child: Row(
                     children: [
                       _buildStatusChip(null, 'All'),
-                                             ...OrderStatus.values.map((status) => _buildStatusChip(status, _getStatusText(status))),
+                      ...OrderStatus.values.map(
+                        (status) =>
+                            _buildStatusChip(status, _getStatusText(status)),
+                      ),
                     ],
                   ),
                 ),
@@ -185,8 +215,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
 
   Widget _buildStatusChip(OrderStatus? status, String label) {
     final isSelected = _selectedStatus == status;
-    final color = status != null ? _getStatusColor(status) : AppConstants.primaryColor;
-    
+    final color =
+        status != null ? _getStatusColor(status) : AppConstants.primaryColor;
+
     return Padding(
       padding: const EdgeInsets.only(right: AppConstants.spacingS),
       child: FilterChip(
@@ -206,7 +237,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
         ),
         side: BorderSide(
-          color: isSelected ? color : AppConstants.textSecondaryColor.withOpacity(0.3),
+          color:
+              isSelected
+                  ? color
+                  : AppConstants.textSecondaryColor.withOpacity(0.3),
         ),
       ),
     );
@@ -256,21 +290,19 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: AppConstants.spacingS),
-          
+
           // Description
           Text(
             order.description,
-            style: AppConstants.bodyLarge.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
+            style: AppConstants.bodyLarge.copyWith(fontWeight: FontWeight.w500),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          
+
           const SizedBox(height: AppConstants.spacingS),
-          
+
           // Amount and Dates
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -302,7 +334,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               ),
             ],
           ),
-          
+
           // Notes (if any)
           if (order.notes != null && order.notes!.isNotEmpty) ...[
             const SizedBox(height: AppConstants.spacingS),
@@ -326,10 +358,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                     ),
                   ),
                   const SizedBox(height: AppConstants.spacingXS),
-                  Text(
-                    order.notes!,
-                    style: AppConstants.bodySmall,
-                  ),
+                  Text(order.notes!, style: AppConstants.bodySmall),
                 ],
               ),
             ),
@@ -385,7 +414,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays == 0) {
       return 'Today';
     } else if (difference.inDays == 1) {

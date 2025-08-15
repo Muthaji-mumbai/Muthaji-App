@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/order.dart';
 import '../../models/user.dart';
 import '../../services/order_service.dart';
 import '../../services/user_service.dart';
+import '../../services/auth_service.dart';
 import '../../constants/app_constants.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
+import 'update_order_screen.dart';
 
 class ManageOrdersScreen extends StatefulWidget {
   const ManageOrdersScreen({super.key});
@@ -16,16 +19,16 @@ class ManageOrdersScreen extends StatefulWidget {
 
 class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
   // Services are static, so we don't need instances
-  
+
   List<Order> _allOrders = [];
   List<Order> _filteredOrders = [];
   List<User> _employees = [];
-  
+
   OrderStatus? _selectedStatus;
   String _searchQuery = '';
   String? _selectedEmployeeId;
   final TextEditingController _searchController = TextEditingController();
-  
+
   bool _isLoading = true;
 
   @override
@@ -46,412 +49,514 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    
+
     try {
-      final orders = OrderService.getAllOrders();
-      final employees = UserService.getUsersByRole(UserRole.employee);
-      
-      setState(() {
-        _allOrders = orders;
-        _filteredOrders = orders;
-        _employees = employees;
-        _isLoading = false;
-      });
+      final token = AuthService.currentToken;
+      if (token != null) {
+        final orders = await OrderService.getAllOrders(token);
+        final employees = await UserService.getUsersByRole(
+          UserRole.employee,
+          token,
+        );
+
+        setState(() {
+          _allOrders = orders;
+          _filteredOrders = orders;
+          _employees = employees;
+          _isLoading = false;
+        });
+      } else {
+        throw Exception('No authentication token');
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading data: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
       }
     }
   }
 
   void _applyFilters() {
     setState(() {
-      _filteredOrders = _allOrders.where((order) {
-        bool matchesStatus = _selectedStatus == null || order.status == _selectedStatus;
-        bool matchesSearch = _searchQuery.isEmpty || 
-            order.clientName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            order.description.toLowerCase().contains(_searchQuery.toLowerCase());
-        bool matchesEmployee = _selectedEmployeeId == null || 
-            order.assignedEmployeeId == _selectedEmployeeId;
-        
-        return matchesStatus && matchesSearch && matchesEmployee;
-      }).toList();
+      _filteredOrders =
+          _allOrders.where((order) {
+            bool matchesStatus =
+                _selectedStatus == null || order.status == _selectedStatus;
+            bool matchesSearch =
+                _searchQuery.isEmpty ||
+                order.clientName.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ) ||
+                order.description.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                );
+            bool matchesEmployee =
+                _selectedEmployeeId == null ||
+                order.assignedEmployeeId == _selectedEmployeeId;
+
+            return matchesStatus && matchesSearch && matchesEmployee;
+          }).toList();
     });
   }
 
   Future<void> _updateOrderStatus(Order order, OrderStatus newStatus) async {
     try {
-      OrderService.updateOrderStatus(order.id, newStatus);
-      _loadData();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Order status updated successfully')),
+      final token = AuthService.currentToken;
+      if (token != null) {
+        await OrderService.updateOrderStatus(
+          orderId: order.id,
+          newStatus: newStatus,
+          token: token,
         );
+        _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Order status updated successfully')),
+          );
+        }
+      } else {
+        throw Exception('No authentication token');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating order: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating order: $e')));
       }
     }
   }
 
   Future<void> _assignOrder(Order order, String employeeId) async {
     try {
-      // Use updateOrderStatus with assignedEmployeeId parameter
-      OrderService.updateOrderStatus(order.id, order.status, assignedEmployeeId: employeeId);
-      _loadData();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Order assigned successfully')),
+      final token = AuthService.currentToken;
+      if (token != null) {
+        // Use updateOrderStatus with assignedEmployeeId parameter
+        await OrderService.updateOrderStatus(
+          orderId: order.id,
+          newStatus: order.status,
+          assignedEmployeeId: employeeId,
+          token: token,
         );
+        _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Order assigned successfully')),
+          );
+        }
+      } else {
+        throw Exception('No authentication token');
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error assigning order: $e')));
+      }
+    }
+  }
+
+  Future<void> _deleteOrder(String orderId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Order'),
+            content: const Text(
+              'Are you sure you want to delete this order? This action cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppConstants.errorColor,
+                ),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final token = AuthService.currentToken;
+        if (token != null) {
+          await OrderService.deleteOrder(orderId: orderId, token: token);
+
+          // Reload orders
+          await _loadData();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Order deleted successfully'),
+              backgroundColor: AppConstants.successColor,
+            ),
+          );
+        }
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error assigning order: $e')),
+          SnackBar(
+            content: Text('Error deleting order: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
         );
       }
     }
   }
 
-  void _showOrderDetails(Order order) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Order Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailRow('Client', order.clientName),
-              _buildDetailRow('Description', order.description),
-              _buildDetailRow('Amount', '\$${order.amount.toStringAsFixed(2)}'),
-              _buildDetailRow('Status', order.statusText),
-              _buildDetailRow('Created', _formatDate(order.createdAt)),
-              if (order.updatedAt != null) _buildDetailRow('Updated', _formatDate(order.updatedAt!)),
-              if (order.notes != null && order.notes!.isNotEmpty) _buildDetailRow('Notes', order.notes!),
-              if (order.assignedEmployeeId != null) 
-                _buildDetailRow('Assigned To', _getEmployeeName(order.assignedEmployeeId!)),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Close'),
-          ),
-        ],
+  void _navigateToUpdateOrder(Order order) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UpdateOrderScreen(orderId: order.id),
       ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: AppConstants.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppConstants.textSecondaryColor,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppConstants.bodyMedium,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getEmployeeName(String employeeId) {
-    final employee = _employees.firstWhere(
-      (e) => e.id == employeeId,
-      orElse: () => User(
-        id: '',
-        name: 'Unknown',
-        email: '',
-        phone: '',
-        role: UserRole.employee,
-        createdAt: DateTime.now(),
-        isActive: true,
-      ),
-    );
-    return employee.name;
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    ).then((_) {
+      // Reload orders when returning from update screen
+      _loadData();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Soloshine by muthaji - Manage Orders'),
+        title: const Text('Manage Orders'),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Filters Section
-                Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: AppConstants.cardShadow,
-                  ),
-                  child: Column(
-                    children: [
-                      // Search and Status Filter
-                      Row(
-                        children: [
-                          Expanded(
-                            child: CustomTextField(
-                              controller: _searchController,
-                              labelText: 'Search Orders',
-                              hintText: 'Search by client name or description...',
-                              prefixIcon: Icons.search,
-                            ),
-                          ),
-                          SizedBox(width: 16),
-                          DropdownButton<OrderStatus>(
-                            value: _selectedStatus,
-                            hint: Text('All Statuses'),
-                            items: [
-                              DropdownMenuItem(
-                                value: null,
-                                child: Text('All Statuses'),
-                              ),
-                              ...OrderStatus.values.map((status) => DropdownMenuItem(
-                                value: status,
-                                child: Text(status.name.toUpperCase()),
-                              )),
-                            ],
-                            onChanged: (value) {
-                              setState(() => _selectedStatus = value);
-                              _applyFilters();
-                            },
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      // Employee Filter
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButton<String>(
-                              value: _selectedEmployeeId,
-                              hint: Text('All Employees'),
-                              isExpanded: true,
-                              items: [
-                                DropdownMenuItem(
-                                  value: null,
-                                  child: Text('All Employees'),
-                                ),
-                                ..._employees.map((employee) => DropdownMenuItem(
-                                  value: employee.id,
-                                  child: Text(employee.name),
-                                )),
-                              ],
-                              onChanged: (value) {
-                                setState(() => _selectedEmployeeId = value);
-                                _applyFilters();
-                              },
-                            ),
-                          ),
-                          SizedBox(width: 16),
-                          CustomButton(
-                            text: 'Clear Filters',
-                            onPressed: () {
-                              setState(() {
-                                _selectedStatus = null;
-                                _searchQuery = '';
-                                _selectedEmployeeId = null;
-                              });
-                              _applyFilters();
-                            },
-                            isOutlined: true,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Orders List
-                Expanded(
-                  child: _filteredOrders.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.inbox_outlined,
-                                size: 64,
-                                color: AppConstants.textSecondary,
-                              ),
-                              SizedBox(height: 16),
-                              Text(
-                                'No orders found',
-                                style: AppConstants.headlineSmall.copyWith(
-                                  color: AppConstants.textSecondaryColor,
-                                ),
-                              ),
-                              Text(
-                                'Try adjusting your filters',
-                                style: AppConstants.bodyMedium.copyWith(
-                                  color: AppConstants.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: EdgeInsets.all(16),
-                          itemCount: _filteredOrders.length,
-                          itemBuilder: (context, index) {
-                            final order = _filteredOrders[index];
-                            return _buildOrderCard(order);
-                          },
-                        ),
-                ),
-              ],
+      body: Padding(
+        padding: const EdgeInsets.all(AppConstants.spacingM),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Search and Filter Section
+            _buildSearchAndFilterSection(),
+            const SizedBox(height: AppConstants.spacingM),
+
+            // Orders List
+            Expanded(
+              child:
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _filteredOrders.isEmpty
+                      ? _buildEmptyState()
+                      : _buildOrdersList(),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchAndFilterSection() {
+    return Column(
+      children: [
+        // Search Bar
+        TextField(
+          controller: _searchController,
+          decoration: const InputDecoration(
+            hintText: 'Search orders...',
+            prefixIcon: Icon(Icons.search),
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: AppConstants.spacingS),
+
+        // Filters Row
+        Row(
+          children: [
+            // Status Filter
+            Expanded(
+              child: DropdownButtonFormField<OrderStatus>(
+                decoration: const InputDecoration(
+                  labelText: 'Filter by Status',
+                  border: OutlineInputBorder(),
+                ),
+                value: _selectedStatus,
+                items: [
+                  const DropdownMenuItem(
+                    value: null,
+                    child: Text('All Statuses'),
+                  ),
+                  ...OrderStatus.values.map(
+                    (status) => DropdownMenuItem(
+                      value: status,
+                      child: Text(status.toString().split('.').last),
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  _selectedStatus = value;
+                  _applyFilters();
+                },
+              ),
+            ),
+            const SizedBox(width: AppConstants.spacingS),
+
+            // Clear Filters Button
+            CustomButton(
+              onPressed: () {
+                setState(() {
+                  _searchQuery = '';
+                  _selectedStatus = null;
+                  _selectedEmployeeId = null;
+                });
+                _applyFilters();
+              },
+              text: 'Clear Filters',
+              backgroundColor: AppConstants.secondaryColor,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.inbox_outlined,
+            size: 64,
+            color: AppConstants.textSecondaryColor,
+          ),
+          const SizedBox(height: AppConstants.spacingM),
+          Text(
+            'No orders found',
+            style: AppConstants.headingMedium.copyWith(
+              color: AppConstants.textSecondaryColor,
+            ),
+          ),
+          const SizedBox(height: AppConstants.spacingS),
+          Text(
+            'Try adjusting your search or filter criteria',
+            style: AppConstants.bodyMedium.copyWith(
+              color: AppConstants.textSecondaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrdersList() {
+    return ListView.builder(
+      itemCount: _filteredOrders.length,
+      itemBuilder: (context, index) {
+        final order = _filteredOrders[index];
+        return _buildOrderCard(order);
+      },
     );
   }
 
   Widget _buildOrderCard(Order order) {
     return Card(
-      margin: EdgeInsets.only(bottom: 16),
-      elevation: 2,
+      margin: const EdgeInsets.only(bottom: AppConstants.spacingS),
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppConstants.spacingM),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+            // Header Row
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        order.clientName,
-                        style: AppConstants.titleMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        'Order #${order.id.substring(0, 8)}',
-                        style: AppConstants.bodySmall.copyWith(
-                          color: AppConstants.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: order.statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: order.statusColor),
-                  ),
                   child: Text(
-                    order.statusText,
-                    style: AppConstants.bodySmall.copyWith(
-                      color: order.statusColor,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    order.description,
+                    style: AppConstants.headingSmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                _buildStatusChip(order.status),
               ],
             ),
-            
-            SizedBox(height: 12),
-            
-            // Description
-            Text(
-              order.description,
-              style: AppConstants.bodyMedium,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            
-            SizedBox(height: 12),
-            
-            // Details
-            Row(
-              children: [
-                Icon(Icons.attach_money, size: 16, color: AppConstants.textSecondary),
-                SizedBox(width: 4),
-                Text(
-                  '\$${order.amount.toStringAsFixed(2)}',
-                  style: AppConstants.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppConstants.primaryColor,
+            const SizedBox(height: AppConstants.spacingS),
+
+            // Order Details
+            _buildOrderDetail('Order ID', order.id),
+            _buildOrderDetail('Client', order.clientName),
+            _buildOrderDetail('Amount', '\$${order.amount.toStringAsFixed(2)}'),
+            _buildOrderDetail('Created', _formatDate(order.createdAt)),
+            if (order.orderType != null)
+              _buildOrderDetail('Type', order.orderType!),
+            if (order.orderDate != null)
+              _buildOrderDetail('Order Date', _formatDate(order.orderDate!)),
+            if (order.notes != null && order.notes!.isNotEmpty)
+              _buildOrderDetail('Notes', order.notes!),
+
+            // Ornament Details
+            if (order.ornamentDetails.isNotEmpty) ...[
+              const SizedBox(height: AppConstants.spacingS),
+              Text(
+                'Ornament Details:',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: AppConstants.spacingXS),
+              ...order.ornamentDetails.map(
+                (detail) => Padding(
+                  padding: const EdgeInsets.only(left: AppConstants.spacingM),
+                  child: Text(
+                    '• ${detail.name} - ${detail.material} (${detail.weight}g, ${detail.purity}) x${detail.quantity}',
+                    style: AppConstants.bodySmall,
                   ),
                 ),
-                Spacer(),
-                Icon(Icons.calendar_today, size: 16, color: AppConstants.textSecondaryColor),
-                SizedBox(width: 4),
-                Text(
-                  _formatDate(order.createdAt),
-                  style: AppConstants.bodySmall.copyWith(
-                    color: AppConstants.textSecondaryColor,
-                  ),
+              ),
+            ],
+
+            // Images
+            if (order.images.isNotEmpty) ...[
+              const SizedBox(height: AppConstants.spacingS),
+              Text(
+                'Images:',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-              ],
-            ),
-            
-            SizedBox(height: 16),
-            
-            // Actions
+              ),
+              const SizedBox(height: AppConstants.spacingXS),
+              SizedBox(
+                height: 80,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: order.images.length,
+                  itemBuilder: (context, index) {
+                    return Container(
+                      margin: const EdgeInsets.only(
+                        right: AppConstants.spacingS,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          order.images[index],
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 80,
+                              height: 80,
+                              color: AppConstants.textSecondaryColor
+                                  .withOpacity(0.1),
+                              child: const Icon(Icons.image_not_supported),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+
+            const SizedBox(height: AppConstants.spacingM),
+
+            // Action Buttons
             Row(
               children: [
                 Expanded(
                   child: CustomButton(
-                    text: 'View Details',
-                    onPressed: () => _showOrderDetails(order),
-                    isOutlined: true,
+                    onPressed: () => _navigateToUpdateOrder(order),
+                    text: 'Edit Order',
+                    backgroundColor: AppConstants.secondaryColor,
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: AppConstants.spacingS),
                 Expanded(
                   child: CustomButton(
-                    text: 'Update Status',
                     onPressed: () => _showStatusUpdateDialog(order),
+                    text: 'Update Status',
+                    backgroundColor: AppConstants.primaryColor,
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: AppConstants.spacingS),
                 Expanded(
                   child: CustomButton(
-                    text: 'Assign',
-                    onPressed: () => _showAssignmentDialog(order),
-                    isOutlined: true,
+                    onPressed: () => _deleteOrder(order.id),
+                    text: 'Delete',
+                    backgroundColor: AppConstants.errorColor,
                   ),
                 ),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderDetail(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppConstants.spacingXS),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: AppConstants.bodyMedium.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+          ),
+          Expanded(child: Text(value, style: AppConstants.bodyMedium)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(OrderStatus status) {
+    Color chipColor;
+    String statusText;
+
+    switch (status) {
+      case OrderStatus.pending:
+        chipColor = AppConstants.warningColor;
+        statusText = 'Pending';
+        break;
+      case OrderStatus.confirmed:
+        chipColor = AppConstants.primaryColor;
+        statusText = 'Confirmed';
+        break;
+      case OrderStatus.inProgress:
+        chipColor = AppConstants.secondaryColor;
+        statusText = 'In Progress';
+        break;
+      case OrderStatus.completed:
+        chipColor = AppConstants.successColor;
+        statusText = 'Completed';
+        break;
+      case OrderStatus.cancelled:
+        chipColor = AppConstants.errorColor;
+        statusText = 'Cancelled';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingS,
+        vertical: AppConstants.spacingXS,
+      ),
+      decoration: BoxDecoration(
+        color: chipColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        statusText,
+        style: AppConstants.bodySmall.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );
@@ -459,77 +564,68 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
 
   void _showStatusUpdateDialog(Order order) {
     OrderStatus? selectedStatus = order.status;
-    
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Update Order Status'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: OrderStatus.values.map((status) => RadioListTile<OrderStatus>(
-            title: Text(status.name.toUpperCase()),
-            value: status,
-            groupValue: selectedStatus,
-            onChanged: (value) => selectedStatus = value,
-          )).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Update Order Status'),
+            content: StatefulBuilder(
+              builder:
+                  (context, setState) => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Current Status: ${order.status.toString().split('.').last}',
+                      ),
+                      const SizedBox(height: AppConstants.spacingM),
+                      DropdownButtonFormField<OrderStatus>(
+                        decoration: const InputDecoration(
+                          labelText: 'New Status',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: selectedStatus,
+                        items:
+                            OrderStatus.values
+                                .map(
+                                  (status) => DropdownMenuItem(
+                                    value: status,
+                                    child: Text(
+                                      status.toString().split('.').last,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedStatus = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  if (selectedStatus != null &&
+                      selectedStatus != order.status) {
+                    Navigator.of(context).pop();
+                    _updateOrderStatus(order, selectedStatus!);
+                  }
+                },
+                child: const Text('Update'),
+              ),
+            ],
           ),
-          CustomButton(
-            text: 'Update',
-            onPressed: () {
-              if (selectedStatus != null && selectedStatus != order.status) {
-                _updateOrderStatus(order, selectedStatus!);
-              }
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      ),
     );
   }
 
-  void _showAssignmentDialog(Order order) {
-    String? selectedEmployeeId = order.assignedEmployeeId;
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Assign Order to Employee'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButton<String>(
-              value: selectedEmployeeId,
-              hint: Text('Select Employee'),
-              isExpanded: true,
-              items: _employees.map((employee) => DropdownMenuItem(
-                value: employee.id,
-                child: Text(employee.name),
-              )).toList(),
-              onChanged: (value) => selectedEmployeeId = value,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel'),
-          ),
-          CustomButton(
-            text: 'Assign',
-            onPressed: () {
-              if (selectedEmployeeId != null) {
-                _assignOrder(order, selectedEmployeeId!);
-              }
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      ),
-    );
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

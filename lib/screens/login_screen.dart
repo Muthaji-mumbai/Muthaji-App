@@ -39,6 +39,14 @@ class _LoginScreenState extends State<LoginScreen> {
           SnackBar(
             content: Text(authProvider.error ?? 'Login failed'),
             backgroundColor: AppConstants.errorColor,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
           ),
         );
       }
@@ -186,6 +194,53 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
 
                       const SizedBox(height: AppConstants.spacingXL),
+
+                      // Demo Credentials Section
+                      Container(
+                        padding: const EdgeInsets.all(AppConstants.spacingM),
+                        decoration: BoxDecoration(
+                          color: AppConstants.surfaceColor,
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.radiusM,
+                          ),
+                          border: Border.all(
+                            color: AppConstants.primaryColor.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: AppConstants.primaryColor,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: AppConstants.spacingS),
+                                Text(
+                                  'Demo Credentials',
+                                  style: AppConstants.bodyMedium.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppConstants.textPrimaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppConstants.spacingS),
+                            _buildDemoCredential('Admin', 'codoit53@gmail.com'),
+                            _buildDemoCredential('Password', '123456'),
+                            const SizedBox(height: AppConstants.spacingXS),
+                            Text(
+                              'Role will be determined by the backend response',
+                              style: AppConstants.bodySmall.copyWith(
+                                color: AppConstants.textSecondaryColor,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),

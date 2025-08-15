@@ -1,38 +1,12 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
+import 'api_service.dart';
+import '../constants/app_constants.dart';
 
 class AuthService {
   static const String _userKey = 'user';
   static const String _tokenKey = 'token';
-
-  // Mock users for demo purposes
-  static final List<User> _mockUsers = [
-    User(
-      id: '1',
-      name: 'Admin User',
-      email: 'admin@example.com',
-      phone: '+1234567890',
-      role: UserRole.admin,
-      createdAt: DateTime.now(),
-    ),
-    User(
-      id: '2',
-      name: 'Employee User',
-      email: 'employee@example.com',
-      phone: '+1234567891',
-      role: UserRole.employee,
-      createdAt: DateTime.now(),
-    ),
-    User(
-      id: '3',
-      name: 'Client User',
-      email: 'client@example.com',
-      phone: '+1234567892',
-      role: UserRole.client,
-      createdAt: DateTime.now(),
-    ),
-  ];
 
   static User? _currentUser;
   static String? _currentToken;
@@ -41,35 +15,37 @@ class AuthService {
   static String? get currentToken => _currentToken;
   static bool get isLoggedIn => _currentUser != null;
 
-  // Login method
+  // Login method using real API
   static Future<bool> login(String email, String password) async {
-    // Simulate API call delay
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final response = await ApiService.post(
+        AppConstants.loginEndpoint,
+        body: {'email': email, 'password': password},
+      );
 
-    // Find user by email
-    final user = _mockUsers.firstWhere(
-      (user) => user.email == email,
-      orElse: () => throw Exception('User not found'),
-    );
+      if (response['success'] == true && response['data'] != null) {
+        final userData = response['data'];
 
-    // In real app, verify password here
-    if (password == 'password') {
-      _currentUser = user;
-      _currentToken = 'mock_token_${user.id}';
-      
-      // Save to local storage
-      await _saveUserToStorage();
-      return true;
+        // Create user from API response
+        _currentUser = User.fromJson(userData);
+        _currentToken = userData['token'];
+
+        // Save to local storage
+        await _saveUserToStorage();
+        return true;
+      } else {
+        throw Exception(response['message'] ?? 'Login failed');
+      }
+    } catch (e) {
+      throw Exception('Login failed: $e');
     }
-
-    throw Exception('Invalid credentials');
   }
 
   // Logout method
   static Future<void> logout() async {
     _currentUser = null;
     _currentToken = null;
-    
+
     // Clear local storage
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);
@@ -104,11 +80,6 @@ class AuthService {
     }
   }
 
-  // Get user by role for demo purposes
-  static User getDemoUser(UserRole role) {
-    return _mockUsers.firstWhere((user) => user.role == role);
-  }
-
   // Check if current user has specific role
   static bool hasRole(UserRole role) {
     return _currentUser?.role == role;
@@ -117,5 +88,17 @@ class AuthService {
   // Check if current user has any of the specified roles
   static bool hasAnyRole(List<UserRole> roles) {
     return _currentUser != null && roles.contains(_currentUser!.role);
+  }
+
+  // Get user by role for demo purposes (fallback)
+  static User getDemoUser(UserRole role) {
+    return User(
+      id: role.toString(),
+      name: 'Demo ${role.toString().split('.').last}',
+      email: 'demo@example.com',
+      phone: '+1234567890',
+      role: role,
+      createdAt: DateTime.now(),
+    );
   }
 }

@@ -9,6 +9,7 @@ import '../../services/user_service.dart';
 import '../../models/order.dart';
 import '../../models/user.dart';
 import '../dashboard_screen.dart';
+import 'user_management_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -30,15 +31,65 @@ class _AdminDashboardState extends State<AdminDashboard> {
     _loadDashboardData();
   }
 
-  void _loadDashboardData() {
+  void _loadDashboardData() async {
     setState(() {
       _isLoading = true;
     });
 
-    _orderStats = OrderService.getOrderStatistics();
-    _userStats = UserService.getUserStatistics();
-    _recentOrders = OrderService.getAllOrders().take(5).toList();
-    _recentUsers = UserService.getRecentUsers();
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final token = authProvider.currentUser?.token;
+
+      if (token != null) {
+        // Load real user data
+        final users = await UserService.getAllUsers(token);
+        final totalUsers = users.length;
+        final activeUsers = users.where((u) => u.isActive).length;
+        final adminUsers = users.where((u) => u.role == UserRole.admin).length;
+        final employeeUsers =
+            users.where((u) => u.role == UserRole.employee).length;
+        final clientUsers =
+            users.where((u) => u.role == UserRole.client).length;
+
+        _userStats = {
+          'totalUsers': totalUsers,
+          'activeUsers': activeUsers,
+          'adminUsers': adminUsers,
+          'employeeUsers': employeeUsers,
+          'clientUsers': clientUsers,
+        };
+
+        // Get recent users (last 5)
+        _recentUsers = users.take(5).toList();
+
+        // Load real order data
+        final orderStats = await OrderService.getOrderStatistics(token);
+        final allOrders = await OrderService.getAllOrders(token);
+
+        _orderStats = orderStats;
+        _recentOrders = allOrders.take(5).toList();
+      }
+    } catch (e) {
+      print('Error loading dashboard data: $e');
+      // Set default values on error
+      _userStats = {
+        'totalUsers': 0,
+        'activeUsers': 0,
+        'adminUsers': 0,
+        'employeeUsers': 0,
+        'clientUsers': 0,
+      };
+      _recentUsers = [];
+      _orderStats = {
+        'totalOrders': 0,
+        'pendingOrders': 0,
+        'inProgressOrders': 0,
+        'completedOrders': 0,
+        'cancelledOrders': 0,
+        'totalRevenue': 0.0,
+      };
+      _recentOrders = [];
+    }
 
     setState(() {
       _isLoading = false;
@@ -48,7 +99,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   Widget build(BuildContext context) {
     final currentUser = context.read<AuthProvider>().currentUser;
-    
+
     return DashboardScaffold(
       title: 'Soloshine by muthaji - Admin Dashboard',
       actions: [
@@ -57,54 +108,55 @@ class _AdminDashboardState extends State<AdminDashboard> {
           onPressed: _loadDashboardData,
         ),
       ],
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () async => _loadDashboardData(),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppConstants.spacingM),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Welcome Section
-                    _buildWelcomeSection(currentUser!),
-                    
-                    const SizedBox(height: AppConstants.spacingL),
-                    
-                    // Quick Actions
-                    _buildQuickActions(),
-                    
-                    const SizedBox(height: AppConstants.spacingL),
-                    
-                    // Statistics Overview
-                    _buildStatisticsOverview(),
-                    
-                    const SizedBox(height: AppConstants.spacingL),
-                    
-                    // Recent Orders
-                    _buildRecentOrders(),
-                    
-                    const SizedBox(height: AppConstants.spacingL),
-                    
-                    // Recent Users
-                    _buildRecentUsers(),
-                  ],
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                onRefresh: () async => _loadDashboardData(),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppConstants.spacingM),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Welcome Section
+                      _buildWelcomeSection(currentUser!),
+
+                      const SizedBox(height: AppConstants.spacingL),
+
+                      // Quick Actions
+                      _buildQuickActions(),
+
+                      const SizedBox(height: AppConstants.spacingL),
+
+                      // Statistics Overview
+                      _buildStatisticsOverview(),
+
+                      const SizedBox(height: AppConstants.spacingL),
+
+                      // Recent Orders
+                      _buildRecentOrders(),
+
+                      const SizedBox(height: AppConstants.spacingL),
+
+                      // Recent Users
+                      _buildRecentUsers(),
+                    ],
+                  ),
                 ),
               ),
-            ),
     );
   }
 
   Widget _buildWelcomeSection(User user) {
+    final displayName =
+        user.name.isNotEmpty ? user.name : user.email.split('@')[0];
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppConstants.spacingL),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppConstants.secondaryColor,
-            AppConstants.primaryColor,
-          ],
+          colors: [AppConstants.secondaryColor, AppConstants.primaryColor],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -115,10 +167,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Welcome, ${user.name}!',
-            style: AppConstants.headingMedium.copyWith(
-              color: Colors.white,
-            ),
+            'Welcome, $displayName!',
+            style: AppConstants.headingMedium.copyWith(color: Colors.white),
           ),
           const SizedBox(height: AppConstants.spacingS),
           Text(
@@ -134,14 +184,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildQuickActions() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Quick Actions',
-          style: AppConstants.headingSmall,
-        ),
+        Text('Quick Actions', style: AppConstants.headingSmall),
         const SizedBox(height: AppConstants.spacingM),
         if (isMobile)
           // Stack buttons vertically on mobile
@@ -160,6 +207,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
               CustomButton(
                 onPressed: () {
                   // Navigate to user management
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const UserManagementScreen(),
+                    ),
+                  );
                 },
                 text: 'Manage Users',
                 icon: Icons.people,
@@ -209,6 +262,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     child: CustomButton(
                       onPressed: () {
                         // Navigate to user management
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const UserManagementScreen(),
+                          ),
+                        );
                       },
                       text: 'Manage Users',
                       icon: Icons.people,
@@ -251,16 +310,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildStatisticsOverview() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'System Overview',
-          style: AppConstants.headingSmall,
-        ),
+        Text('System Overview', style: AppConstants.headingSmall),
         const SizedBox(height: AppConstants.spacingM),
-        
+
         if (isMobile)
           // Stack cards vertically on mobile
           Column(
@@ -334,9 +390,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: AppConstants.spacingM),
-              
+
               Row(
                 children: [
                   Expanded(
@@ -358,9 +414,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: AppConstants.spacingM),
-              
+
               // User Statistics
               Row(
                 children: [
@@ -396,10 +452,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Recent Orders',
-              style: AppConstants.headingSmall,
-            ),
+            Text('Recent Orders', style: AppConstants.headingSmall),
             TextButton(
               onPressed: () {
                 // Navigate to all orders
@@ -427,10 +480,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   color: AppConstants.textSecondaryColor.withOpacity(0.5),
                 ),
                 const SizedBox(height: AppConstants.spacingM),
-                Text(
-                  'No orders yet',
-                  style: AppConstants.bodyLarge,
-                ),
+                Text('No orders yet', style: AppConstants.bodyLarge),
                 const SizedBox(height: AppConstants.spacingS),
                 Text(
                   'Orders will appear here when created',
@@ -453,10 +503,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Recent Users',
-              style: AppConstants.headingSmall,
-            ),
+            Text('Recent Users', style: AppConstants.headingSmall),
             TextButton(
               onPressed: () {
                 // Navigate to all users
@@ -484,10 +531,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   color: AppConstants.textSecondaryColor.withOpacity(0.5),
                 ),
                 const SizedBox(height: AppConstants.spacingM),
-                Text(
-                  'No users yet',
-                  style: AppConstants.bodyLarge,
-                ),
+                Text('No users yet', style: AppConstants.bodyLarge),
                 const SizedBox(height: AppConstants.spacingS),
                 Text(
                   'Users will appear here when registered',
@@ -617,6 +661,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   style: AppConstants.bodyLarge.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   user.email,
@@ -624,6 +670,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     color: AppConstants.textSecondaryColor,
                   ),
                 ),
+                if (user.phone.isNotEmpty)
+                  Text(
+                    'Phone: ${user.phone}',
+                    style: AppConstants.bodyMedium.copyWith(
+                      color: AppConstants.textSecondaryColor,
+                    ),
+                  ),
+                if (user.address != null && user.address!.isNotEmpty)
+                  Text(
+                    'Address: ${user.address}',
+                    style: AppConstants.bodyMedium.copyWith(
+                      color: AppConstants.textSecondaryColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             ),
           ),
@@ -647,6 +709,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ),
               ),
+              const SizedBox(height: AppConstants.spacingXS),
               Text(
                 'Joined: ${_formatDate(user.createdAt)}',
                 style: AppConstants.bodySmall.copyWith(
@@ -660,7 +723,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingM),
       decoration: BoxDecoration(
@@ -670,18 +738,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
       child: Column(
         children: [
-          Icon(
-            icon,
-            color: color,
-            size: 32,
-          ),
+          Icon(icon, color: color, size: 32),
           const SizedBox(height: AppConstants.spacingS),
-          Text(
-            value,
-            style: AppConstants.headingSmall.copyWith(
-              color: color,
-            ),
-          ),
+          Text(value, style: AppConstants.headingSmall.copyWith(color: color)),
           const SizedBox(height: AppConstants.spacingXS),
           Text(
             title,
@@ -696,7 +755,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays == 0) {
       return 'Today';
     } else if (difference.inDays == 1) {

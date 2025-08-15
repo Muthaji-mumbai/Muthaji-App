@@ -6,6 +6,7 @@ import '../../constants/app_constants.dart';
 import '../../widgets/custom_button.dart';
 import '../../services/order_service.dart';
 import '../../services/user_service.dart';
+import '../../services/auth_service.dart';
 import '../../models/order.dart';
 import '../../models/user.dart';
 import '../dashboard_screen.dart';
@@ -30,69 +31,99 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
     _loadOrders();
   }
 
-  void _loadOrders() {
+  Future<void> _loadOrders() async {
     setState(() {
       _isLoading = true;
     });
 
-    final currentUser = context.read<AuthProvider>().currentUser;
-    if (currentUser != null) {
-      _assignedOrders = OrderService.getOrdersByEmployee(currentUser.id);
-      _pendingOrders = OrderService.getOrdersByStatus(OrderStatus.pending);
-    }
+    try {
+      final currentUser = context.read<AuthProvider>().currentUser;
+      final token = AuthService.currentToken;
 
-    setState(() {
-      _isLoading = false;
-    });
+      if (currentUser != null && token != null) {
+        final assignedOrders = await OrderService.getOrdersByEmployee(
+          currentUser.id,
+          token,
+        );
+        final pendingOrders = await OrderService.getOrdersByStatus(
+          OrderStatus.pending,
+          token,
+        );
+
+        setState(() {
+          _assignedOrders = assignedOrders;
+          _pendingOrders = pendingOrders;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _assignedOrders = [];
+          _pendingOrders = [];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _assignedOrders = [];
+        _pendingOrders = [];
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load orders: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final currentUser = context.read<AuthProvider>().currentUser;
-    
+
     return DashboardScaffold(
       title: 'Soloshine by muthaji - Employee Dashboard',
       actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh),
-          onPressed: _loadOrders,
-        ),
+        IconButton(icon: const Icon(Icons.refresh), onPressed: _loadOrders),
       ],
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () async => _loadOrders(),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppConstants.spacingM),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Welcome Section
-                    _buildWelcomeSection(currentUser!),
-                    
-                    const SizedBox(height: AppConstants.spacingL),
-                    
-                    // Quick Actions
-                    _buildQuickActions(),
-                    
-                    const SizedBox(height: AppConstants.spacingL),
-                    
-                    // Assigned Orders
-                    _buildAssignedOrders(),
-                    
-                    const SizedBox(height: AppConstants.spacingL),
-                    
-                    // Pending Orders
-                    _buildPendingOrders(),
-                    
-                    const SizedBox(height: AppConstants.spacingL),
-                    
-                    // Statistics
-                    _buildStatistics(),
-                  ],
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                onRefresh: () async => _loadOrders(),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppConstants.spacingM),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Welcome Section
+                      _buildWelcomeSection(currentUser!),
+
+                      const SizedBox(height: AppConstants.spacingL),
+
+                      // Quick Actions
+                      _buildQuickActions(),
+
+                      const SizedBox(height: AppConstants.spacingL),
+
+                      // Assigned Orders
+                      _buildAssignedOrders(),
+
+                      const SizedBox(height: AppConstants.spacingL),
+
+                      // Pending Orders
+                      _buildPendingOrders(),
+
+                      const SizedBox(height: AppConstants.spacingL),
+
+                      // Statistics
+                      _buildStatistics(),
+                    ],
+                  ),
                 ),
               ),
-            ),
       floatingActionButtons: [
         FloatingActionButton.extended(
           onPressed: () async {
@@ -115,15 +146,15 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   }
 
   Widget _buildWelcomeSection(User user) {
+    final displayName =
+        user.name.isNotEmpty ? user.name : user.email.split('@')[0];
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppConstants.spacingL),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppConstants.accentColor,
-            AppConstants.secondaryColor,
-          ],
+          colors: [AppConstants.accentColor, AppConstants.secondaryColor],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -134,10 +165,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Welcome, ${user.name}!',
-            style: AppConstants.headingMedium.copyWith(
-              color: Colors.white,
-            ),
+            'Welcome, $displayName!',
+            style: AppConstants.headingMedium.copyWith(color: Colors.white),
           ),
           const SizedBox(height: AppConstants.spacingS),
           Text(
@@ -153,14 +182,11 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
 
   Widget _buildQuickActions() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Quick Actions',
-          style: AppConstants.headingSmall,
-        ),
+        Text('Quick Actions', style: AppConstants.headingSmall),
         const SizedBox(height: AppConstants.spacingM),
         if (isMobile)
           // Stack buttons vertically on mobile
@@ -251,10 +277,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'My Assigned Orders',
-              style: AppConstants.headingSmall,
-            ),
+            Text('My Assigned Orders', style: AppConstants.headingSmall),
             TextButton(
               onPressed: () {
                 Navigator.push(
@@ -287,10 +310,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                   color: AppConstants.textSecondaryColor.withOpacity(0.5),
                 ),
                 const SizedBox(height: AppConstants.spacingM),
-                Text(
-                  'No assigned orders',
-                  style: AppConstants.bodyLarge,
-                ),
+                Text('No assigned orders', style: AppConstants.bodyLarge),
                 const SizedBox(height: AppConstants.spacingS),
                 Text(
                   'Orders will appear here when assigned to you',
@@ -301,7 +321,9 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
             ),
           )
         else
-          ..._assignedOrders.take(3).map((order) => _buildOrderCard(order, true)),
+          ..._assignedOrders
+              .take(3)
+              .map((order) => _buildOrderCard(order, true)),
       ],
     );
   }
@@ -313,10 +335,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Pending Orders',
-              style: AppConstants.headingSmall,
-            ),
+            Text('Pending Orders', style: AppConstants.headingSmall),
             TextButton(
               onPressed: () {
                 Navigator.push(
@@ -349,10 +368,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                   color: AppConstants.textSecondaryColor.withOpacity(0.5),
                 ),
                 const SizedBox(height: AppConstants.spacingM),
-                Text(
-                  'No pending orders',
-                  style: AppConstants.bodyLarge,
-                ),
+                Text('No pending orders', style: AppConstants.bodyLarge),
                 const SizedBox(height: AppConstants.spacingS),
                 Text(
                   'All orders have been processed',
@@ -363,7 +379,9 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
             ),
           )
         else
-          ..._pendingOrders.take(3).map((order) => _buildOrderCard(order, false)),
+          ..._pendingOrders
+              .take(3)
+              .map((order) => _buildOrderCard(order, false)),
       ],
     );
   }
@@ -377,9 +395,10 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         borderRadius: BorderRadius.circular(AppConstants.radiusM),
         boxShadow: AppConstants.cardShadow,
         border: Border.all(
-          color: isAssigned 
-              ? AppConstants.accentColor.withOpacity(0.3)
-              : AppConstants.warningColor.withOpacity(0.3),
+          color:
+              isAssigned
+                  ? AppConstants.accentColor.withOpacity(0.3)
+                  : AppConstants.warningColor.withOpacity(0.3),
           width: isAssigned ? 2 : 1,
         ),
       ),
@@ -451,14 +470,18 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                   ),
                   if (isAssigned)
                     Container(
-                      margin: const EdgeInsets.only(top: AppConstants.spacingXS),
+                      margin: const EdgeInsets.only(
+                        top: AppConstants.spacingXS,
+                      ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppConstants.spacingS,
                         vertical: AppConstants.spacingXS,
                       ),
                       decoration: BoxDecoration(
                         color: AppConstants.accentColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusS,
+                        ),
                       ),
                       child: Text(
                         'Assigned to you',
@@ -479,19 +502,19 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
 
   Widget _buildStatistics() {
     final totalAssigned = _assignedOrders.length;
-    final pendingAssigned = _assignedOrders.where((o) => o.status == OrderStatus.pending).length;
-    final inProgressAssigned = _assignedOrders.where((o) => o.status == OrderStatus.inProgress).length;
-    final completedAssigned = _assignedOrders.where((o) => o.status == OrderStatus.completed).length;
-    
+    final pendingAssigned =
+        _assignedOrders.where((o) => o.status == OrderStatus.pending).length;
+    final inProgressAssigned =
+        _assignedOrders.where((o) => o.status == OrderStatus.inProgress).length;
+    final completedAssigned =
+        _assignedOrders.where((o) => o.status == OrderStatus.completed).length;
+
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'My Statistics',
-          style: AppConstants.headingSmall,
-        ),
+        Text('My Statistics', style: AppConstants.headingSmall),
         const SizedBox(height: AppConstants.spacingM),
         if (isMobile)
           // Stack cards vertically on mobile
@@ -579,7 +602,12 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingM),
       decoration: BoxDecoration(
@@ -589,18 +617,9 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
       ),
       child: Column(
         children: [
-          Icon(
-            icon,
-            color: color,
-            size: 32,
-          ),
+          Icon(icon, color: color, size: 32),
           const SizedBox(height: AppConstants.spacingS),
-          Text(
-            value,
-            style: AppConstants.headingSmall.copyWith(
-              color: color,
-            ),
-          ),
+          Text(value, style: AppConstants.headingSmall.copyWith(color: color)),
           const SizedBox(height: AppConstants.spacingXS),
           Text(
             title,
@@ -615,7 +634,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays == 0) {
       return 'Today';
     } else if (difference.inDays == 1) {

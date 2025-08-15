@@ -3,16 +3,30 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppConstants {
   // App Colors - New Theme (Soloshine by muthaji - Green & White)
-  static const Color primaryColor = Color(0xFF2E7D32);      // Dark green color
-  static const Color secondaryColor = Color(0xFF4CAF50);    // Medium green color
-  static const Color accentColor = Color(0xFF66BB6A);       // Light green accent
-  static const Color backgroundColor = Color(0xFFFFFFFF);   // White background
-  static const Color surfaceColor = Color(0xFFF8F9FA);     // Very light gray surface
-  static const Color errorColor = Color(0xFFE53E3E);        // Error color
-  static const Color successColor = Color(0xFF2E7D32);      // Success color (dark green)
-  static const Color warningColor = Color(0xFFFF9800);      // Warning color
-  static const Color textPrimaryColor = Color(0xFF1B5E20);  // Dark green text
+  static const Color primaryColor = Color(0xFF2E7D32); // Dark green color
+  static const Color secondaryColor = Color(0xFF4CAF50); // Medium green color
+  static const Color accentColor = Color(0xFF66BB6A); // Light green accent
+  static const Color backgroundColor = Color(0xFFFFFFFF); // White background
+  static const Color surfaceColor = Color(
+    0xFFF8F9FA,
+  ); // Very light gray surface
+  static const Color errorColor = Color(0xFFE53E3E); // Error color
+  static const Color successColor = Color(
+    0xFF2E7D32,
+  ); // Success color (dark green)
+  static const Color warningColor = Color(0xFFFF9800); // Warning color
+  static const Color textPrimaryColor = Color(0xFF1B5E20); // Dark green text
   static const Color textSecondaryColor = Color(0xFF666666); // Dark gray text
+
+  // API Configuration
+  static const String baseUrl = 'https://soloshine-backend.onrender.com';
+  static const String loginEndpoint = '/auth/login';
+  static const String loginUrl = '$baseUrl$loginEndpoint';
+
+  // Additional API endpoints for future use
+  static const String usersEndpoint = '/user';
+  static const String ordersEndpoint = '/order';
+  static const String profileEndpoint = '/profile';
 
   // Text Styles
   static TextStyle get headingLarge => GoogleFonts.inter(
