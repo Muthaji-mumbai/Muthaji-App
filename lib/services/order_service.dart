@@ -125,31 +125,54 @@ class OrderService {
       // Include the order ID in the request body as the backend expects
       final requestBody = Map<String, dynamic>.from(updateData);
 
-      // Try to convert string ID to int if backend expects it
-      // First try to parse as int, if it fails, use as string
+      // Try multiple approaches for the order ID field
+      // Some backends expect different field names or types
       try {
         final intId = int.parse(orderId);
         requestBody['_id'] = intId;
+        requestBody['id'] = intId;
         print('Using integer ID: $intId');
       } catch (e) {
         // If parsing fails, use the string ID
         requestBody['_id'] = orderId;
+        requestBody['id'] = orderId;
         print('Using string ID: $orderId');
       }
+
+      // Also try orderId field as some APIs expect this
+      requestBody['orderId'] = orderId;
 
       print('Sending update request for order: $orderId');
       print('Request body: $requestBody');
 
-      final response = await ApiService.patch(
-        '${AppConstants.ordersEndpoint}/$orderId',
-        body: requestBody,
-        token: token,
-      );
+      // Try the specific endpoint first
+      try {
+        final response = await ApiService.patch(
+          '${AppConstants.ordersEndpoint}/$orderId',
+          body: requestBody,
+          token: token,
+        );
 
-      if (response['success'] == true && response['data'] != null) {
-        return Order.fromJson(response['data']);
-      } else {
-        throw Exception(response['message'] ?? 'Failed to update order');
+        if (response['success'] == true && response['data'] != null) {
+          return Order.fromJson(response['data']);
+        } else {
+          throw Exception(response['message'] ?? 'Failed to update order');
+        }
+      } catch (e) {
+        print('Specific endpoint failed, trying root endpoint: $e');
+
+        // If specific endpoint fails, try the root endpoint
+        final response = await ApiService.patch(
+          AppConstants.ordersEndpoint,
+          body: requestBody,
+          token: token,
+        );
+
+        if (response['success'] == true && response['data'] != null) {
+          return Order.fromJson(response['data']);
+        } else {
+          throw Exception(response['message'] ?? 'Failed to update order');
+        }
       }
     } catch (e) {
       print('Error in updateOrder: $e');
