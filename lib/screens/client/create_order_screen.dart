@@ -99,11 +99,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         allowMultiple: true,
         type: FileType.custom,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+        withData: true,
       );
 
       if (result != null) {
         setState(() {
-          _selectedFiles = result.files;
+          _selectedFiles.addAll(result.files);
         });
       }
     } catch (e) {
@@ -191,7 +192,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               children: [
                 if (currentUser != null) _buildClientInfoCard(currentUser),
                 const SizedBox(height: AppConstants.spacingL),
-                
+                if (_selectedFiles.isNotEmpty) ...[
+                  _buildTopPreviewStrip(),
+                  const SizedBox(height: AppConstants.spacingL),
+                ],
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
@@ -204,7 +208,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       children: [
                         Text('Order Details', style: AppConstants.headingSmall),
                         const SizedBox(height: AppConstants.spacingM),
-                        
                         CustomTextField(
                           controller: _descriptionController,
                           labelText: 'Description',
@@ -221,9 +224,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                             return null;
                           },
                         ),
-                        
                         const SizedBox(height: AppConstants.spacingM),
-                        
                         Row(
                           children: [
                             Expanded(
@@ -271,9 +272,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                             ),
                           ],
                         ),
-                        
                         const SizedBox(height: AppConstants.spacingM),
-                        
                         GestureDetector(
                           onTap: _selectDate,
                           child: CustomTextField(
@@ -284,9 +283,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                             enabled: false,
                           ),
                         ),
-                        
                         const SizedBox(height: AppConstants.spacingM),
-                        
                         CustomTextField(
                           controller: _notesController,
                           labelText: 'Notes',
@@ -294,30 +291,26 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                           prefixIcon: Icons.note,
                           maxLines: 2,
                         ),
+                        if (_selectedFiles.isNotEmpty) ...[
+                          const SizedBox(height: AppConstants.spacingM),
+                          _buildPreviewGrid(),
+                        ],
                       ],
                     ),
                   ),
                 ),
-                
                 const SizedBox(height: AppConstants.spacingL),
-                
                 _buildOrnamentDetailsSection(),
-                
                 const SizedBox(height: AppConstants.spacingL),
-                
                 _buildFilesSection(),
-                
                 const SizedBox(height: AppConstants.spacingXL),
-                
                 CustomButton(
                   onPressed: _isLoading ? null : _createOrder,
                   text: _isLoading ? 'Creating...' : 'Create Order',
                   isLoading: _isLoading,
                   backgroundColor: AppConstants.successColor,
                 ),
-                
                 const SizedBox(height: AppConstants.spacingM),
-                
                 CustomButton(
                   onPressed: _isLoading ? null : () => Navigator.pop(context),
                   text: 'Cancel',
@@ -480,6 +473,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             Text('Attachments', style: AppConstants.headingSmall),
             const SizedBox(height: AppConstants.spacingM),
             if (_selectedFiles.isNotEmpty) ...[
+              _buildPreviewGrid(),
+              const SizedBox(height: AppConstants.spacingM),
               Wrap(
                 spacing: AppConstants.spacingS,
                 runSpacing: AppConstants.spacingS,
@@ -491,7 +486,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     avatar: Icon(
-                      file.extension == 'pdf' ? Icons.picture_as_pdf : Icons.image,
+                      (file.extension ?? '').toLowerCase() == 'pdf' ? Icons.picture_as_pdf : Icons.image,
                       color: AppConstants.primaryColor,
                     ),
                     deleteIcon: Icon(Icons.close, size: 16),
@@ -516,6 +511,95 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTopPreviewStrip() {
+    return SizedBox(
+      height: 110,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _selectedFiles.length,
+        separatorBuilder: (_, __) => const SizedBox(width: AppConstants.spacingS),
+        itemBuilder: (context, index) {
+          final file = _selectedFiles[index];
+          return _buildFileThumb(file, size: 100);
+        },
+      ),
+    );
+  }
+
+  Widget _buildPreviewGrid() {
+    return Wrap(
+      spacing: AppConstants.spacingS,
+      runSpacing: AppConstants.spacingS,
+      children: _selectedFiles.map((f) => _buildFileThumb(f, size: 90)).toList(),
+    );
+  }
+
+  Widget _buildFileThumb(PlatformFile file, {double size = 90}) {
+    final isPdf = (file.extension ?? '').toLowerCase() == 'pdf';
+    Widget content;
+    if (!isPdf && file.bytes != null && file.bytes!.isNotEmpty) {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+        child: Image.memory(
+          file.bytes!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else {
+      content = Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: AppConstants.surfaceColor,
+          borderRadius: BorderRadius.circular(AppConstants.radiusS),
+          border: Border.all(color: AppConstants.primaryColor.withOpacity(0.15)),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(isPdf ? Icons.picture_as_pdf : Icons.image, color: AppConstants.primaryColor),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Text(
+                  file.name,
+                  style: AppConstants.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        content,
+        Positioned(
+          right: -6,
+          top: -6,
+          child: InkWell(
+            onTap: () => setState(() => _selectedFiles.remove(file)),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppConstants.errorColor,
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(2),
+              child: const Icon(Icons.close, size: 14, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
