@@ -21,7 +21,7 @@ class OrnamentDetail {
 
   factory OrnamentDetail.fromJson(Map<String, dynamic> json) {
     return OrnamentDetail(
-      id: json['_id'] ?? json['id'] ?? '',
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
       name: json['name'] ?? '',
       material: json['material'] ?? '',
       weight: (json['weight'] ?? 0).toDouble(),
@@ -86,11 +86,16 @@ class Order {
 
     if (json['userid'] != null) {
       final userData = json['userid'];
-      clientId = userData['_id'] ?? userData['id'] ?? '';
-      clientName = userData['name'] ?? '';
+      // Some APIs return userid as object, others as scalar. Always coerce to String.
+      if (userData is Map<String, dynamic>) {
+        clientId = (userData['_id'] ?? userData['id'] ?? '').toString();
+        clientName = (userData['name'] ?? '').toString();
+      } else {
+        clientId = userData.toString();
+      }
     } else {
-      clientId = json['clientId'] ?? '';
-      clientName = json['clientName'] ?? '';
+      clientId = (json['clientId'] ?? '').toString();
+      clientName = (json['clientName'] ?? '').toString();
     }
 
     // Parse ornament details
@@ -114,7 +119,7 @@ class Order {
     }
 
     return Order(
-      id: json['_id'] ?? json['id'] ?? '',
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
       clientId: clientId,
       clientName: clientName,
       description: json['description'] ?? 'Order',
