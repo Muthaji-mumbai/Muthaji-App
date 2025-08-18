@@ -142,6 +142,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final currentUser = context.read<AuthProvider>().currentUser;
 
     return DashboardScaffold(
+        logo: Image.asset(
+                    'assets/icons/logo.png',
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                  ),
       title: 'Muthaji - Admin Dashboard',
       actions: [
         IconButton(
@@ -177,8 +183,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Welcome Section
-                            _buildWelcomeSection(currentUser!),
-                            const SizedBox(height: AppConstants.spacingL),
+                            // _buildWelcomeSection(currentUser!),
+                            // const SizedBox(height: AppConstants.spacingL),
                             // Orders by Date Chart with filter
                             _buildOrdersByDateChart(days: _chartDays, allOrders: _allOrders),
                             const SizedBox(height: AppConstants.spacingL),
@@ -211,7 +217,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ],
                         );
                     }
-                    return const SizedBox.shrink();
                   },
                 ),
               ),

@@ -46,8 +46,10 @@ class DashboardScaffold extends StatelessWidget {
   final Widget? drawer;
   final Widget? bottomNavigationBar;
   final List<Widget>? floatingActionButtons;
+  final Widget? logo;
 
   const DashboardScaffold({
+    this.logo,
     super.key,
     required this.title,
     required this.actions,

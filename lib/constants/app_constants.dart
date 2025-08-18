@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 class AppConstants {
   // Modern Professional Palette (Blue/Emerald)
   // Light theme
-  static const Color primaryColor = Color(0xFF2563EB); // Blue 600
+  static const Color primaryColor = Color(0xFF10B981); // Blue 600
   static const Color secondaryColor = Color(0xFF60A5FA); // Blue 400
   static const Color accentColor = Color(0xFF10B981); // Emerald 500
   static const Color backgroundColor = Color(0xFFF8FAFC); // Slate 50
