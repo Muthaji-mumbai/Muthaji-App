@@ -12,6 +12,9 @@ import '../../models/user.dart';
 import '../dashboard_screen.dart';
 import 'user_management_screen.dart';
 
+// View switching: dashboard, orders, reports
+enum _AdminView { dashboard, orders, reports }
+
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
@@ -58,10 +61,11 @@ class _WelcomeChip extends StatelessWidget {
 class _AdminDashboardState extends State<AdminDashboard> {
   Map<String, dynamic> _orderStats = {};
   Map<String, dynamic> _userStats = {};
-  List<Order> _recentOrders = [];
   List<Order> _allOrders = [];
   List<User> _recentUsers = [];
   bool _isLoading = true;
+  _AdminView _currentView = _AdminView.dashboard;
+  int _chartDays = 14; // default last 14 days
 
   @override
   void initState() {
@@ -106,7 +110,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
         _orderStats = orderStats;
         _allOrders = allOrders;
-        _recentOrders = allOrders.take(5).toList();
       }
     } catch (e) {
       print('Error loading dashboard data: $e');
@@ -127,7 +130,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'cancelledOrders': 0,
         'totalRevenue': 0.0,
       };
-      _recentOrders = [];
     }
 
     setState(() {
@@ -167,37 +169,50 @@ class _AdminDashboardState extends State<AdminDashboard> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(AppConstants.spacingM),
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Welcome Section
-                    _buildWelcomeSection(currentUser!),
-
-                    
-                    const SizedBox(height: AppConstants.spacingL),
-
-                    // Orders by Date Chart
-                    _buildOrdersByDateChart(days: 14, allOrders: _allOrders),
-
-                    // Quick Actions
-                    _buildQuickActions(),
-
-                    const SizedBox(height: AppConstants.spacingL),
-
-                    // Statistics Overview
-                    _buildStatisticsOverview(),
-
-
-                    const SizedBox(height: AppConstants.spacingL),
-
-                    // Recent Orders
-                    _buildRecentOrders(),
-
-                    const SizedBox(height: AppConstants.spacingL),
-
-                    // Recent Users
-                    _buildRecentUsers(),
-                  ],
+                child: Builder(
+                  builder: (context) {
+                    switch (_currentView) {
+                      case _AdminView.dashboard:
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Welcome Section
+                            _buildWelcomeSection(currentUser!),
+                            const SizedBox(height: AppConstants.spacingL),
+                            // Orders by Date Chart with filter
+                            _buildOrdersByDateChart(days: _chartDays, allOrders: _allOrders),
+                            const SizedBox(height: AppConstants.spacingL),
+                            // Quick Actions
+                            _buildQuickActions(),
+                            const SizedBox(height: AppConstants.spacingL),
+                            // Statistics Overview
+                            _buildStatisticsOverview(),
+                            const SizedBox(height: AppConstants.spacingL),
+                            // Recent Users (Recent Orders removed per request)
+                            _buildRecentUsers(),
+                          ],
+                        );
+                      case _AdminView.orders:
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTopBar('All Orders'),
+                            const SizedBox(height: AppConstants.spacingM),
+                            _buildAllOrdersView(),
+                          ],
+                        );
+                      case _AdminView.reports:
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTopBar('Reports'),
+                            const SizedBox(height: AppConstants.spacingM),
+                            _buildReportsView(),
+                          ],
+                        );
+                    }
+                    return const SizedBox.shrink();
+                  },
                 ),
               ),
             ),
@@ -256,23 +271,6 @@ print("user.name: ${displayName}");
                     style:
                         AppConstants.headingMedium.copyWith(color: const Color.fromARGB(255, 230, 225, 225)),
                   ),
-                  const SizedBox(height: AppConstants.spacingS),
-                  Text(
-                    'You have full access to manage the entire system',
-                    style: AppConstants.bodyMedium.copyWith(
-                      color: Colors.white.withOpacity(0.92),
-                    ),
-                  ),
-                  const SizedBox(height: AppConstants.spacingM),
-                  Wrap(
-                    spacing: AppConstants.spacingS,
-                    runSpacing: AppConstants.spacingS,
-                    children: const [
-                      _WelcomeChip(icon: Icons.security, label: 'Admin Access'),
-                      _WelcomeChip(icon: Icons.analytics, label: 'Insights'),
-                      _WelcomeChip(icon: Icons.settings, label: 'Settings'),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -296,7 +294,7 @@ print("user.name: ${displayName}");
             children: [
               CustomButton(
                 onPressed: () {
-                  // Navigate to order management
+                  setState(() => _currentView = _AdminView.orders);
                 },
                 text: 'Manage Orders',
                 icon: Icons.shopping_cart,
@@ -322,7 +320,7 @@ print("user.name: ${displayName}");
               const SizedBox(height: AppConstants.spacingM),
               CustomButton(
                 onPressed: () {
-                  // Navigate to reports
+                  setState(() => _currentView = _AdminView.reports);
                 },
                 text: 'View Reports',
                 icon: Icons.analytics,
@@ -350,7 +348,7 @@ print("user.name: ${displayName}");
                   Expanded(
                     child: CustomButton(
                       onPressed: () {
-                        // Navigate to order management
+                        setState(() => _currentView = _AdminView.orders);
                       },
                       text: 'Manage Orders',
                       icon: Icons.shopping_cart,
@@ -382,7 +380,7 @@ print("user.name: ${displayName}");
                   Expanded(
                     child: CustomButton(
                       onPressed: () {
-                        // Navigate to reports
+                        setState(() => _currentView = _AdminView.reports);
                       },
                       text: 'View Reports',
                       icon: Icons.analytics,
@@ -429,30 +427,15 @@ print("user.name: ${displayName}");
       ..sort((a, b) => a.key.compareTo(b.key));
 
     final maxY = (entries.map((e) => e.value).fold<int>(0, (p, c) => c > p ? c : p)).toDouble();
-    final barGroups = <BarChartGroupData>[];
+    final spots = <FlSpot>[];
     for (int i = 0; i < entries.length; i++) {
-      final v = entries[i].value.toDouble();
-      barGroups.add(
-        BarChartGroupData(
-          x: i,
-          barRods: [
-            BarChartRodData(
-              toY: v,
-              width: 12,
-              borderRadius: BorderRadius.circular(4),
-              color: AppConstants.primaryColor,
-              backDrawRodData: BackgroundBarChartRodData(
-                show: true,
-                toY: (maxY == 0 ? 1 : maxY),
-                color: AppConstants.secondaryColor.withOpacity(0.25),
-              ),
-            ),
-          ],
-        ),
-      );
+      spots.add(FlSpot(i.toDouble(), entries[i].value.toDouble()));
     }
 
     String _labelFor(DateTime d) => '${d.day}/${d.month}';
+
+    final step = (days / 7).ceil(); // show ~7 labels across
+    final chartWidth = (days <= 14) ? double.infinity : days * 40.0; // allow scroll for long ranges
 
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingM),
@@ -467,50 +450,180 @@ print("user.name: ${displayName}");
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Orders (last $days days)', style: AppConstants.headingSmall),
+              Text('Orders (last $_chartDays days)', style: AppConstants.headingSmall),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppConstants.textSecondaryColor.withOpacity(0.2)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: _chartDays,
+                    items: const [7, 14, 30, 90]
+                        .map((d) => DropdownMenuItem<int>(value: d, child: Text('Last $d days')))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val == null) return;
+                      setState(() => _chartDays = val);
+                    },
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: AppConstants.spacingM),
           SizedBox(
             height: 220,
-            child: BarChart(
-              BarChartData(
-                gridData: FlGridData(show: true, drawVerticalLine: false),
-                borderData: FlBorderData(show: false),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: true, reservedSize: 28),
-                  ),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 1,
-                      getTitlesWidget: (value, meta) {
-                        final idx = value.toInt();
-                        if (idx < 0 || idx >= entries.length) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            _labelFor(entries[idx].key),
-                            style: AppConstants.bodySmall,
+            child: (days <= 14)
+                ? LineChart(
+                    LineChartData(
+                      minY: 0,
+                      maxY: (maxY == 0 ? 1 : maxY) * 1.2,
+                      gridData: FlGridData(show: true, drawVerticalLine: false),
+                      borderData: FlBorderData(show: false),
+                      titlesData: FlTitlesData(
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: true, reservedSize: 32),
+                        ),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            interval: 1,
+                            getTitlesWidget: (value, meta) {
+                              final idx = value.toInt();
+                              if (idx < 0 || idx >= entries.length || idx % step != 0) {
+                                return const SizedBox.shrink();
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  _labelFor(entries[idx].key),
+                                  style: AppConstants.bodySmall,
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
+                        ),
+                      ),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: spots,
+                          isCurved: true,
+                          color: AppConstants.primaryColor,
+                          barWidth: 3,
+                          dotData: FlDotData(show: true),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: AppConstants.primaryColor.withOpacity(0.12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: chartWidth,
+                      child: LineChart(
+                        LineChartData(
+                          minY: 0,
+                          maxY: (maxY == 0 ? 1 : maxY) * 1.2,
+                          gridData: FlGridData(show: true, drawVerticalLine: false),
+                          borderData: FlBorderData(show: false),
+                          titlesData: FlTitlesData(
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: true, reservedSize: 32),
+                            ),
+                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                interval: 1,
+                                getTitlesWidget: (value, meta) {
+                                  final idx = value.toInt();
+                                  if (idx < 0 || idx >= entries.length || idx % step != 0) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Text(
+                                      _labelFor(entries[idx].key),
+                                      style: AppConstants.bodySmall,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          lineBarsData: [
+                            LineChartBarData(
+                              spots: spots,
+                              isCurved: true,
+                              color: AppConstants.primaryColor,
+                              barWidth: 3,
+                              dotData: FlDotData(show: true),
+                              belowBarData: BarAreaData(
+                                show: true,
+                                color: AppConstants.primaryColor.withOpacity(0.12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                barGroups: barGroups,
-                maxY: (maxY == 0 ? 1 : maxY) * 1.2,
-              ),
-            ),
           ),
         ],
       ),
           );
+  }
+
+  // Simple top bar with back button for non-dashboard views
+  Widget _buildTopBar(String title) {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => setState(() => _currentView = _AdminView.dashboard),
+        ),
+        Text(title, style: AppConstants.headingSmall),
+      ],
+    );
+  }
+
+  // Orders view showing all orders
+  Widget _buildAllOrdersView() {
+    if (_allOrders.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(AppConstants.spacingL),
+        decoration: BoxDecoration(
+          color: AppConstants.surfaceColor,
+          borderRadius: BorderRadius.circular(AppConstants.radiusM),
+          boxShadow: AppConstants.cardShadow,
+        ),
+        child: Center(child: Text('No orders found', style: AppConstants.bodyLarge)),
+      );
+    }
+    return Column(
+      children: _allOrders.map((o) => _buildOrderCard(o)).toList(),
+    );
+  }
+
+  // Reports view combining stats and charts
+  Widget _buildReportsView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildStatisticsOverview(),
+        const SizedBox(height: AppConstants.spacingL),
+        _buildOrdersByDateChart(days: _chartDays, allOrders: _allOrders),
+      ],
+    );
   }
 
   Widget _buildStatisticsOverview() {
@@ -532,13 +645,7 @@ print("user.name: ${displayName}");
                 Icons.shopping_cart,
                 AppConstants.primaryColor,
               ),
-              const SizedBox(height: AppConstants.spacingM),
-              _buildStatCard(
-                'Total Revenue',
-                '\$${_orderStats['totalRevenue']?.toStringAsFixed(2) ?? '0.00'}',
-                Icons.attach_money,
-                AppConstants.successColor,
-              ),
+             
               const SizedBox(height: AppConstants.spacingM),
               _buildStatCard(
                 'Pending Orders',
@@ -584,15 +691,7 @@ print("user.name: ${displayName}");
                       AppConstants.primaryColor,
                     ),
                   ),
-                  const SizedBox(width: AppConstants.spacingM),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Total Revenue',
-                      '\$${_orderStats['totalRevenue']?.toStringAsFixed(2) ?? '0.00'}',
-                      Icons.attach_money,
-                      AppConstants.successColor,
-                    ),
-                  ),
+                
                 ],
               ),
 
@@ -650,56 +749,7 @@ print("user.name: ${displayName}");
     );
   }
 
-  Widget _buildRecentOrders() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Recent Orders', style: AppConstants.headingSmall),
-            TextButton(
-              onPressed: () {
-                // Navigate to all orders
-              },
-              child: const Text('View All'),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppConstants.spacingM),
-        if (_recentOrders.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(AppConstants.spacingL),
-            decoration: BoxDecoration(
-              color: AppConstants.surfaceColor,
-              borderRadius: BorderRadius.circular(AppConstants.radiusM),
-              border: Border.all(
-                color: AppConstants.textSecondaryColor.withOpacity(0.2),
-              ),
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.shopping_cart_outlined,
-                  size: 48,
-                  color: AppConstants.textSecondaryColor.withOpacity(0.5),
-                ),
-                const SizedBox(height: AppConstants.spacingM),
-                Text('No orders yet', style: AppConstants.bodyLarge),
-                const SizedBox(height: AppConstants.spacingS),
-                Text(
-                  'Orders will appear here when created',
-                  style: AppConstants.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          )
-        else
-          ..._recentOrders.map((order) => _buildOrderCard(order)),
-      ],
-    );
-  }
+  // Recent orders section removed per request
 
   Widget _buildRecentUsers() {
     return Column(

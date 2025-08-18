@@ -2,18 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppConstants {
-  // App Colors - Light Green & White theme
-  // Soft, fresh, and airy palette.
-  static const Color primaryColor = Color(0xFF8BC34A); // Light green
-  static const Color secondaryColor = Color(0xFFC5E1A5); // Pale green
-  static const Color accentColor = Color(0xFFAED581); // Mid light green
-  static const Color backgroundColor = Color(0xFFFFFFFF); // White
-  static const Color surfaceColor = Color(0xFFF4FAF1); // Very light green tint
-  static const Color errorColor = Color(0xFFE53935); // Red
-  static const Color successColor = Color(0xFF43A047); // Green (readable)
-  static const Color warningColor = Color(0xFFFFA000); // Amber
-  static const Color textPrimaryColor = Color(0xFF2E7D32); // Dark green for contrast
-  static const Color textSecondaryColor = Color(0xFF6D6D6D); // Muted gray
+  // Modern Professional Palette (Blue/Emerald)
+  // Light theme
+  static const Color primaryColor = Color(0xFF2563EB); // Blue 600
+  static const Color secondaryColor = Color(0xFF60A5FA); // Blue 400
+  static const Color accentColor = Color(0xFF10B981); // Emerald 500
+  static const Color backgroundColor = Color(0xFFF8FAFC); // Slate 50
+  static const Color surfaceColor = Color(0xFFFFFFFF); // White
+  static const Color errorColor = Color(0xFFEF4444); // Red 500
+  static const Color successColor = Color(0xFF16A34A); // Green 600
+  static const Color warningColor = Color(0xFFF59E0B); // Amber 500
+  static const Color textPrimaryColor = Color(0xFF0F172A); // Slate 900
+  static const Color textSecondaryColor = Color(0xFF475569); // Slate 600
+
+  // Dark mode palette
+  static const Color darkBackgroundColor = Color(0xFF0B1220); // Deep navy
+  static const Color darkSurfaceColor = Color(0xFF111827); // Gray 900
+  static const Color darkTextPrimaryColor = Color(0xFFF3F4F6); // Gray 100
+  static const Color darkTextSecondaryColor = Color(0xFF9CA3AF); // Gray 400
 
   // API Configuration
   static const String baseUrl = 'https://soloshine-backend.onrender.com';
@@ -107,4 +113,64 @@ class AppConstants {
       offset: const Offset(0, 10),
     ),
   ];
+
+  // ThemeData (Light)
+  static ThemeData get lightTheme => ThemeData(
+        colorScheme: ColorScheme(
+          brightness: Brightness.light,
+          primary: primaryColor,
+          onPrimary: Colors.white,
+          secondary: secondaryColor,
+          onSecondary: Colors.white,
+          error: errorColor,
+          onError: Colors.white,
+          background: backgroundColor,
+          onBackground: textPrimaryColor,
+          surface: surfaceColor,
+          onSurface: textPrimaryColor,
+        ),
+        scaffoldBackgroundColor: backgroundColor,
+        useMaterial3: true,
+        fontFamily: 'Inter',
+        textTheme: GoogleFonts.interTextTheme().apply(
+          bodyColor: textPrimaryColor,
+          displayColor: textPrimaryColor,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        cardColor: surfaceColor,
+      );
+
+  // ThemeData (Dark)
+  static ThemeData get darkTheme => ThemeData(
+        colorScheme: ColorScheme(
+          brightness: Brightness.dark,
+          primary: primaryColor,
+          onPrimary: Colors.white,
+          secondary: secondaryColor,
+          onSecondary: Colors.white,
+          error: errorColor,
+          onError: Colors.white,
+          background: darkBackgroundColor,
+          onBackground: darkTextPrimaryColor,
+          surface: darkSurfaceColor,
+          onSurface: darkTextPrimaryColor,
+        ),
+        scaffoldBackgroundColor: darkBackgroundColor,
+        useMaterial3: true,
+        fontFamily: 'Inter',
+        textTheme: GoogleFonts.interTextTheme(ThemeData(brightness: Brightness.dark).textTheme).apply(
+          bodyColor: darkTextPrimaryColor,
+          displayColor: darkTextPrimaryColor,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        cardColor: darkSurfaceColor,
+      );
 }

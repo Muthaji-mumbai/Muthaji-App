@@ -21,14 +21,9 @@ class MyApp extends StatelessWidget {
         child: MaterialApp(
           title: 'Muthaji',
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: AppConstants.primaryColor,
-              brightness: Brightness.light,
-            ),
-            useMaterial3: true,
-            fontFamily: 'Inter',
-          ),
+          theme: AppConstants.lightTheme,
+          darkTheme: AppConstants.darkTheme,
+          themeMode: ThemeMode.system,
           home: const AuthWrapper(),
         ),
         breakpoints: [

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:responsive_framework/responsive_framework.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
 import '../constants/app_constants.dart';
@@ -60,8 +59,6 @@ class DashboardScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = ResponsiveBreakpoints.of(context).isMobile;
-    final isTablet = ResponsiveBreakpoints.of(context).isTablet;
     
     return Scaffold(
       backgroundColor: AppConstants.backgroundColor,
@@ -77,35 +74,14 @@ class DashboardScaffold extends StatelessWidget {
         elevation: 0,
         actions: [
           ...actions,
-          if (!isMobile) // Hide menu on mobile, show on tablet/desktop
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) {
-                if (value == 'logout') {
-                  _showLogoutDialog(context);
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, color: AppConstants.errorColor),
-                      SizedBox(width: AppConstants.spacingS),
-                      Text('Logout'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          IconButton(
+            tooltip: 'Logout',
+            icon: const Icon(Icons.logout),
+            onPressed: () => _showLogoutDialog(context),
+          ),
         ],
-        // Show menu button on mobile
-        leading: isMobile ? IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {
-            Scaffold.of(context).openDrawer();
-          },
-        ) : null,
+        // Remove mobile menu icon as requested
+        leading: null,
       ),
       drawer: drawer,
       body: body,
