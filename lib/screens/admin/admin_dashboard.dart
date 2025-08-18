@@ -173,7 +173,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     // Welcome Section
                     _buildWelcomeSection(currentUser!),
 
+                    
                     const SizedBox(height: AppConstants.spacingL),
+
+                    // Orders by Date Chart
+                    _buildOrdersByDateChart(days: 14, allOrders: _allOrders),
 
                     // Quick Actions
                     _buildQuickActions(),
@@ -183,10 +187,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     // Statistics Overview
                     _buildStatisticsOverview(),
 
-                    const SizedBox(height: AppConstants.spacingL),
-
-                    // Orders by Date Chart
-                    _buildOrdersByDateChart(days: 14, allOrders: _allOrders),
 
                     const SizedBox(height: AppConstants.spacingL),
 
@@ -206,10 +206,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildWelcomeSection(User user) {
+    Widget _buildWelcomeSection(User user) {
     final displayName =
-        user.name.isNotEmpty ? user.name : user.email.split('@')[0];
-
+         user.email.split('@')[0];
+print("user.name: ${displayName}");
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppConstants.radiusL),
       child: Stack(
@@ -237,7 +237,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             child: Opacity(
               opacity: 0.08,
               child: Image.asset(
-                'assets/icons/logo.jpg',
+                'assets/icons/logo.png',
                 width: 160,
                 height: 160,
                 fit: BoxFit.contain,
@@ -247,14 +247,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
           // Foreground content
           Positioned.fill(
             child: Padding(
-              padding: const EdgeInsets.all(AppConstants.spacingL),
+              padding: const EdgeInsets.only(left: 10,top: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Welcome, $displayName!',
                     style:
-                        AppConstants.headingMedium.copyWith(color: Colors.white),
+                        AppConstants.headingMedium.copyWith(color: const Color.fromARGB(255, 230, 225, 225)),
                   ),
                   const SizedBox(height: AppConstants.spacingS),
                   Text(
