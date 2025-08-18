@@ -17,12 +17,17 @@ class CreateOrderScreen extends StatefulWidget {
   State<CreateOrderScreen> createState() => _CreateOrderScreenState();
 }
 
-class _CreateOrderScreenState extends State<CreateOrderScreen> {
+class _CreateOrderScreenState extends State<CreateOrderScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
   final _orderDateController = TextEditingController();
+
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   bool _isLoading = false;
   DateTime? _selectedOrderDate;
@@ -37,6 +42,24 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     super.initState();
     _orderDateController.text = DateTime.now().toIso8601String().split('T')[0];
     _selectedOrderDate = DateTime.now();
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _animationController.forward();
   }
 
   @override
@@ -45,6 +68,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     _amountController.dispose();
     _notesController.dispose();
     _orderDateController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -109,7 +133,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking files: $e')),
+        SnackBar(
+          content: Text('Error picking files: $e'),
+          backgroundColor: AppConstants.errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.radiusM),
+          ),
+        ),
       );
     }
   }
@@ -133,16 +164,34 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             notes: _notesController.text.trim(),
             orderType: _selectedOrderType,
             orderDate: _selectedOrderDate,
-            ornamentDetails: _ornamentDetails.isNotEmpty ? _ornamentDetails : null,
-            images: _selectedFiles.isNotEmpty ? _selectedFiles.map((file) => file.name).toList() : null,
+            ornamentDetails:
+                _ornamentDetails.isNotEmpty ? _ornamentDetails : null,
+            images:
+                _selectedFiles.isNotEmpty
+                    ? _selectedFiles.map((file) => file.name).toList()
+                    : null,
             token: token,
           );
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Order created successfully! Order ID: ${order.id}'),
+                content: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    const SizedBox(width: AppConstants.spacingS),
+                    Expanded(
+                      child: Text(
+                        'Order created successfully! ID: ${order.id}',
+                      ),
+                    ),
+                  ],
+                ),
                 backgroundColor: AppConstants.successColor,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                ),
               ),
             );
             Navigator.pop(context, true);
@@ -154,8 +203,18 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to create order: $e'),
+              content: Row(
+                children: [
+                  Icon(Icons.error, color: Colors.white),
+                  const SizedBox(width: AppConstants.spacingS),
+                  Expanded(child: Text('Failed to create order: $e')),
+                ],
+              ),
               backgroundColor: AppConstants.errorColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusM),
+              ),
             ),
           );
         }
@@ -175,283 +234,71 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
     return Scaffold(
       backgroundColor: AppConstants.backgroundColor,
-      appBar: AppBar(
-        title: const Text('Create Order'),
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppConstants.spacingL),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (currentUser != null) _buildClientInfoCard(currentUser),
-                const SizedBox(height: AppConstants.spacingL),
-                if (_selectedFiles.isNotEmpty) ...[
-                  _buildTopPreviewStrip(),
-                  const SizedBox(height: AppConstants.spacingL),
-                ],
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusM),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 120,
+            floating: false,
+            pinned: true,
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            flexibleSpace: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppConstants.primaryColor,
+                    AppConstants.secondaryColor.withOpacity(0.8),
+                  ],
+                ),
+              ),
+              child: FlexibleSpaceBar(
+                centerTitle: true,
+                title: Text(
+                  'Create New Order',
+                  style: AppConstants.headingMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppConstants.spacingM),
+                ),
+              ),
+            ),
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppConstants.spacingL),
+                  child: Form(
+                    key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Order Details', style: AppConstants.headingSmall),
-                        const SizedBox(height: AppConstants.spacingM),
-                        CustomTextField(
-                          controller: _descriptionController,
-                          labelText: 'Description',
-                          hintText: 'Describe your order',
-                          prefixIcon: Icons.description,
-                          maxLines: 3,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter description';
-                            }
-                            if (value.length < 10) {
-                              return 'Description must be at least 10 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: AppConstants.spacingM),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: CustomTextField(
-                                controller: _amountController,
-                                labelText: 'Amount',
-                                hintText: 'Enter amount',
-                                prefixIcon: Icons.attach_money,
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter amount';
-                                  }
-                                  final amount = double.tryParse(value);
-                                  if (amount == null || amount <= 0) {
-                                    return 'Please enter a valid amount';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: AppConstants.spacingM),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: _selectedOrderType,
-                                decoration: InputDecoration(
-                                  labelText: 'Type',
-                                  prefixIcon: Icon(Icons.category),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                                  ),
-                                ),
-                                items: _orderTypes.map((type) {
-                                  return DropdownMenuItem(
-                                    value: type,
-                                    child: Text(type),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedOrderType = value!;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppConstants.spacingM),
-                        GestureDetector(
-                          onTap: _selectDate,
-                          child: CustomTextField(
-                            controller: _orderDateController,
-                            labelText: 'Date',
-                            hintText: 'Select date',
-                            prefixIcon: Icons.calendar_today,
-                            enabled: false,
-                          ),
-                        ),
-                        const SizedBox(height: AppConstants.spacingM),
-                        CustomTextField(
-                          controller: _notesController,
-                          labelText: 'Notes',
-                          hintText: 'Additional notes',
-                          prefixIcon: Icons.note,
-                          maxLines: 2,
-                        ),
-                        if (_selectedFiles.isNotEmpty) ...[
-                          const SizedBox(height: AppConstants.spacingM),
-                          _buildPreviewGrid(),
-                        ],
+                        _buildProgressIndicator(),
+                        const SizedBox(height: AppConstants.spacingXL),
+                        if (currentUser != null)
+                          _buildClientInfoCard(currentUser),
+                        if (currentUser != null)
+                          const SizedBox(height: AppConstants.spacingXL),
+                        _buildOrderDetailsCard(),
+                        const SizedBox(height: AppConstants.spacingXL),
+                        _buildOrnamentSection(),
+                        const SizedBox(height: AppConstants.spacingXL),
+                        _buildFilesSection(),
+                        const SizedBox(height: AppConstants.spacingXL),
+                        _buildActionButtons(),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: AppConstants.spacingL),
-                _buildOrnamentDetailsSection(),
-                const SizedBox(height: AppConstants.spacingL),
-                _buildFilesSection(),
-                const SizedBox(height: AppConstants.spacingXL),
-                CustomButton(
-                  onPressed: _isLoading ? null : _createOrder,
-                  text: _isLoading ? 'Creating...' : 'Create Order',
-                  isLoading: _isLoading,
-                  backgroundColor: AppConstants.successColor,
-                ),
-                const SizedBox(height: AppConstants.spacingM),
-                CustomButton(
-                  onPressed: _isLoading ? null : () => Navigator.pop(context),
-                  text: 'Cancel',
-                  isOutlined: true,
-                  textColor: AppConstants.errorColor,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrnamentDetailsSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.spacingM),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Ornament Details', style: AppConstants.headingSmall),
-                IconButton(
-                  onPressed: _addOrnamentDetail,
-                  icon: Icon(Icons.add_circle, color: AppConstants.primaryColor),
-                ),
-              ],
-            ),
-            if (_ornamentDetails.isNotEmpty) ...[
-              const SizedBox(height: AppConstants.spacingM),
-              ..._ornamentDetails.asMap().entries.map((entry) {
-                return _buildOrnamentDetailCard(entry.key, entry.value);
-              }),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrnamentDetailCard(int index, Map<String, dynamic> detail) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
-      padding: const EdgeInsets.all(AppConstants.spacingS),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppConstants.primaryColor.withOpacity(0.2)),
-        borderRadius: BorderRadius.circular(AppConstants.radiusS),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                  ),
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['name'] = value;
-                  }),
-                ),
               ),
-              const SizedBox(width: AppConstants.spacingS),
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Material',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                  ),
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['material'] = value;
-                  }),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppConstants.spacingS),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Weight (g)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['weight'] = double.tryParse(value) ?? 0.0;
-                  }),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacingS),
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Purity',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                  ),
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['purity'] = value;
-                  }),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacingS),
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Quantity',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['quantity'] = int.tryParse(value) ?? 1;
-                  }),
-                ),
-              ),
-            ],
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: IconButton(
-              onPressed: () => _removeOrnamentDetail(index),
-              icon: Icon(Icons.delete, color: AppConstants.errorColor),
             ),
           ),
         ],
@@ -459,144 +306,60 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     );
   }
 
-  Widget _buildFilesSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+  Widget _buildProgressIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+        boxShadow: AppConstants.cardShadow,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.spacingM),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Attachments', style: AppConstants.headingSmall),
-            const SizedBox(height: AppConstants.spacingM),
-            if (_selectedFiles.isNotEmpty) ...[
-              _buildPreviewGrid(),
-              const SizedBox(height: AppConstants.spacingM),
-              Wrap(
-                spacing: AppConstants.spacingS,
-                runSpacing: AppConstants.spacingS,
-                children: _selectedFiles.map((file) {
-                  return Chip(
-                    label: Text(
-                      file.name,
-                      style: AppConstants.bodySmall,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    avatar: Icon(
-                      (file.extension ?? '').toLowerCase() == 'pdf' ? Icons.picture_as_pdf : Icons.image,
-                      color: AppConstants.primaryColor,
-                    ),
-                    deleteIcon: Icon(Icons.close, size: 16),
-                    deleteIconColor: AppConstants.errorColor,
-                    onDeleted: () {
-                      setState(() {
-                        _selectedFiles.remove(file);
-                      });
-                    },
-                    backgroundColor: AppConstants.surfaceColor,
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: AppConstants.spacingM),
-            ],
-            CustomButton(
-              onPressed: _pickFiles,
-              text: 'Add Files',
-              icon: Icons.attach_file,
-              isOutlined: true,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildProgressStep(1, 'Details', true),
+          Container(
+            height: 2,
+            width: 60,
+            color: AppConstants.primaryColor.withOpacity(0.3),
+          ),
+          _buildProgressStep(2, 'Ornaments', _ornamentDetails.isNotEmpty),
+          Container(
+            height: 2,
+            width: 60,
+            color: AppConstants.primaryColor.withOpacity(0.3),
+          ),
+          _buildProgressStep(3, 'Files', _selectedFiles.isNotEmpty),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressStep(int step, String label, bool isActive) {
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 12,
+          backgroundColor:
+              isActive
+                  ? AppConstants.primaryColor
+                  : AppConstants.textSecondaryColor.withOpacity(0.2),
+          child: Text(
+            '$step',
+            style: AppConstants.bodySmall.copyWith(
+              color: isActive ? Colors.white : AppConstants.textSecondaryColor,
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopPreviewStrip() {
-    return SizedBox(
-      height: 110,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _selectedFiles.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppConstants.spacingS),
-        itemBuilder: (context, index) {
-          final file = _selectedFiles[index];
-          return _buildFileThumb(file, size: 100);
-        },
-      ),
-    );
-  }
-
-  Widget _buildPreviewGrid() {
-    return Wrap(
-      spacing: AppConstants.spacingS,
-      runSpacing: AppConstants.spacingS,
-      children: _selectedFiles.map((f) => _buildFileThumb(f, size: 90)).toList(),
-    );
-  }
-
-  Widget _buildFileThumb(PlatformFile file, {double size = 90}) {
-    final isPdf = (file.extension ?? '').toLowerCase() == 'pdf';
-    Widget content;
-    if (!isPdf && file.bytes != null && file.bytes!.isNotEmpty) {
-      content = ClipRRect(
-        borderRadius: BorderRadius.circular(AppConstants.radiusS),
-        child: Image.memory(
-          file.bytes!,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-        ),
-      );
-    } else {
-      content = Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: AppConstants.surfaceColor,
-          borderRadius: BorderRadius.circular(AppConstants.radiusS),
-          border: Border.all(color: AppConstants.primaryColor.withOpacity(0.15)),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(isPdf ? Icons.picture_as_pdf : Icons.image, color: AppConstants.primaryColor),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Text(
-                  file.name,
-                  style: AppConstants.bodySmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
           ),
         ),
-      );
-    }
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        content,
-        Positioned(
-          right: -6,
-          top: -6,
-          child: InkWell(
-            onTap: () => setState(() => _selectedFiles.remove(file)),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppConstants.errorColor,
-                shape: BoxShape.circle,
-              ),
-              padding: const EdgeInsets.all(2),
-              child: const Icon(Icons.close, size: 14, color: Colors.white),
-            ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: AppConstants.bodySmall.copyWith(
+            color:
+                isActive
+                    ? AppConstants.primaryColor
+                    : AppConstants.textSecondaryColor,
+            fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
       ],
@@ -604,53 +367,314 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   }
 
   Widget _buildClientInfoCard(User user) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingL),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+        boxShadow: AppConstants.cardShadow,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.spacingM),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Client Information', style: AppConstants.headingSmall),
-            const SizedBox(height: AppConstants.spacingM),
-            _buildInfoRow('Name', user.name),
-            _buildInfoRow('Email', user.email),
-            _buildInfoRow('Phone', user.phone),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.person, color: AppConstants.primaryColor),
+              const SizedBox(width: AppConstants.spacingM),
+              Text('Client Information', style: AppConstants.headingSmall),
+            ],
+          ),
+          const SizedBox(height: AppConstants.spacingL),
+          _buildInfoRow('Name', user.name),
+          _buildInfoRow('Email', user.email),
+          _buildInfoRow('Phone', user.phone ?? ''),
+        ],
       ),
     );
   }
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingS),
+      padding: const EdgeInsets.only(bottom: AppConstants.spacingM),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: AppConstants.bodyMedium.copyWith(
-                fontWeight: FontWeight.w500,
-                color: AppConstants.textSecondaryColor,
-              ),
+          Text(
+            '$label: ',
+            style: AppConstants.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppConstants.textPrimaryColor,
             ),
           ),
           Expanded(
             child: Text(
               value,
               style: AppConstants.bodyMedium,
-              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildOrderDetailsCard() {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingL),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+        boxShadow: AppConstants.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.receipt, color: AppConstants.accentColor),
+              const SizedBox(width: AppConstants.spacingM),
+              Text('Order Details', style: AppConstants.headingSmall),
+            ],
+          ),
+          const SizedBox(height: AppConstants.spacingL),
+          CustomTextField(
+            controller: _descriptionController,
+            labelText: 'Description',
+            hintText: 'Describe your jewelry order',
+            prefixIcon: Icons.description,
+            maxLines: 4,
+            validator: (value) {
+              if (value == null || value.isEmpty)
+                return 'Please enter description';
+              if (value.length < 10) return 'Minimum 10 characters required';
+              return null;
+            },
+          ),
+          const SizedBox(height: AppConstants.spacingL),
+          Row(
+            children: [
+              Expanded(
+                child: CustomTextField(
+                  controller: _amountController,
+                  labelText: 'Amount',
+                  hintText: '₹0.00',
+                  prefixIcon: Icons.currency_rupee,
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty)
+                      return 'Please enter amount';
+                    if (double.tryParse(value) == null ||
+                        double.parse(value) <= 0)
+                      return 'Enter valid amount';
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(width: AppConstants.spacingM),
+              Expanded(child: _buildDropdown()),
+            ],
+          ),
+          const SizedBox(height: AppConstants.spacingL),
+          CustomTextField(
+            controller: _orderDateController,
+            labelText: 'Delivery Date',
+            hintText: 'Select date',
+            prefixIcon: Icons.calendar_today,
+
+            onTap: _selectDate,
+          ),
+          const SizedBox(height: AppConstants.spacingL),
+          CustomTextField(
+            controller: _notesController,
+            labelText: 'Special Instructions',
+            hintText: 'Any special requirements',
+            prefixIcon: Icons.note,
+            maxLines: 3,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Type',
+          style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: AppConstants.spacingS),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppConstants.surfaceColor,
+            borderRadius: BorderRadius.circular(AppConstants.radiusM),
+            border: Border.all(
+              color: AppConstants.primaryColor.withOpacity(0.2),
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedOrderType,
+              items:
+                  _orderTypes.map((type) {
+                    return DropdownMenuItem(
+                      value: type,
+                      child: Text(type, style: AppConstants.bodyMedium),
+                    );
+                  }).toList(),
+              onChanged: (value) => setState(() => _selectedOrderType = value!),
+              dropdownColor: AppConstants.surfaceColor,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: AppConstants.primaryColor,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOrnamentSection() {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingL),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+        boxShadow: AppConstants.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.diamond, color: AppConstants.warningColor),
+              const SizedBox(width: AppConstants.spacingM),
+              Text('Ornament Details', style: AppConstants.headingSmall),
+              const Spacer(),
+              IconButton(
+                icon: Icon(Icons.add, color: AppConstants.primaryColor),
+                onPressed: _addOrnamentDetail,
+              ),
+            ],
+          ),
+          if (_ornamentDetails.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: AppConstants.spacingL),
+              child: Text(
+                'No ornament details added. Click + to add.',
+                style: AppConstants.bodyMedium.copyWith(
+                  color: AppConstants.textSecondaryColor,
+                ),
+              ),
+            )
+          else
+            ..._ornamentDetails.asMap().entries.map((entry) {
+              final index = entry.key;
+              final detail = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(top: AppConstants.spacingM),
+                child: Container(
+                  padding: const EdgeInsets.all(AppConstants.spacingM),
+                  decoration: BoxDecoration(
+                    color: AppConstants.backgroundColor,
+                    borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                    border: Border.all(
+                      color: AppConstants.primaryColor.withOpacity(0.1),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text('Item ${index + 1}')),
+                      IconButton(
+                        icon: Icon(
+                          Icons.delete,
+                          color: AppConstants.errorColor,
+                        ),
+                        onPressed: () => _removeOrnamentDetail(index),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilesSection() {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingL),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+        boxShadow: AppConstants.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.attach_file, color: AppConstants.accentColor),
+              const SizedBox(width: AppConstants.spacingM),
+              Text('Attachments', style: AppConstants.headingSmall),
+            ],
+          ),
+          const SizedBox(height: AppConstants.spacingL),
+          CustomButton(
+            text: 'Upload Files',
+            icon: Icons.upload,
+            onPressed: _pickFiles,
+            backgroundColor: AppConstants.primaryColor,
+          ),
+          if (_selectedFiles.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: AppConstants.spacingM),
+              child: Wrap(
+                spacing: AppConstants.spacingM,
+                runSpacing: AppConstants.spacingM,
+                children:
+                    _selectedFiles
+                        .map(
+                          (file) => Chip(
+                            label: Text(
+                              file.name,
+                              style: AppConstants.bodySmall,
+                            ),
+                            onDeleted: () {
+                              setState(() {
+                                _selectedFiles.remove(file);
+                              });
+                            },
+                          ),
+                        )
+                        .toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        CustomButton(
+          text: 'Cancel',
+          onPressed: () => Navigator.pop(context),
+          backgroundColor: AppConstants.errorColor,
+        ),
+        const SizedBox(width: AppConstants.spacingM),
+        CustomButton(
+          text: 'Create Order',
+          onPressed: _createOrder,
+          backgroundColor: AppConstants.successColor,
+          isLoading: _isLoading,
+        ),
+      ],
     );
   }
 }
