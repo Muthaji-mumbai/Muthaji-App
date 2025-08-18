@@ -2,21 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppConstants {
-  // App Colors - New Theme (Soloshine by muthaji - Green & White)
-  static const Color primaryColor = Color(0xFF2E7D32); // Dark green color
-  static const Color secondaryColor = Color(0xFF4CAF50); // Medium green color
-  static const Color accentColor = Color(0xFF66BB6A); // Light green accent
-  static const Color backgroundColor = Color(0xFFFFFFFF); // White background
-  static const Color surfaceColor = Color(
-    0xFFF8F9FA,
-  ); // Very light gray surface
-  static const Color errorColor = Color(0xFFE53E3E); // Error color
-  static const Color successColor = Color(
-    0xFF2E7D32,
-  ); // Success color (dark green)
-  static const Color warningColor = Color(0xFFFF9800); // Warning color
-  static const Color textPrimaryColor = Color(0xFF1B5E20); // Dark green text
-  static const Color textSecondaryColor = Color(0xFF666666); // Dark gray text
+  // App Colors - Light Green & White theme
+  // Soft, fresh, and airy palette.
+  static const Color primaryColor = Color(0xFF8BC34A); // Light green
+  static const Color secondaryColor = Color(0xFFC5E1A5); // Pale green
+  static const Color accentColor = Color(0xFFAED581); // Mid light green
+  static const Color backgroundColor = Color(0xFFFFFFFF); // White
+  static const Color surfaceColor = Color(0xFFF4FAF1); // Very light green tint
+  static const Color errorColor = Color(0xFFE53935); // Red
+  static const Color successColor = Color(0xFF43A047); // Green (readable)
+  static const Color warningColor = Color(0xFFFFA000); // Amber
+  static const Color textPrimaryColor = Color(0xFF2E7D32); // Dark green for contrast
+  static const Color textSecondaryColor = Color(0xFF6D6D6D); // Muted gray
 
   // API Configuration
   static const String baseUrl = 'https://soloshine-backend.onrender.com';
@@ -97,17 +94,17 @@ class AppConstants {
   // Shadows
   static List<BoxShadow> get cardShadow => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.05),
-      blurRadius: 10,
-      offset: const Offset(0, 4),
+      color: Colors.black.withOpacity(0.06),
+      blurRadius: 12,
+      offset: const Offset(0, 6),
     ),
   ];
 
   static List<BoxShadow> get elevatedShadow => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.1),
-      blurRadius: 20,
-      offset: const Offset(0, 8),
+      color: Colors.black.withOpacity(0.12),
+      blurRadius: 22,
+      offset: const Offset(0, 10),
     ),
   ];
 }

@@ -84,7 +84,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
     final currentUser = context.read<AuthProvider>().currentUser;
 
     return DashboardScaffold(
-      title: 'Soloshine by muthaji - Employee Dashboard',
+      title: 'Muthaji - Employee Dashboard',
       actions: [
         IconButton(icon: const Icon(Icons.refresh), onPressed: _loadOrders),
       ],

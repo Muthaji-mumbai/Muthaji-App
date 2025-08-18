@@ -74,7 +74,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
     final currentUser = context.read<AuthProvider>().currentUser;
 
     return DashboardScaffold(
-      title: 'Soloshine by muthaji - Client Dashboard',
+      title: 'Muthaji - Client Dashboard',
       actions: [
         IconButton(icon: const Icon(Icons.refresh), onPressed: _loadOrders),
       ],

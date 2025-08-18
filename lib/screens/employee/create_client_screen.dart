@@ -99,7 +99,7 @@ class _CreateClientScreenState extends State<CreateClientScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Soloshine by muthaji - Create New Client'),
+        title: Text('Muthaji - Create New Client'),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
       ),

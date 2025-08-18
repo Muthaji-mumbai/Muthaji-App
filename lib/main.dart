@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
       create: (context) => AuthProvider(),
       child: ResponsiveBreakpoints.builder(
         child: MaterialApp(
-          title: 'Soloshine by muthaji',
+          title: 'Muthaji',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(

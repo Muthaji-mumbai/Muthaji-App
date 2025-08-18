@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
@@ -18,10 +19,47 @@ class AdminDashboard extends StatefulWidget {
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
+// Small chip used in the welcome banner
+class _WelcomeChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _WelcomeChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingS,
+        vertical: AppConstants.spacingXS,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppConstants.bodySmall.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AdminDashboardState extends State<AdminDashboard> {
   Map<String, dynamic> _orderStats = {};
   Map<String, dynamic> _userStats = {};
   List<Order> _recentOrders = [];
+  List<Order> _allOrders = [];
   List<User> _recentUsers = [];
   bool _isLoading = true;
 
@@ -67,6 +105,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final allOrders = await OrderService.getAllOrders(token);
 
         _orderStats = orderStats;
+        _allOrders = allOrders;
         _recentOrders = allOrders.take(5).toList();
       }
     } catch (e) {
@@ -101,49 +140,69 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final currentUser = context.read<AuthProvider>().currentUser;
 
     return DashboardScaffold(
-      title: 'Soloshine by muthaji - Admin Dashboard',
+      title: 'Muthaji - Admin Dashboard',
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh),
           onPressed: _loadDashboardData,
         ),
       ],
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                onRefresh: () async => _loadDashboardData(),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppConstants.spacingM),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Welcome Section
-                      _buildWelcomeSection(currentUser!),
+      body: Stack(
+        children: [
+          // Background image layer
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/bg.png',
+              fit: BoxFit.cover,
+              color: Colors.white.withOpacity(0.85),
+              colorBlendMode: BlendMode.srcOver,
+            ),
+          ),
+          // Foreground content
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator())
+          else
+            RefreshIndicator(
+              onRefresh: () async => _loadDashboardData(),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppConstants.spacingM),
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Welcome Section
+                    _buildWelcomeSection(currentUser!),
 
-                      const SizedBox(height: AppConstants.spacingL),
+                    const SizedBox(height: AppConstants.spacingL),
 
-                      // Quick Actions
-                      _buildQuickActions(),
+                    // Quick Actions
+                    _buildQuickActions(),
 
-                      const SizedBox(height: AppConstants.spacingL),
+                    const SizedBox(height: AppConstants.spacingL),
 
-                      // Statistics Overview
-                      _buildStatisticsOverview(),
+                    // Statistics Overview
+                    _buildStatisticsOverview(),
 
-                      const SizedBox(height: AppConstants.spacingL),
+                    const SizedBox(height: AppConstants.spacingL),
 
-                      // Recent Orders
-                      _buildRecentOrders(),
+                    // Orders by Date Chart
+                    _buildOrdersByDateChart(days: 14, allOrders: _allOrders),
 
-                      const SizedBox(height: AppConstants.spacingL),
+                    const SizedBox(height: AppConstants.spacingL),
 
-                      // Recent Users
-                      _buildRecentUsers(),
-                    ],
-                  ),
+                    // Recent Orders
+                    _buildRecentOrders(),
+
+                    const SizedBox(height: AppConstants.spacingL),
+
+                    // Recent Users
+                    _buildRecentUsers(),
+                  ],
                 ),
               ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -151,30 +210,71 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final displayName =
         user.name.isNotEmpty ? user.name : user.email.split('@')[0];
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppConstants.spacingL),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppConstants.secondaryColor, AppConstants.primaryColor],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppConstants.radiusL),
-        boxShadow: AppConstants.cardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppConstants.radiusL),
+      child: Stack(
         children: [
-          Text(
-            'Welcome, $displayName!',
-            style: AppConstants.headingMedium.copyWith(color: Colors.white),
+          // Gradient background
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppConstants.spacingL),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppConstants.primaryColor,
+                  AppConstants.secondaryColor,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: AppConstants.cardShadow,
+            ),
           ),
-          const SizedBox(height: AppConstants.spacingS),
-          Text(
-            'You have full access to manage the entire system',
-            style: AppConstants.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.9),
+          // Subtle logo watermark
+          Positioned(
+            right: -10,
+            bottom: -10,
+            child: Opacity(
+              opacity: 0.08,
+              child: Image.asset(
+                'assets/icons/logo.jpg',
+                width: 160,
+                height: 160,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          // Foreground content
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.all(AppConstants.spacingL),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome, $displayName!',
+                    style:
+                        AppConstants.headingMedium.copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: AppConstants.spacingS),
+                  Text(
+                    'You have full access to manage the entire system',
+                    style: AppConstants.bodyMedium.copyWith(
+                      color: Colors.white.withOpacity(0.92),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.spacingM),
+                  Wrap(
+                    spacing: AppConstants.spacingS,
+                    runSpacing: AppConstants.spacingS,
+                    children: const [
+                      _WelcomeChip(icon: Icons.security, label: 'Admin Access'),
+                      _WelcomeChip(icon: Icons.analytics, label: 'Insights'),
+                      _WelcomeChip(icon: Icons.settings, label: 'Settings'),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -306,6 +406,111 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
       ],
     );
+  }
+
+  Widget _buildOrdersByDateChart({int days = 14, required List<Order> allOrders}) {
+    // Prepare date buckets for last `days` days
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day).subtract(Duration(days: days - 1));
+    final Map<DateTime, int> counts = {
+      for (int i = 0; i < days; i++)
+        DateTime(start.year, start.month, start.day).add(Duration(days: i)): 0,
+    };
+
+        for (final o in allOrders) {
+      final d = (o.orderDate ?? o.createdAt);
+      final key = DateTime(d.year, d.month, d.day);
+      if (key.isAfter(start.subtract(const Duration(days: 1))) && key.isBefore(now.add(const Duration(days: 1)))) {
+        if (counts.containsKey(key)) counts[key] = (counts[key] ?? 0) + 1;
+      }
+    }
+
+    final entries = counts.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    final maxY = (entries.map((e) => e.value).fold<int>(0, (p, c) => c > p ? c : p)).toDouble();
+    final barGroups = <BarChartGroupData>[];
+    for (int i = 0; i < entries.length; i++) {
+      final v = entries[i].value.toDouble();
+      barGroups.add(
+        BarChartGroupData(
+          x: i,
+          barRods: [
+            BarChartRodData(
+              toY: v,
+              width: 12,
+              borderRadius: BorderRadius.circular(4),
+              color: AppConstants.primaryColor,
+              backDrawRodData: BackgroundBarChartRodData(
+                show: true,
+                toY: (maxY == 0 ? 1 : maxY),
+                color: AppConstants.secondaryColor.withOpacity(0.25),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    String _labelFor(DateTime d) => '${d.day}/${d.month}';
+
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+        boxShadow: AppConstants.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Orders (last $days days)', style: AppConstants.headingSmall),
+            ],
+          ),
+          const SizedBox(height: AppConstants.spacingM),
+          SizedBox(
+            height: 220,
+            child: BarChart(
+              BarChartData(
+                gridData: FlGridData(show: true, drawVerticalLine: false),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: true, reservedSize: 28),
+                  ),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 1,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= entries.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            _labelFor(entries[idx].key),
+                            style: AppConstants.bodySmall,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                barGroups: barGroups,
+                maxY: (maxY == 0 ? 1 : maxY) * 1.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+          );
   }
 
   Widget _buildStatisticsOverview() {
@@ -730,22 +935,61 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.all(AppConstants.spacingM),
       decoration: BoxDecoration(
         color: AppConstants.surfaceColor,
         borderRadius: BorderRadius.circular(AppConstants.radiusM),
         boxShadow: AppConstants.cardShadow,
       ),
-      child: Column(
+      child: Row(
         children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: AppConstants.spacingS),
-          Text(value, style: AppConstants.headingSmall.copyWith(color: color)),
-          const SizedBox(height: AppConstants.spacingXS),
-          Text(
-            title,
-            style: AppConstants.bodyMedium,
-            textAlign: TextAlign.center,
+          // Accent bar
+          Container(
+            width: 5,
+            height: 84,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(AppConstants.radiusM),
+                bottomLeft: Radius.circular(AppConstants.radiusM),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(AppConstants.spacingM),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: color.withOpacity(0.12),
+                    child: Icon(icon, color: color),
+                  ),
+                  const SizedBox(width: AppConstants.spacingM),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: AppConstants.bodyMedium.copyWith(
+                            color: AppConstants.textSecondaryColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: AppConstants.spacingXS),
+                        Text(
+                          value,
+                          style: AppConstants.headingSmall.copyWith(
+                            color: AppConstants.textPrimaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

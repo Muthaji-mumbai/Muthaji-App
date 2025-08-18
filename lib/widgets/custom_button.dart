@@ -22,7 +22,7 @@ class CustomButton extends StatelessWidget {
     this.backgroundColor,
     this.textColor,
     this.width,
-    this.height = 50,
+    this.height = 60,
     this.icon,
     this.isFullWidth = false,
   });
