@@ -1,3 +1,5 @@
+import 'package:file_picker/file_picker.dart';
+
 import '../models/order.dart';
 import '../models/user.dart';
 import 'api_service.dart';
@@ -80,6 +82,7 @@ class OrderService {
     String? orderType,
     DateTime? orderDate,
     List<Map<String, dynamic>>? ornamentDetails,
+     List<PlatformFile>? files,
     List<String>? images,
     String? token,
   }) async {

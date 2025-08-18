@@ -22,8 +22,8 @@ class MyApp extends StatelessWidget {
           title: 'Muthaji',
           debugShowCheckedModeBanner: false,
           theme: AppConstants.lightTheme,
-          darkTheme: AppConstants.darkTheme,
-          themeMode: ThemeMode.system,
+          // darkTheme: AppConstants.darkTheme,
+          // themeMode: ThemeMode.system,
           home: const AuthWrapper(),
         ),
         breakpoints: [

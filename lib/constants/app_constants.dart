@@ -20,7 +20,7 @@ class AppConstants {
   static const Color darkSurfaceColor = Color(0xFF111827); // Gray 900
   static const Color darkTextPrimaryColor = Color(0xFFF3F4F6); // Gray 100
   static const Color darkTextSecondaryColor = Color(0xFF9CA3AF); // Gray 400
-
+ 
   // API Configuration
   static const String baseUrl = 'https://soloshine-backend.onrender.com';
   static const String loginEndpoint = '/auth/login';
