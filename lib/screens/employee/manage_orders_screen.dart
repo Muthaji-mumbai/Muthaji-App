@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -838,7 +838,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         url,
         options: Options(responseType: ResponseType.bytes),
       );
-      final result = await ImageGallerySaver.saveImage(
+      final result = await ImageGallerySaverPlus.saveImage(
         Uint8List.fromList(response.data),
         quality: 100,
         name: 'order_image_${DateTime.now().millisecondsSinceEpoch}',
