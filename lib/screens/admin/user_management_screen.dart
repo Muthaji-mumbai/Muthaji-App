@@ -393,11 +393,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   String _getRoleText(UserRole role) {
     switch (role) {
       case UserRole.admin:
-        return 'Admin';
+        return 'admin';
       case UserRole.employee:
-        return 'Employee';
+        return 'employee';
       case UserRole.client:
-        return 'Customer';
+        return 'customer';
     }
   }
 
@@ -638,11 +638,11 @@ class _AddUserDialogState extends State<AddUserDialog> {
   String _getRoleText(UserRole role) {
     switch (role) {
       case UserRole.admin:
-        return 'Admin';
+        return 'admin';
       case UserRole.employee:
-        return 'Employee';
+        return 'employee';
       case UserRole.client:
-        return 'Customer';
+        return 'customer';
     }
   }
 }
@@ -870,11 +870,11 @@ class _EditUserDialogState extends State<EditUserDialog> {
   String _getRoleText(UserRole role) {
     switch (role) {
       case UserRole.admin:
-        return 'Admin';
+        return 'admin';
       case UserRole.employee:
-        return 'Employee';
+        return 'employee';
       case UserRole.client:
-        return 'Customer';
+        return 'customer';
     }
   }
 }
