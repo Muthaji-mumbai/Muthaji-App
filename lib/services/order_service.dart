@@ -76,8 +76,8 @@ class OrderService {
   static Future<Order> createOrder({
     required String clientId,
     required String clientName,
-    required String description,
-    required double amount,
+    String? description,
+    double? amount,
     String? notes,
     String? orderType,
     DateTime? orderDate,
@@ -91,9 +91,9 @@ class OrderService {
         AppConstants.ordersEndpoint,
         body: {
           'userid': clientId,
-          'description': description,
-          'amount': amount,
-          'notes': notes,
+          'description': description ?? '',
+          'amount': amount ?? 0.0,
+          'notes': notes ?? '',
           'ordertype': orderType ?? 'Single',
           'orderdate':
               orderDate?.toIso8601String() ?? DateTime.now().toIso8601String(),

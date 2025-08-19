@@ -14,12 +14,14 @@ class CustomTextField extends StatelessWidget {
   final bool enabled;
   final VoidCallback? onTap;
   final bool isRequired;
+  final TextStyle? style;
   
   
 
   const CustomTextField({
 
     this.isRequired = false,
+    this.style,
     
     super.key,
     required this.controller,
