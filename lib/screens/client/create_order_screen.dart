@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'dart:typed_data';
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../widgets/custom_button.dart';
@@ -28,7 +31,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   DateTime? _selectedOrderDate;
   String _selectedOrderType = 'Single';
   List<Map<String, dynamic>> _ornamentDetails = [];
-  List<PlatformFile> _selectedFiles = [];
+  List<File> _selectedImages = [];
+  final ImagePicker _picker = ImagePicker();
 
   final List<String> _orderTypes = ['Single', 'Bulk', 'Custom'];
 
@@ -93,25 +97,107 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     });
   }
 
-  Future<void> _pickFiles() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        allowMultiple: true,
-        type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
-        withData: true,
-      );
+  Future<void> _showImageSourceDialog() async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Select Image Source',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.blue),
+                title: const Text('Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageFromGallery();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.green),
+                title: const Text('Camera'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageFromCamera();
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
-      if (result != null) {
-        setState(() {
-          _selectedFiles.addAll(result.files);
-        });
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        _openImageEditor(File(image.path));
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking files: $e')),
+        SnackBar(content: Text('Error picking image: $e')),
       );
     }
+  }
+
+  Future<void> _pickImageFromCamera() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+      if (image != null) {
+        _openImageEditor(File(image.path));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error taking photo: $e')),
+      );
+    }
+  }
+
+  Future<void> _openImageEditor(File imageFile) async {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ImageEditorScreen(
+          imageFile: imageFile,
+          onImageEdited: (editedImage) {
+            setState(() {
+              _selectedImages.add(editedImage);
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+    });
   }
 
   Future<void> _createOrder() async {
@@ -125,6 +211,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         final token = AuthService.currentToken;
 
         if (currentUser != null && token != null) {
+          // Convert images to the format expected by OrderService
+          List<String>? imageNames;
+          if (_selectedImages.isNotEmpty) {
+            imageNames = _selectedImages.map((file) => file.path.split('/').last).toList();
+          }
+
           final order = await OrderService.createOrder(
             clientId: currentUser.id,
             clientName: currentUser.name,
@@ -134,7 +226,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             orderType: _selectedOrderType,
             orderDate: _selectedOrderDate,
             ornamentDetails: _ornamentDetails.isNotEmpty ? _ornamentDetails : null,
-            images: _selectedFiles.isNotEmpty ? _selectedFiles.map((file) => file.name).toList() : null,
+            images: imageNames,
             token: token,
           );
 
@@ -174,148 +266,40 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     final currentUser = context.read<AuthProvider>().currentUser;
 
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text('Create Order'),
-        backgroundColor: AppConstants.primaryColor,
+        backgroundColor: const Color(0xFF8E5A78),
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppConstants.spacingL),
+          padding: const EdgeInsets.all(16),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (currentUser != null) _buildClientInfoCard(currentUser),
-                const SizedBox(height: AppConstants.spacingL),
-                if (_selectedFiles.isNotEmpty) ...[
-                  _buildTopPreviewStrip(),
-                  const SizedBox(height: AppConstants.spacingL),
-                ],
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusM),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppConstants.spacingM),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Order Details', style: AppConstants.headingSmall),
-                        const SizedBox(height: AppConstants.spacingM),
-                        CustomTextField(
-                          controller: _descriptionController,
-                          labelText: 'Description',
-                          hintText: 'Describe your order',
-                          prefixIcon: Icons.description,
-                          maxLines: 3,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter description';
-                            }
-                            if (value.length < 10) {
-                              return 'Description must be at least 10 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: AppConstants.spacingM),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: CustomTextField(
-                                controller: _amountController,
-                                labelText: 'Amount',
-                                hintText: 'Enter amount',
-                                prefixIcon: Icons.attach_money,
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter amount';
-                                  }
-                                  final amount = double.tryParse(value);
-                                  if (amount == null || amount <= 0) {
-                                    return 'Please enter a valid amount';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: AppConstants.spacingM),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: _selectedOrderType,
-                                decoration: InputDecoration(
-                                  labelText: 'Type',
-                                  prefixIcon: Icon(Icons.category),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                                  ),
-                                ),
-                                items: _orderTypes.map((type) {
-                                  return DropdownMenuItem(
-                                    value: type,
-                                    child: Text(type),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedOrderType = value!;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppConstants.spacingM),
-                        GestureDetector(
-                          onTap: _selectDate,
-                          child: CustomTextField(
-                            controller: _orderDateController,
-                            labelText: 'Date',
-                            hintText: 'Select date',
-                            prefixIcon: Icons.calendar_today,
-                            enabled: false,
-                          ),
-                        ),
-                        const SizedBox(height: AppConstants.spacingM),
-                        CustomTextField(
-                          controller: _notesController,
-                          labelText: 'Notes',
-                          hintText: 'Additional notes',
-                          prefixIcon: Icons.note,
-                          maxLines: 2,
-                        ),
-                        if (_selectedFiles.isNotEmpty) ...[
-                          const SizedBox(height: AppConstants.spacingM),
-                          _buildPreviewGrid(),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppConstants.spacingL),
-                _buildOrnamentDetailsSection(),
-                const SizedBox(height: AppConstants.spacingL),
-                _buildFilesSection(),
-                const SizedBox(height: AppConstants.spacingXL),
+                // Main Image Section
+                _buildMainImageSection(),
+                const SizedBox(height: 16),
+                
+                // Image Grid Section
+                _buildImageGridSection(),
+                const SizedBox(height: 16),
+                
+                // Form Fields
+                _buildFormFields(),
+                const SizedBox(height: 20),
+                
+                // Action Buttons
                 CustomButton(
                   onPressed: _isLoading ? null : _createOrder,
-                  text: _isLoading ? 'Creating...' : 'Create Order',
+                  text: _isLoading ? 'Creating...' : 'Create',
                   isLoading: _isLoading,
-                  backgroundColor: AppConstants.successColor,
-                ),
-                const SizedBox(height: AppConstants.spacingM),
-                CustomButton(
-                  onPressed: _isLoading ? null : () => Navigator.pop(context),
-                  text: 'Cancel',
-                  isOutlined: true,
-                  textColor: AppConstants.errorColor,
+                  backgroundColor: const Color(0xFF8E5A78),
                 ),
               ],
             ),
@@ -325,277 +309,142 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     );
   }
 
-  Widget _buildOrnamentDetailsSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.spacingM),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Ornament Details', style: AppConstants.headingSmall),
-                IconButton(
-                  onPressed: _addOrnamentDetail,
-                  icon: Icon(Icons.add_circle, color: AppConstants.primaryColor),
-                ),
-              ],
-            ),
-            if (_ornamentDetails.isNotEmpty) ...[
-              const SizedBox(height: AppConstants.spacingM),
-              ..._ornamentDetails.asMap().entries.map((entry) {
-                return _buildOrnamentDetailCard(entry.key, entry.value);
-              }),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrnamentDetailCard(int index, Map<String, dynamic> detail) {
+  Widget _buildMainImageSection() {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
-      padding: const EdgeInsets.all(AppConstants.spacingS),
+      height: 200,
       decoration: BoxDecoration(
-        border: Border.all(color: AppConstants.primaryColor.withOpacity(0.2)),
-        borderRadius: BorderRadius.circular(AppConstants.radiusS),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                  ),
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['name'] = value;
-                  }),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacingS),
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Material',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                  ),
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['material'] = value;
-                  }),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppConstants.spacingS),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Weight (g)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['weight'] = double.tryParse(value) ?? 0.0;
-                  }),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacingS),
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Purity',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                  ),
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['purity'] = value;
-                  }),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacingS),
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Quantity',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['quantity'] = int.tryParse(value) ?? 1;
-                  }),
-                ),
-              ),
-            ],
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: IconButton(
-              onPressed: () => _removeOrnamentDetail(index),
-              icon: Icon(Icons.delete, color: AppConstants.errorColor),
-            ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildFilesSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.spacingM),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Attachments', style: AppConstants.headingSmall),
-            const SizedBox(height: AppConstants.spacingM),
-            if (_selectedFiles.isNotEmpty) ...[
-              _buildPreviewGrid(),
-              const SizedBox(height: AppConstants.spacingM),
-              Wrap(
-                spacing: AppConstants.spacingS,
-                runSpacing: AppConstants.spacingS,
-                children: _selectedFiles.map((file) {
-                  return Chip(
-                    label: Text(
-                      file.name,
-                      style: AppConstants.bodySmall,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    avatar: Icon(
-                      (file.extension ?? '').toLowerCase() == 'pdf' ? Icons.picture_as_pdf : Icons.image,
-                      color: AppConstants.primaryColor,
-                    ),
-                    deleteIcon: Icon(Icons.close, size: 16),
-                    deleteIconColor: AppConstants.errorColor,
-                    onDeleted: () {
-                      setState(() {
-                        _selectedFiles.remove(file);
-                      });
-                    },
-                    backgroundColor: AppConstants.surfaceColor,
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: AppConstants.spacingM),
-            ],
-            CustomButton(
-              onPressed: _pickFiles,
-              text: 'Add Files',
-              icon: Icons.attach_file,
-              isOutlined: true,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopPreviewStrip() {
-    return SizedBox(
-      height: 110,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _selectedFiles.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppConstants.spacingS),
-        itemBuilder: (context, index) {
-          final file = _selectedFiles[index];
-          return _buildFileThumb(file, size: 100);
-        },
-      ),
-    );
-  }
-
-  Widget _buildPreviewGrid() {
-    return Wrap(
-      spacing: AppConstants.spacingS,
-      runSpacing: AppConstants.spacingS,
-      children: _selectedFiles.map((f) => _buildFileThumb(f, size: 90)).toList(),
-    );
-  }
-
-  Widget _buildFileThumb(PlatformFile file, {double size = 90}) {
-    final isPdf = (file.extension ?? '').toLowerCase() == 'pdf';
-    Widget content;
-    if (!isPdf && file.bytes != null && file.bytes!.isNotEmpty) {
-      content = ClipRRect(
-        borderRadius: BorderRadius.circular(AppConstants.radiusS),
-        child: Image.memory(
-          file.bytes!,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-        ),
-      );
-    } else {
-      content = Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: AppConstants.surfaceColor,
-          borderRadius: BorderRadius.circular(AppConstants.radiusS),
-          border: Border.all(color: AppConstants.primaryColor.withOpacity(0.15)),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(isPdf ? Icons.picture_as_pdf : Icons.image, color: AppConstants.primaryColor),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Text(
-                  file.name,
-                  style: AppConstants.bodySmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
+      child: _selectedImages.isNotEmpty
+          ? Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    _selectedImages.first,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
                 ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: () => _removeImage(0),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : GestureDetector(
+              onTap: _showImageSourceDialog,
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.cloud_upload_outlined,
+                    size: 48,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Add Images',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
+    );
+  }
+
+  Widget _buildImageGridSection() {
+    return Row(
+      children: [
+        // Plus button
+        GestureDetector(
+          onTap: _showImageSourceDialog,
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: const Icon(
+              Icons.add,
+              color: Colors.grey,
+              size: 24,
+            ),
           ),
         ),
-      );
-    }
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        content,
-        Positioned(
-          right: -6,
-          top: -6,
-          child: InkWell(
-            onTap: () => setState(() => _selectedFiles.remove(file)),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppConstants.errorColor,
-                shape: BoxShape.circle,
-              ),
-              padding: const EdgeInsets.all(2),
-              child: const Icon(Icons.close, size: 14, color: Colors.white),
+        const SizedBox(width: 8),
+        
+        // Image thumbnails
+        Expanded(
+          child: SizedBox(
+            height: 60,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _selectedImages.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                return Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        _selectedImages[index],
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: GestureDetector(
+                        onTap: () => _removeImage(index),
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -603,50 +452,330 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     );
   }
 
-  Widget _buildClientInfoCard(User user) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+  Widget _buildFormFields() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.spacingM),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Client Information', style: AppConstants.headingSmall),
-            const SizedBox(height: AppConstants.spacingM),
-            _buildInfoRow('Name', user.name),
-            _buildInfoRow('Email', user.email),
-            _buildInfoRow('Phone', user.phone),
-          ],
-        ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Quantity *',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Required';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Weight *',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Required';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Party Order No',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Item Category *',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  items: ['Ring', 'Necklace', 'Bracelet', 'Earrings'].map((category) {
+                    return DropdownMenuItem(value: category, child: Text(category));
+                  }).toList(),
+                  onChanged: (value) {},
+                  validator: (value) {
+                    if (value == null) return 'Required';
+                    return null;
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Melting *',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  items: ['Yes', 'No'].map((option) {
+                    return DropdownMenuItem(value: option, child: Text(option));
+                  }).toList(),
+                  onChanged: (value) {},
+                  validator: (value) {
+                    if (value == null) return 'Required';
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Size',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Screw Section
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Screw',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: RadioListTile<String>(
+                      title: const Text('North'),
+                      value: 'North',
+                      groupValue: 'North',
+                      onChanged: (value) {},
+                      dense: true,
+                    ),
+                  ),
+                  Expanded(
+                    child: RadioListTile<String>(
+                      title: const Text('South'),
+                      value: 'South',
+                      groupValue: 'North',
+                      onChanged: (value) {},
+                      dense: true,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: RadioListTile<String>(
+                      title: const Text('Push Screw'),
+                      value: 'Push Screw',
+                      groupValue: 'North',
+                      onChanged: (value) {},
+                      dense: true,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: RadioListTile<String>(
+                      title: const Text('No Screw'),
+                      value: 'No Screw',
+                      groupValue: 'North',
+                      onChanged: (value) {},
+                      dense: true,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            decoration: const InputDecoration(
+              labelText: 'Remarks *',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            maxLines: 3,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Required';
+              }
+              return null;
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Image Editor Screen
+class ImageEditorScreen extends StatefulWidget {
+  final File imageFile;
+  final Function(File) onImageEdited;
+
+  const ImageEditorScreen({
+    super.key,
+    required this.imageFile,
+    required this.onImageEdited,
+  });
+
+  @override
+  State<ImageEditorScreen> createState() => _ImageEditorScreenState();
+}
+
+class _ImageEditorScreenState extends State<ImageEditorScreen> {
+  late File _currentImage;
+  bool _isProcessing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentImage = widget.imageFile;
+  }
+
+  Future<void> _cropImage() async {
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      // Here you would implement image cropping functionality
+      // For now, we'll just use the original image
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      setState(() {
+        _isProcessing = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error processing image: $e')),
+      );
+    }
+  }
+
+  void _saveImage() {
+    widget.onImageEdited(_currentImage);
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            onPressed: () {}, // Undo functionality
+            icon: const Icon(Icons.undo),
+          ),
+          IconButton(
+            onPressed: () {}, // Redo functionality
+            icon: const Icon(Icons.redo),
+          ),
+          IconButton(
+            onPressed: _saveImage,
+            icon: const Icon(Icons.check),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: _isProcessing
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Image.file(
+                      _currentImage,
+                      fit: BoxFit.contain,
+                    ),
+            ),
+          ),
+          Container(
+            color: Colors.black87,
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildToolButton(Icons.crop, 'Crop', _cropImage),
+                _buildToolButton(Icons.brush, 'Brush', () {}),
+                _buildToolButton(Icons.text_fields, 'Text', () {}),
+                _buildToolButton(Icons.link, 'Link', () {}),
+                _buildToolButton(Icons.flip, 'Flip', () {}),
+                _buildToolButton(Icons.rotate_left, 'Rotate left', () {}),
+                _buildToolButton(Icons.rotate_right, 'Rotate right', () {}),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingS),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildToolButton(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: AppConstants.bodyMedium.copyWith(
-                fontWeight: FontWeight.w500,
-                color: AppConstants.textSecondaryColor,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppConstants.bodyMedium,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+          Icon(icon, color: Colors.white, size: 24),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
             ),
           ),
         ],

@@ -25,34 +25,32 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
+Future<void> _handleLogin() async {
+  if (_formKey.currentState!.validate()) {
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.login(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
 
-  Future<void> _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      final authProvider = context.read<AuthProvider>();
-      final success = await authProvider.login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
-
-      if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.error ?? 'Login failed'),
-            backgroundColor: AppConstants.errorColor,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Dismiss',
-              textColor: Colors.white,
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              },
-            ),
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.error == 'Invalid Password' ? 'Invalid Password' : authProvider.error ?? 'An unexpected error occurred'),
+          backgroundColor: AppConstants.errorColor,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Dismiss',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
           ),
-        );
-      }
+        ),
+      );
     }
   }
-
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(

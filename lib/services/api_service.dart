@@ -125,21 +125,25 @@ class ApiService {
   }
 
   // Handle HTTP response
-  static Map<String, dynamic> _handleResponse(http.Response response) {
+// Handle HTTP response
+static Map<String, dynamic> _handleResponse(http.Response response) {
+  try {
+    final responseData = json.decode(response.body);
+    
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      try {
-        return json.decode(response.body);
-      } catch (e) {
-        throw Exception('Invalid JSON response: $e');
-      }
+      return responseData;
     } else {
-      try {
-        final errorBody = json.decode(response.body);
-        final message = errorBody['message'] ?? 'Request failed';
-        throw Exception(message);
-      } catch (e) {
-        throw Exception('Request failed with status: ${response.statusCode}');
-      }
+      // For error status codes, return the parsed response instead of throwing
+      // This allows the calling code to access the error message from the API
+      return responseData;
     }
+  } catch (e) {
+    // If JSON parsing fails, return a generic error response
+    return {
+      'success': false,
+      'message': 'Request failed with status: ${response.statusCode}',
+      'data': null
+    };
   }
+}
 }
