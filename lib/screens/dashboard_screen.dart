@@ -65,11 +65,24 @@ class DashboardScaffold extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppConstants.backgroundColor,
       appBar: AppBar(
-        title: Text(
-          title,
-          style: AppConstants.headingSmall.copyWith(
-            color: Colors.white,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (logo != null) ...[
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: FittedBox(fit: BoxFit.cover, child: logo!),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              title,
+              style: AppConstants.headingSmall.copyWith(
+                color: Colors.white,
+              ),
+            ),
+          ],
         ),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,

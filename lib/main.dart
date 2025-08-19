@@ -4,6 +4,7 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/splash_screen.dart';
 import 'constants/app_constants.dart';
 
 void main() {
@@ -67,27 +68,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     if (_isInitializing) {
-      return const Scaffold(
-        backgroundColor: AppConstants.backgroundColor,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(
-                color: AppConstants.primaryColor,
-              ),
-              SizedBox(height: AppConstants.spacingM),
-              Text(
-                'Loading...',
-                style: TextStyle(
-                  color: AppConstants.textPrimaryColor,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      return SplashScreen();
     }
 
     return Consumer<AuthProvider>(

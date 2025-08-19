@@ -148,7 +148,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     height: 40,
                     fit: BoxFit.cover,
                   ),
-      title: 'Muthaji - Admin Dashboard',
+      title: 'Muthaji - Admin',
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh),
@@ -186,7 +186,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             // _buildWelcomeSection(currentUser!),
                             // const SizedBox(height: AppConstants.spacingL),
                             // Orders by Date Chart with filter
-                            _buildOrdersByDateChart(days: _chartDays, allOrders: _allOrders),
+                            _buildOrdersByDateChart(days: _chartDays, allOrders: _allOrders,onDaysChanged: (days) {
+                              setState(() {
+                                _chartDays = days;
+                              });
+                            },),
                             const SizedBox(height: AppConstants.spacingL),
                             // Quick Actions
                             _buildQuickActions(),
@@ -411,86 +415,115 @@ print("user.name: ${displayName}");
     );
   }
 
-  Widget _buildOrdersByDateChart({int days = 14, required List<Order> allOrders}) {
-    // Prepare date buckets for last `days` days
-    final now = DateTime.now();
-    final start = DateTime(now.year, now.month, now.day).subtract(Duration(days: days - 1));
-    final Map<DateTime, int> counts = {
-      for (int i = 0; i < days; i++)
-        DateTime(start.year, start.month, start.day).add(Duration(days: i)): 0,
-    };
+Widget _buildOrdersByDateChart({
+  int days = 14, 
+  required List<Order> allOrders,
+  required Function(int) onDaysChanged, // Add callback function
+}) {
+  // Prepare date buckets for last `days` days
+  final now = DateTime.now();
+  final start = DateTime(now.year, now.month, now.day).subtract(Duration(days: days - 1));
+  final Map<DateTime, int> counts = {
+    for (int i = 0; i < days; i++)
+      DateTime(start.year, start.month, start.day).add(Duration(days: i)): 0,
+  };
 
-        for (final o in allOrders) {
-      final d = (o.orderDate ?? o.createdAt);
-      final key = DateTime(d.year, d.month, d.day);
-      if (key.isAfter(start.subtract(const Duration(days: 1))) && key.isBefore(now.add(const Duration(days: 1)))) {
-        if (counts.containsKey(key)) counts[key] = (counts[key] ?? 0) + 1;
-      }
+  for (final o in allOrders) {
+    final d = (o.orderDate ?? o.createdAt);
+    final key = DateTime(d.year, d.month, d.day);
+    if (key.isAfter(start.subtract(const Duration(days: 1))) && 
+        key.isBefore(now.add(const Duration(days: 1)))) {
+      if (counts.containsKey(key)) counts[key] = (counts[key] ?? 0) + 1;
     }
+  }
 
-    final entries = counts.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+  final entries = counts.entries.toList()
+    ..sort((a, b) => a.key.compareTo(b.key));
 
-    final maxY = (entries.map((e) => e.value).fold<int>(0, (p, c) => c > p ? c : p)).toDouble();
-    final spots = <FlSpot>[];
-    for (int i = 0; i < entries.length; i++) {
-      spots.add(FlSpot(i.toDouble(), entries[i].value.toDouble()));
-    }
+  final maxY = (entries.map((e) => e.value).fold<int>(0, (p, c) => c > p ? c : p)).toDouble();
+  final spots = <FlSpot>[];
+  for (int i = 0; i < entries.length; i++) {
+    spots.add(FlSpot(i.toDouble(), entries[i].value.toDouble()));
+  }
 
-    String _labelFor(DateTime d) => '${d.day}/${d.month}';
+  String _labelFor(DateTime d) => '${d.day}/${d.month}';
 
-    final step = (days / 7).ceil(); // show ~7 labels across
-    final chartWidth = (days <= 14) ? double.infinity : days * 40.0; // allow scroll for long ranges
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      // Responsive calculations
+      final screenWidth = MediaQuery.of(context).size.width;
+      final isMobile = screenWidth < 600;
+      final chartHeight = isMobile ? screenWidth * 0.6 : 220.0;
+      final chartWidth = days * (isMobile ? 30.0 : 40.0);
+      final step = (days / (isMobile ? 4 : 7)).ceil();
 
-    return Container(
-      padding: const EdgeInsets.all(AppConstants.spacingM),
-      decoration: BoxDecoration(
-        color: AppConstants.surfaceColor,
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
-        boxShadow: AppConstants.cardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Orders (last $_chartDays days)', style: AppConstants.headingSmall),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppConstants.textSecondaryColor.withOpacity(0.2)),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<int>(
-                    value: _chartDays,
-                    items: const [7, 14, 30, 90]
-                        .map((d) => DropdownMenuItem<int>(value: d, child: Text('Last $d days')))
-                        .toList(),
-                    onChanged: (val) {
-                      if (val == null) return;
-                      setState(() => _chartDays = val);
-                    },
+      return Container(
+        padding: const EdgeInsets.all(AppConstants.spacingM),
+        decoration: BoxDecoration(
+          color: AppConstants.surfaceColor,
+          borderRadius: BorderRadius.circular(AppConstants.radiusM),
+          boxShadow: AppConstants.cardShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Orders', style: AppConstants.headingSmall),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppConstants.textSecondaryColor.withOpacity(0.2)),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: days,
+                      items: const [7, 14, 30, 90]
+                          .map((d) => DropdownMenuItem<int>(value: d, child: Text('Last $d days')))
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          onDaysChanged(val); // Call the callback to update parent state
+                        }
+                      },
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppConstants.spacingM),
-          SizedBox(
-            height: 220,
-            child: (days <= 14)
-                ? LineChart(
+              ],
+            ),
+            SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+            SizedBox(
+              height: chartHeight,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: chartWidth > constraints.maxWidth ? chartWidth : constraints.maxWidth,
+                  child: LineChart(
                     LineChartData(
                       minY: 0,
                       maxY: (maxY == 0 ? 1 : maxY) * 1.2,
-                      gridData: FlGridData(show: true, drawVerticalLine: false),
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: maxY > 0 ? maxY / 5 : 1,
+                      ),
                       borderData: FlBorderData(show: false),
                       titlesData: FlTitlesData(
                         leftTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: true, reservedSize: 32),
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 32,
+                            interval: maxY > 0 ? maxY / 5 : 1,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                value.toInt().toString(),
+                                style: AppConstants.bodySmall,
+                              );
+                            },
+                          ),
                         ),
                         rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -498,6 +531,7 @@ print("user.name: ${displayName}");
                           sideTitles: SideTitles(
                             showTitles: true,
                             interval: 1,
+                            reservedSize: 30,
                             getTitlesWidget: (value, meta) {
                               final idx = value.toInt();
                               if (idx < 0 || idx >= entries.length || idx % step != 0) {
@@ -507,7 +541,9 @@ print("user.name: ${displayName}");
                                 padding: const EdgeInsets.only(top: 6),
                                 child: Text(
                                   _labelFor(entries[idx].key),
-                                  style: AppConstants.bodySmall,
+                                  style: AppConstants.bodySmall.copyWith(
+                                    fontSize: isMobile ? 10 : 12,
+                                  ),
                                 ),
                               );
                             },
@@ -519,7 +555,7 @@ print("user.name: ${displayName}");
                           spots: spots,
                           isCurved: true,
                           color: AppConstants.primaryColor,
-                          barWidth: 3,
+                          barWidth: isMobile ? 2 : 3,
                           dotData: FlDotData(show: true),
                           belowBarData: BarAreaData(
                             show: true,
@@ -528,67 +564,16 @@ print("user.name: ${displayName}");
                         ),
                       ],
                     ),
-                  )
-                : SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: chartWidth,
-                      child: LineChart(
-                        LineChartData(
-                          minY: 0,
-                          maxY: (maxY == 0 ? 1 : maxY) * 1.2,
-                          gridData: FlGridData(show: true, drawVerticalLine: false),
-                          borderData: FlBorderData(show: false),
-                          titlesData: FlTitlesData(
-                            leftTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: true, reservedSize: 32),
-                            ),
-                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                interval: 1,
-                                getTitlesWidget: (value, meta) {
-                                  final idx = value.toInt();
-                                  if (idx < 0 || idx >= entries.length || idx % step != 0) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 6),
-                                    child: Text(
-                                      _labelFor(entries[idx].key),
-                                      style: AppConstants.bodySmall,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          lineBarsData: [
-                            LineChartBarData(
-                              spots: spots,
-                              isCurved: true,
-                              color: AppConstants.primaryColor,
-                              barWidth: 3,
-                              dotData: FlDotData(show: true),
-                              belowBarData: BarAreaData(
-                                show: true,
-                                color: AppConstants.primaryColor.withOpacity(0.12),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   ),
-          ),
-        ],
-      ),
-          );
-  }
-
-  // Simple top bar with back button for non-dashboard views
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+} // Simple top bar with back button for non-dashboard views
   Widget _buildTopBar(String title) {
     return Row(
       children: [
@@ -626,7 +611,11 @@ print("user.name: ${displayName}");
       children: [
         _buildStatisticsOverview(),
         const SizedBox(height: AppConstants.spacingL),
-        _buildOrdersByDateChart(days: _chartDays, allOrders: _allOrders),
+        _buildOrdersByDateChart(days: _chartDays, allOrders: _allOrders,onDaysChanged: (days) {
+                              setState(() {
+                                _chartDays = days;
+                              });
+                            },),
       ],
     );
   }
@@ -810,15 +799,19 @@ print("user.name: ${displayName}");
   Widget _buildOrderCard(Order order) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
-      padding: const EdgeInsets.all(AppConstants.spacingM),
       decoration: BoxDecoration(
         color: AppConstants.surfaceColor,
         borderRadius: BorderRadius.circular(AppConstants.radiusM),
         boxShadow: AppConstants.cardShadow,
       ),
-      child: Row(
-        children: [
-          Container(
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.spacingM,
+            vertical: AppConstants.spacingS,
+          ),
+          leading: Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
@@ -831,36 +824,38 @@ print("user.name: ${displayName}");
               size: 20,
             ),
           ),
-          const SizedBox(width: AppConstants.spacingM),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  order.description,
-                  style: AppConstants.bodyLarge.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  'Client: ${order.clientName}',
-                  style: AppConstants.bodyMedium.copyWith(
-                    color: AppConstants.textSecondaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          title: Row(
             children: [
-              Text(
-                '\$${order.amount.toStringAsFixed(2)}',
-                style: AppConstants.bodyLarge.copyWith(
-                  color: AppConstants.primaryColor,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Order #${order.id.substring(0, 8)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppConstants.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppConstants.primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      order.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppConstants.bodySmall,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Client: ${order.clientName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppConstants.bodySmall.copyWith(
+                        color: AppConstants.textSecondaryColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Container(
@@ -882,7 +877,145 @@ print("user.name: ${displayName}");
               ),
             ],
           ),
-        ],
+          childrenPadding: const EdgeInsets.fromLTRB(
+            AppConstants.spacingM,
+            0,
+            AppConstants.spacingM,
+            AppConstants.spacingM,
+          ),
+          children: [
+            // Dates
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Created: ${_formatDate(order.createdAt)}',
+                    style: AppConstants.bodySmall.copyWith(
+                        color: AppConstants.textSecondaryColor)),
+                if (order.updatedAt != null)
+                  Text('Updated: ${_formatDate(order.updatedAt!)}',
+                      style: AppConstants.bodySmall.copyWith(
+                          color: AppConstants.textSecondaryColor)),
+              ],
+            ),
+
+            const SizedBox(height: AppConstants.spacingM),
+
+            // Type / Order date
+            if (order.orderType != null || order.orderDate != null)
+              Row(
+                children: [
+                  if (order.orderType != null)
+                    Text('Type: ${order.orderType!}',
+                        style: AppConstants.bodySmall),
+                  if (order.orderType != null && order.orderDate != null)
+                    const SizedBox(width: AppConstants.spacingL),
+                  if (order.orderDate != null)
+                    Text('Order Date: ${_formatDate(order.orderDate!)}',
+                        style: AppConstants.bodySmall),
+                ],
+              ),
+
+            // Ornament details
+            if (order.ornamentDetails.isNotEmpty) ...[
+              const SizedBox(height: AppConstants.spacingM),
+              Text('Ornament Details',
+                  style: AppConstants.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w700,
+                  )),
+              const SizedBox(height: AppConstants.spacingS),
+              ...order.ornamentDetails.map((d) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppConstants.spacingS),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(d.name, style: AppConstants.bodyMedium),
+                        ),
+                        Text('${d.material} • ${d.purity}',
+                            style: AppConstants.bodySmall.copyWith(
+                                color: AppConstants.textSecondaryColor)),
+                        const SizedBox(width: AppConstants.spacingM),
+                        Text('${d.weight}g x ${d.quantity}',
+                            style: AppConstants.bodySmall.copyWith(
+                                color: AppConstants.textSecondaryColor)),
+                      ],
+                    ),
+                  )),
+            ],
+
+            // Notes
+            if (order.notes != null && order.notes!.isNotEmpty) ...[
+              const SizedBox(height: AppConstants.spacingM),
+              Text('Notes',
+                  style: AppConstants.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w700,
+                  )),
+              const SizedBox(height: AppConstants.spacingXS),
+              Text(order.notes!, style: AppConstants.bodySmall),
+            ],
+
+            // Attachments
+            if (order.images.isNotEmpty || order.pdfs.isNotEmpty) ...[
+              const SizedBox(height: AppConstants.spacingM),
+              if (order.images.isNotEmpty) ...[
+                Text('Images',
+                    style: AppConstants.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                    )),
+                const SizedBox(height: AppConstants.spacingS),
+                _buildImageThumbnails(order.images),
+                const SizedBox(height: AppConstants.spacingS),
+              ],
+              if (order.pdfs.isNotEmpty)
+                Chip(
+                  avatar: const Icon(Icons.picture_as_pdf, size: 18),
+                  label: Text('${order.pdfs.length} PDF(s)'),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final d = date;
+    final dd = d.day.toString().padLeft(2, '0');
+    final mm = d.month.toString().padLeft(2, '0');
+    final yyyy = d.year.toString();
+    return '$dd/$mm/$yyyy';
+  }
+
+  Widget _buildImageThumbnails(List<String> urls) {
+    return SizedBox(
+      height: 64,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemBuilder: (context, index) {
+          final url = urls[index];
+          return GestureDetector(
+            onTap: () => _showImagePreview(url),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppConstants.radiusS),
+              child: Image.network(url, width: 64, height: 64, fit: BoxFit.cover),
+            ),
+          );
+        },
+        separatorBuilder: (_, __) => const SizedBox(width: AppConstants.spacingS),
+        itemCount: urls.length,
+      ),
+    );
+  }
+
+  void _showImagePreview(String url) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(AppConstants.spacingM),
+        child: InteractiveViewer(
+          minScale: 0.5,
+          maxScale: 5,
+          child: Image.network(url, fit: BoxFit.contain),
+        ),
       ),
     );
   }
@@ -1051,20 +1184,20 @@ print("user.name: ${displayName}");
     );
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
+  // String _formatDate(DateTime date) {
+  //   final now = DateTime.now();
+  //   final difference = now.difference(date);
 
-    if (difference.inDays == 0) {
-      return 'Today';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
-  }
+  //   if (difference.inDays == 0) {
+  //     return 'Today';
+  //   } else if (difference.inDays == 1) {
+  //     return 'Yesterday';
+  //   } else if (difference.inDays < 7) {
+  //     return '${difference.inDays} days ago';
+  //   } else {
+  //     return '${date.day}/${date.month}/${date.year}';
+  //   }
+  // }
 
   String _getStatusText(OrderStatus status) {
     switch (status) {

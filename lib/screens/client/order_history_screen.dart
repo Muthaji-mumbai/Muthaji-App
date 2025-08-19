@@ -20,6 +20,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   bool _isLoading = true;
   String _searchQuery = '';
   OrderStatus? _selectedStatus;
+  DateTime? _fromDate;
+  DateTime? _toDate;
+  final Set<int> _expanded = <int>{};
 
   @override
   void initState() {
@@ -71,23 +74,32 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   }
 
   void _applyFilters() {
-    _filteredOrders =
-        _allOrders.where((order) {
-          // Apply status filter
-          if (_selectedStatus != null && order.status != _selectedStatus) {
-            return false;
-          }
+    _filteredOrders = _allOrders.where((order) {
+      // Apply status filter
+      if (_selectedStatus != null && order.status != _selectedStatus) {
+        return false;
+      }
 
-          // Apply search filter
-          if (_searchQuery.isNotEmpty) {
-            final query = _searchQuery.toLowerCase();
-            return order.description.toLowerCase().contains(query) ||
-                order.id.toLowerCase().contains(query) ||
-                order.statusText.toLowerCase().contains(query);
-          }
+      // Apply search filter
+      if (_searchQuery.isNotEmpty) {
+        final query = _searchQuery.toLowerCase();
+        return order.description.toLowerCase().contains(query) ||
+            order.id.toLowerCase().contains(query) ||
+            order.statusText.toLowerCase().contains(query);
+      }
 
-          return true;
-        }).toList();
+      // Apply date range filter (by createdAt)
+      if (_fromDate != null) {
+        final from = DateTime(_fromDate!.year, _fromDate!.month, _fromDate!.day);
+        if (order.createdAt.isBefore(from)) return false;
+      }
+      if (_toDate != null) {
+        final to = DateTime(_toDate!.year, _toDate!.month, _toDate!.day, 23, 59, 59, 999);
+        if (order.createdAt.isAfter(to)) return false;
+      }
+
+      return true;
+    }).toList();
 
     // Sort by creation date (newest first)
     _filteredOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -113,21 +125,23 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
 
           // Orders List
           Expanded(
-            child:
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _filteredOrders.isEmpty
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredOrders.isEmpty
                     ? _buildEmptyState()
                     : RefreshIndicator(
-                      onRefresh: () async => _loadOrders(),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(AppConstants.spacingM),
-                        itemCount: _filteredOrders.length,
-                        itemBuilder: (context, index) {
-                          return _buildOrderCard(_filteredOrders[index]);
-                        },
+                        onRefresh: () async => _loadOrders(),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(AppConstants.spacingM),
+                          itemCount: _filteredOrders.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index == 0) return _buildTableHeader();
+                            final rowIndex = index - 1;
+                            final order = _filteredOrders[rowIndex];
+                            return _buildOrderTile(rowIndex, order);
+                          },
+                        ),
                       ),
-                    ),
           ),
         ],
       ),
@@ -139,9 +153,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       padding: const EdgeInsets.all(AppConstants.spacingM),
       decoration: BoxDecoration(
         color: AppConstants.surfaceColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
         boxShadow: AppConstants.cardShadow,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Search Bar
           TextField(
@@ -182,35 +198,106 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
 
           const SizedBox(height: AppConstants.spacingM),
 
-          // Status Filter
+          // Filters header row
           Row(
             children: [
-              Text(
-                'Filter by Status:',
-                style: AppConstants.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w500,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppConstants.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.tune, color: AppConstants.primaryColor, size: 18),
+              ),
+              const SizedBox(width: AppConstants.spacingS),
+              Expanded(
+                child: Text(
+                  'Filters',
+                  style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              _buildBadge('Showing ${_filteredOrders.length}'),
+            ],
+          ),
+
+          const SizedBox(height: AppConstants.spacingM),
+
+          // Status Filter (restyled chips)
+          Wrap(
+            spacing: AppConstants.spacingS,
+            runSpacing: AppConstants.spacingS,
+            children: [
+              _buildStatusChip(null, 'All'),
+              ...OrderStatus.values.map(
+                (status) => _buildStatusChip(status, _getStatusText(status)),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppConstants.spacingM),
+
+          // Date range filter (bordered fields)
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _pickDate(isFrom: true),
+                  child: _buildDateField(label: 'From Date', date: _fromDate),
                 ),
               ),
               const SizedBox(width: AppConstants.spacingM),
               Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildStatusChip(null, 'All'),
-                      ...OrderStatus.values.map(
-                        (status) =>
-                            _buildStatusChip(status, _getStatusText(status)),
-                      ),
-                    ],
-                  ),
+                child: GestureDetector(
+                  onTap: () => _pickDate(isFrom: false),
+                  child: _buildDateField(label: 'To Date', date: _toDate),
                 ),
+              ),
+              const SizedBox(width: AppConstants.spacingM),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _fromDate = null;
+                    _toDate = null;
+                    _applyFilters();
+                  });
+                },
+                icon: const Icon(Icons.clear),
+                label: const Text(''),
               ),
             ],
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _pickDate({required bool isFrom}) async {
+    final initial = isFrom ? (_fromDate ?? DateTime.now()) : (_toDate ?? DateTime.now());
+    final first = DateTime(2000);
+    final last = DateTime(2100);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: first,
+      lastDate: last,
+    );
+    if (picked != null) {
+      setState(() {
+        if (isFrom) {
+          _fromDate = picked;
+          // Ensure from <= to
+          if (_toDate != null && _toDate!.isBefore(_fromDate!)) {
+            _toDate = _fromDate;
+          }
+        } else {
+          _toDate = picked;
+          if (_fromDate != null && _fromDate!.isAfter(_toDate!)) {
+            _fromDate = _toDate;
+          }
+        }
+        _applyFilters();
+      });
+    }
   }
 
   Widget _buildStatusChip(OrderStatus? status, String label) {
@@ -246,125 +333,247 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     );
   }
 
-  Widget _buildOrderCard(Order order) {
+  // Header row for the table-like layout
+  Widget _buildTableHeader() {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
-      padding: const EdgeInsets.all(AppConstants.spacingM),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingM,
+        vertical: AppConstants.spacingS,
+      ),
       decoration: BoxDecoration(
         color: AppConstants.surfaceColor,
         borderRadius: BorderRadius.circular(AppConstants.radiusM),
         boxShadow: AppConstants.cardShadow,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          // Header with Order ID and Status
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  'Order #${order.id.substring(0, 8)}',
+          const SizedBox(
+            width: 48,
+            child: Text('Sl No', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text('Order number',
+                style: AppConstants.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text('Type',
+                style: AppConstants.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text('Order date',
+                style: AppConstants.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Collapsible row with summary and expandable details
+  Widget _buildOrderTile(int index, Order order) {
+    final isOpen = _expanded.contains(index);
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+        boxShadow: AppConstants.cardShadow,
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: isOpen,
+          onExpansionChanged: (open) {
+            setState(() {
+              if (open) {
+                _expanded.add(index);
+              } else {
+                _expanded.remove(index);
+              }
+            });
+          },
+          tilePadding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.spacingM,
+            vertical: AppConstants.spacingS,
+          ),
+          title: _buildOrderSummary(index, order),
+          childrenPadding: const EdgeInsets.all(AppConstants.spacingM),
+          children: [
+            _buildOrderDetails(order),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderSummary(int index, Order order) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            SizedBox(
+              width: 48,
+              child: Text('${index + 1}',
                   style: AppConstants.bodyMedium.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: AppConstants.primaryColor,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingS,
-                  vertical: AppConstants.spacingXS,
-                ),
-                decoration: BoxDecoration(
-                  color: order.statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                ),
-                child: Text(
-                  order.statusText,
-                  style: AppConstants.bodySmall.copyWith(
-                    color: order.statusColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: AppConstants.spacingS),
-
-          // Description
-          Text(
-            order.description,
-            style: AppConstants.bodyLarge.copyWith(fontWeight: FontWeight.w500),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-
-          const SizedBox(height: AppConstants.spacingS),
-
-          // Amount and Dates
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '\$${order.amount.toStringAsFixed(2)}',
-                style: AppConstants.headingSmall.copyWith(
+                  )),
+            ),
+            Expanded(
+              flex: 3,
+              child: Text(
+                'Order #${order.id.substring(0, 8)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w700,
                   color: AppConstants.primaryColor,
-                  fontWeight: FontWeight.w600,
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Created: ${_formatDate(order.createdAt)}',
-                    style: AppConstants.bodySmall.copyWith(
-                      color: AppConstants.textSecondaryColor,
-                    ),
-                  ),
-                  if (order.updatedAt != null)
-                    Text(
-                      'Updated: ${_formatDate(order.updatedAt!)}',
-                      style: AppConstants.bodySmall.copyWith(
-                        color: AppConstants.textSecondaryColor,
-                      ),
-                    ),
-                ],
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                order.orderType ?? '-',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppConstants.bodySmall,
               ),
-            ],
-          ),
-
-          // Notes (if any)
-          if (order.notes != null && order.notes!.isNotEmpty) ...[
-            const SizedBox(height: AppConstants.spacingS),
-            Container(
-              padding: const EdgeInsets.all(AppConstants.spacingS),
-              decoration: BoxDecoration(
-                color: AppConstants.backgroundColor,
-                borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                border: Border.all(
-                  color: AppConstants.textSecondaryColor.withOpacity(0.2),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                _formatFriendlyDate(order.orderDate ?? order.createdAt),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppConstants.bodySmall.copyWith(
+                  color: AppConstants.textSecondaryColor,
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Notes:',
-                    style: AppConstants.bodySmall.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppConstants.textSecondaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: AppConstants.spacingXS),
-                  Text(order.notes!, style: AppConstants.bodySmall),
-                ],
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOrderDetails(Order order) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Status badge in details
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingS,
+                vertical: AppConstants.spacingXS,
+              ),
+              decoration: BoxDecoration(
+                color: order.statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                border: Border.all(color: order.statusColor.withOpacity(0.3)),
+              ),
+              child: Text(
+                order.statusText,
+                style: AppConstants.bodySmall.copyWith(
+                  color: order.statusColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: AppConstants.spacingM),
+
+        // Created/Updated detailed
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Created: ${_formatDate(order.createdAt)}',
+                style: AppConstants.bodySmall.copyWith(
+                    color: AppConstants.textSecondaryColor)),
+            if (order.updatedAt != null)
+              Text('Updated: ${_formatDate(order.updatedAt!)}',
+                  style: AppConstants.bodySmall
+                      .copyWith(color: AppConstants.textSecondaryColor)),
+          ],
+        ),
+
+        // Order type/date
+        if (order.orderType != null || order.orderDate != null)
+          Row(
+            children: [
+              if (order.orderType != null)
+                Text('Type: ${order.orderType!}',
+                    style: AppConstants.bodySmall),
+              if (order.orderType != null && order.orderDate != null)
+                const SizedBox(width: AppConstants.spacingL),
+              if (order.orderDate != null)
+                Text('Order Date: ${_formatDate(order.orderDate!)}',
+                    style: AppConstants.bodySmall),
+            ],
+          ),
+
+        // Ornament details
+        if (order.ornamentDetails.isNotEmpty) ...[
+          const SizedBox(height: AppConstants.spacingM),
+          Text('Ornament Details',
+              style: AppConstants.bodyMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              )),
+          const SizedBox(height: AppConstants.spacingS),
+          ...order.ornamentDetails.map((d) => Padding(
+                padding: const EdgeInsets.only(bottom: AppConstants.spacingS),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(d.name, style: AppConstants.bodyMedium),
+                    ),
+                    Text('${d.material} • ${d.purity}',
+                        style: AppConstants.bodySmall.copyWith(
+                            color: AppConstants.textSecondaryColor)),
+                    const SizedBox(width: AppConstants.spacingM),
+                    Text('${d.weight}g x ${d.quantity}',
+                        style: AppConstants.bodySmall.copyWith(
+                            color: AppConstants.textSecondaryColor)),
+                  ],
+                ),
+              )),
         ],
-      ),
+
+        // Notes
+        if (order.notes != null && order.notes!.isNotEmpty) ...[
+          const SizedBox(height: AppConstants.spacingM),
+          Text('Notes',
+              style: AppConstants.bodyMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              )),
+          const SizedBox(height: AppConstants.spacingXS),
+          Text(order.notes!, style: AppConstants.bodySmall),
+        ],
+
+        // Attachments info
+        if (order.images.isNotEmpty || order.pdfs.isNotEmpty) ...[
+          const SizedBox(height: AppConstants.spacingM),
+          if (order.images.isNotEmpty) ...[
+            Text('Images',
+                style: AppConstants.bodyMedium
+                    .copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: AppConstants.spacingS),
+            _buildImageThumbnails(order.images),
+            const SizedBox(height: AppConstants.spacingM),
+          ],
+          if (order.pdfs.isNotEmpty)
+            Chip(
+              avatar: const Icon(Icons.picture_as_pdf, size: 18),
+              label: Text('${order.pdfs.length} PDF(s)'),
+            ),
+        ],
+      ],
     );
   }
 
@@ -426,6 +635,16 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     }
   }
 
+  String _formatFriendlyDate(DateTime date) {
+    final now = DateTime.now();
+    final d = DateTime(date.year, date.month, date.day);
+    final today = DateTime(now.year, now.month, now.day);
+    final diff = d.difference(today).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == -1) return 'Yesterday';
+    return _formatDate(date);
+  }
+
   String _getStatusText(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
@@ -454,5 +673,143 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       case OrderStatus.cancelled:
         return AppConstants.errorColor;
     }
+  }
+
+  Widget _buildImageThumbnails(List<String> images) {
+    return SizedBox(
+      height: 90,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: images.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final url = images[index];
+          return GestureDetector(
+            onTap: () => _showImagePreview(url),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppConstants.radiusS),
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stack) => Container(
+                    color: AppConstants.backgroundColor,
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.broken_image),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showImagePreview(String url) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4,
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stack) => SizedBox(
+                    height: 300,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.broken_image, size: 40),
+                          SizedBox(height: 8),
+                          Text('Failed to load image'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 8,
+              top: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateField({required String label, DateTime? date}) {
+    final value = date == null
+        ? null
+        : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppConstants.bodySmall.copyWith(color: AppConstants.textSecondaryColor)),
+        const SizedBox(height: AppConstants.spacingXS),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.spacingM,
+            vertical: AppConstants.spacingS,
+          ),
+          decoration: BoxDecoration(
+            color: AppConstants.backgroundColor,
+            borderRadius: BorderRadius.circular(AppConstants.radiusS),
+            border: Border.all(color: AppConstants.textSecondaryColor.withOpacity(0.25)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.calendar_today, size: 18),
+              const SizedBox(width: AppConstants.spacingS),
+              Expanded(
+                child: Text(
+                  value ?? '${label.toLowerCase()}',
+                  style: AppConstants.bodySmall.copyWith(
+                    color: value == null
+                        ? AppConstants.textSecondaryColor
+                        : AppConstants.textPrimaryColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBadge(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingS,
+        vertical: AppConstants.spacingXS,
+      ),
+      decoration: BoxDecoration(
+        color: AppConstants.primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppConstants.primaryColor.withOpacity(0.2)),
+      ),
+      child: Text(
+        text,
+        style: AppConstants.bodySmall.copyWith(
+          color: AppConstants.primaryColor,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 }

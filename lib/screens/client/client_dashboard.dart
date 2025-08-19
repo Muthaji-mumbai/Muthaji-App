@@ -94,9 +94,19 @@ class _ClientDashboardState extends State<ClientDashboard>
   @override
   Widget build(BuildContext context) {
     final currentUser = context.read<AuthProvider>().currentUser;
+    final isMobile = ResponsiveBreakpoints.of(context).isMobile;
 
     return DashboardScaffold(
-      title: 'Muthaji - Client Dashboard',
+      logo: ClipRRect(
+        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+        child: Image.asset(
+          'assets/icons/logo.png',
+          width: 40,
+          height: 40,
+          fit: BoxFit.cover,
+        ),
+      ),
+      title: 'Muthaji',
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh),
@@ -123,18 +133,19 @@ class _ClientDashboardState extends State<ClientDashboard>
 
                         const SizedBox(height: AppConstants.spacingXL),
 
-                        // Quick Actions
-                        _buildQuickActions(),
+                        // Quick Actions (hidden on mobile)
+                        if (!isMobile) _buildQuickActions(),
 
-                        const SizedBox(height: AppConstants.spacingXL),
+                        if (!isMobile)
+                          const SizedBox(height: AppConstants.spacingXL),
 
                         // Recent Orders
                         _buildRecentOrders(),
 
                         const SizedBox(height: AppConstants.spacingXL),
 
-                        // Order Statistics
-                        _buildOrderStatistics(),
+                        // Order Statistics (hidden on mobile)
+                        if (!isMobile) _buildOrderStatistics(),
                       ],
                     ),
                   ),
@@ -199,13 +210,13 @@ class _ClientDashboardState extends State<ClientDashboard>
             ),
           ),
           const SizedBox(height: AppConstants.spacingM),
-          Text(
-            'Manage your orders with ease and track their progress in real-time.',
-            style: AppConstants.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 16,
-            ),
-          ),
+          // Text(
+          //   'Manage your orders with ease and track their progress in real-time.',
+          //   style: AppConstants.bodyMedium.copyWith(
+          //     color: Colors.white.withOpacity(0.9),
+          //     fontSize: 16,
+          //   ),
+          // ),
         ],
       ),
     );
@@ -414,87 +425,174 @@ class _ClientDashboardState extends State<ClientDashboard>
   }
 
   Widget _buildOrderCard(Order order) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {
-          // Add navigation to order details if needed
-        },
-        child: Container(
-          margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
-          padding: const EdgeInsets.all(AppConstants.spacingL),
-          decoration: BoxDecoration(
-            color: AppConstants.surfaceColor,
-            borderRadius: BorderRadius.circular(AppConstants.radiusL),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
+      padding: const EdgeInsets.all(AppConstants.spacingL),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Order ID + Status
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'Order #${order.id.substring(0, 8)}',
+                  style: AppConstants.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppConstants.primaryColor,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingM,
+                  vertical: AppConstants.spacingS,
+                ),
+                decoration: BoxDecoration(
+                  color: order.statusColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                  border: Border.all(color: order.statusColor.withOpacity(0.3)),
+                ),
+                child: Text(
+                  order.statusText,
+                  style: AppConstants.bodySmall.copyWith(
+                    color: order.statusColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+
+          const SizedBox(height: AppConstants.spacingS),
+
+          // Description (full)
+          Text(
+            order.description,
+            style: AppConstants.bodyLarge.copyWith(
+              color: AppConstants.textPrimaryColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: AppConstants.spacingM),
+
+          // Amount and Dates
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+             
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Expanded(
-                    child: Text(
-                      order.description,
-                      style: AppConstants.bodyLarge.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppConstants.textPrimaryColor,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingM,
-                      vertical: AppConstants.spacingS,
-                    ),
-                    decoration: BoxDecoration(
-                      color: order.statusColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                      border: Border.all(
-                        color: order.statusColor.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Text(
-                      order.statusText,
-                      style: AppConstants.bodySmall.copyWith(
-                        color: order.statusColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppConstants.spacingM),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '₹${order.amount.toStringAsFixed(2)}',
-                    style: AppConstants.bodyLarge.copyWith(
-                      color: AppConstants.primaryColor,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
                   Text(
                     'Created: ${_formatDate(order.createdAt)}',
                     style: AppConstants.bodySmall.copyWith(
                       color: AppConstants.textSecondaryColor,
                     ),
                   ),
+                  if (order.updatedAt != null)
+                    Text(
+                      'Updated: ${_formatDate(order.updatedAt!)}',
+                      style: AppConstants.bodySmall.copyWith(
+                        color: AppConstants.textSecondaryColor,
+                      ),
+                    ),
                 ],
               ),
             ],
           ),
-        ),
+
+          const SizedBox(height: AppConstants.spacingM),
+
+          // Order type/date
+          if (order.orderType != null || order.orderDate != null)
+            Row(
+              children: [
+                if (order.orderType != null)
+                  Text('Type: ${order.orderType!}', style: AppConstants.bodySmall),
+                if (order.orderType != null && order.orderDate != null)
+                  const SizedBox(width: AppConstants.spacingL),
+                if (order.orderDate != null)
+                  Text('Order Date: ${_formatDate(order.orderDate!)}',
+                      style: AppConstants.bodySmall),
+              ],
+            ),
+
+          // Ornament details
+          if (order.ornamentDetails.isNotEmpty) ...[
+            const SizedBox(height: AppConstants.spacingM),
+            Text('Ornament Details',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w700,
+                )),
+            const SizedBox(height: AppConstants.spacingS),
+            ...order.ornamentDetails.map((d) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppConstants.spacingS),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          d.name,
+                          style: AppConstants.bodyMedium,
+                        ),
+                      ),
+                      Text('${d.material} • ${d.purity}',
+                          style: AppConstants.bodySmall
+                              .copyWith(color: AppConstants.textSecondaryColor)),
+                      const SizedBox(width: AppConstants.spacingM),
+                      Text('${d.weight}g x ${d.quantity}',
+                          style: AppConstants.bodySmall
+                              .copyWith(color: AppConstants.textSecondaryColor)),
+                    ],
+                  ),
+                )),
+          ],
+
+          // Notes
+          if (order.notes != null && order.notes!.isNotEmpty) ...[
+            const SizedBox(height: AppConstants.spacingM),
+            Text('Notes',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w700,
+                )),
+            const SizedBox(height: AppConstants.spacingXS),
+            Text(order.notes!, style: AppConstants.bodySmall),
+          ],
+
+          // Attachments info
+          if (order.images.isNotEmpty || order.pdfs.isNotEmpty) ...[
+            const SizedBox(height: AppConstants.spacingM),
+            Wrap(
+              spacing: AppConstants.spacingM,
+              runSpacing: AppConstants.spacingS,
+              children: [
+                if (order.images.isNotEmpty)
+                  Chip(
+                    avatar: const Icon(Icons.image, size: 18),
+                    label: Text('${order.images.length} Image(s)'),
+                  ),
+                if (order.pdfs.isNotEmpty)
+                  Chip(
+                    avatar: const Icon(Icons.picture_as_pdf, size: 18),
+                    label: Text('${order.pdfs.length} PDF(s)'),
+                  ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

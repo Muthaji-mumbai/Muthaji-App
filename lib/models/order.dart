@@ -145,16 +145,21 @@ class Order {
   static OrderStatus _parseStatus(String? status) {
     if (status == null) return OrderStatus.pending;
 
-    switch (status.toLowerCase()) {
+    // Normalize: lowercase and remove spaces, underscores, and dashes
+    final s = status.toLowerCase().replaceAll(RegExp(r'[\s_-]+'), '');
+
+    switch (s) {
       case 'pending':
         return OrderStatus.pending;
       case 'confirmed':
         return OrderStatus.confirmed;
-      case 'in progress':
+      case 'inprogress': // handles "in progress", "in_progress"
+      case 'processing':
         return OrderStatus.inProgress;
       case 'completed':
         return OrderStatus.completed;
       case 'cancelled':
+      case 'canceled':
         return OrderStatus.cancelled;
       default:
         return OrderStatus.pending;
