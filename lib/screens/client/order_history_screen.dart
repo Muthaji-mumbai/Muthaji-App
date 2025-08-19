@@ -153,11 +153,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       padding: const EdgeInsets.all(AppConstants.spacingM),
       decoration: BoxDecoration(
         color: AppConstants.surfaceColor,
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
         boxShadow: AppConstants.cardShadow,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Search Bar
           TextField(
@@ -198,40 +196,30 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
 
           const SizedBox(height: AppConstants.spacingM),
 
-          // Filters header row
+          // Filters header
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppConstants.primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.tune, color: AppConstants.primaryColor, size: 18),
-              ),
-              const SizedBox(width: AppConstants.spacingS),
-              Expanded(
-                child: Text(
-                  'Filters',
-                  style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w700),
-                ),
-              ),
-              _buildBadge('Showing ${_filteredOrders.length}'),
+              Text('Filters',
+                  style: AppConstants.bodyMedium
+                      .copyWith(fontWeight: FontWeight.w700)),
             ],
           ),
 
-          const SizedBox(height: AppConstants.spacingM),
+          const SizedBox(height: AppConstants.spacingS),
 
           // Status Filter (restyled chips)
-          Wrap(
-            spacing: AppConstants.spacingS,
-            runSpacing: AppConstants.spacingS,
-            children: [
-              _buildStatusChip(null, 'All'),
-              ...OrderStatus.values.map(
-                (status) => _buildStatusChip(status, _getStatusText(status)),
-              ),
-            ],
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: AppConstants.spacingS,
+              runSpacing: AppConstants.spacingS,
+              children: [
+                _buildStatusChip(null, 'All'),
+                ...OrderStatus.values.map(
+                  (status) => _buildStatusChip(status, _getStatusText(status)),
+                ),
+              ],
+            ),
           ),
 
           const SizedBox(height: AppConstants.spacingM),
@@ -242,14 +230,20 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               Expanded(
                 child: GestureDetector(
                   onTap: () => _pickDate(isFrom: true),
-                  child: _buildDateField(label: 'From Date', date: _fromDate),
+                  child: _buildDateField(
+                    label: 'From Date',
+                    date: _fromDate,
+                  ),
                 ),
               ),
               const SizedBox(width: AppConstants.spacingM),
               Expanded(
                 child: GestureDetector(
                   onTap: () => _pickDate(isFrom: false),
-                  child: _buildDateField(label: 'To Date', date: _toDate),
+                  child: _buildDateField(
+                    label: 'To Date',
+                    date: _toDate,
+                  ),
                 ),
               ),
               const SizedBox(width: AppConstants.spacingM),
@@ -262,8 +256,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                   });
                 },
                 icon: const Icon(Icons.clear),
-                label: const Text(''),
-              ),
+                label: const Text('Clear'),
+              )
             ],
           ),
         ],
@@ -753,62 +747,33 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   }
 
   Widget _buildDateField({required String label, DateTime? date}) {
-    final value = date == null
-        ? null
+    final text = date == null
+        ? label
         : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppConstants.bodySmall.copyWith(color: AppConstants.textSecondaryColor)),
-        const SizedBox(height: AppConstants.spacingXS),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.spacingM,
-            vertical: AppConstants.spacingS,
-          ),
-          decoration: BoxDecoration(
-            color: AppConstants.backgroundColor,
-            borderRadius: BorderRadius.circular(AppConstants.radiusS),
-            border: Border.all(color: AppConstants.textSecondaryColor.withOpacity(0.25)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.calendar_today, size: 18),
-              const SizedBox(width: AppConstants.spacingS),
-              Expanded(
-                child: Text(
-                  value ?? '${label.toLowerCase()}',
-                  style: AppConstants.bodySmall.copyWith(
-                    color: value == null
-                        ? AppConstants.textSecondaryColor
-                        : AppConstants.textPrimaryColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBadge(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.spacingS,
-        vertical: AppConstants.spacingXS,
+        horizontal: AppConstants.spacingM,
+        vertical: AppConstants.spacingS,
       ),
       decoration: BoxDecoration(
-        color: AppConstants.primaryColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppConstants.primaryColor.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+        border: Border.all(color: AppConstants.textSecondaryColor.withOpacity(0.25)),
       ),
-      child: Text(
-        text,
-        style: AppConstants.bodySmall.copyWith(
-          color: AppConstants.primaryColor,
-          fontWeight: FontWeight.w600,
-        ),
+      child: Row(
+        children: [
+          const Icon(Icons.calendar_today, size: 18),
+          const SizedBox(width: AppConstants.spacingS),
+          Expanded(
+            child: Text(
+              text,
+              style: AppConstants.bodySmall.copyWith(
+                color: date == null
+                    ? AppConstants.textSecondaryColor
+                    : AppConstants.textPrimaryColor,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

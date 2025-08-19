@@ -30,7 +30,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     {
       'name': '',
       'material': 'Gold',
-      'weight': 0.0,
+      'weight': " ",
       'purity': '18K',
       'quantity': 1,
     }
@@ -277,51 +277,35 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppConstants.spacingL),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildImageSection(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildOrnamentDetailsSection(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildOrderDetailsSection(),
-                    const SizedBox(height: AppConstants.spacingXL),
-                    CustomButton(
-                      onPressed: _isLoading ? null : _createOrder,
-                      text: _isLoading ? 'Creating...' : 'Create Order',
-                      isLoading: _isLoading,
-                      backgroundColor: AppConstants.successColor,
-                    ),
-                    const SizedBox(height: AppConstants.spacingM),
-                    CustomButton(
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
-                      text: 'Cancel',
-                      isOutlined: true,
-                      textColor: AppConstants.errorColor,
-                    ),
-                  ],
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildOrderDetailsSection(),
+                const SizedBox(height: AppConstants.spacingL),
+                _buildImageSection(),
+                const SizedBox(height: AppConstants.spacingL),
+                _buildOrnamentDetailsSection(),
+                const SizedBox(height: AppConstants.spacingXL),
+                CustomButton(
+                  onPressed: _isLoading ? null : _createOrder,
+                  text: _isLoading ? 'Creating...' : 'Create Order',
+                  isLoading: _isLoading,
+                  backgroundColor: AppConstants.successColor,
                 ),
-              ),
+                const SizedBox(height: AppConstants.spacingM),
+                CustomButton(
+                  onPressed: _isLoading ? null : () => Navigator.pop(context),
+                  text: 'Cancel',
+                  isOutlined: true,
+                  textColor: AppConstants.errorColor,
+                ),
+              ],
             ),
           ),
         ),
       ),
-    );
-  }
-
-  // Reusable section header with optional trailing action
-  Widget _buildSectionHeader(String title, {Widget? action}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: AppConstants.headingSmall),
-        if (action != null) action,
-      ],
     );
   }
 
@@ -336,7 +320,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader('Order Details'),
+            Text('Order Details', style: AppConstants.headingSmall),
             const SizedBox(height: AppConstants.spacingM),
             Row(
               children: [
@@ -345,6 +329,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     value: _selectedOrderType,
                     decoration: InputDecoration(
                       labelText: 'Order Type',
+                    
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppConstants.radiusS),
                       ),
@@ -367,25 +352,18 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     validator: (value) => value == null ? 'Please select an order type' : null,
                   ),
                 ),
-                const SizedBox(width: AppConstants.spacingS),
+                const SizedBox(width: AppConstants.spacingM),
                 Expanded(
-                  child: TextFormField(
-                    controller: _orderDateController,
-                    readOnly: true,
+                  child: GestureDetector(
                     onTap: _selectDate,
-                    decoration: InputDecoration(
+                    child: CustomTextField(
+                      controller: _orderDateController,
                       labelText: 'Order Date',
                       hintText: 'Select date',
-                      suffixIcon: const Icon(Icons.calendar_today),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppConstants.spacingS,
-                        vertical: AppConstants.spacingS,
-                      ),
+                      prefixIcon: Icons.calendar_today,
+                      enabled: false,
+                      validator: (value) => value!.isEmpty ? 'Please select a date' : null,
                     ),
-                    validator: (value) => (value == null || value.isEmpty) ? 'Please select a date' : null,
                   ),
                 ),
               ],
@@ -407,17 +385,17 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader(
-              'Images',
-              action: OutlinedButton.icon(
-                onPressed: _pickImage,
-                icon: const Icon(Icons.add_a_photo),
-                label: const Text('Add'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppConstants.primaryColor,
-                  side: BorderSide(color: AppConstants.primaryColor.withOpacity(0.4)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Images', style: AppConstants.headingSmall),
+                FloatingActionButton.small(
+                  heroTag: 'pickImageFab',
+                  onPressed: _pickImage,
+                  backgroundColor: AppConstants.primaryColor,
+                  child: const Icon(Icons.add_a_photo),
                 ),
-              ),
+              ],
             ),
             const SizedBox(height: AppConstants.spacingM),
             SizedBox(
@@ -479,13 +457,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader(
-              'Ornament Details',
-              action: IconButton(
-                onPressed: _addOrnamentDetail,
-                icon: Icon(Icons.add_circle, color: AppConstants.primaryColor),
-                tooltip: 'Add Ornament',
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Ornament Details', style: AppConstants.headingSmall),
+                IconButton(
+                  onPressed: _addOrnamentDetail,
+                  icon: Icon(Icons.add_circle, color: AppConstants.primaryColor),
+                ),
+              ],
             ),
             const SizedBox(height: AppConstants.spacingM),
             ..._ornamentDetails.asMap().entries.map((entry) {
@@ -506,14 +486,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         borderRadius: BorderRadius.circular(AppConstants.radiusS),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Wrap(
-            spacing: AppConstants.spacingS,
-            runSpacing: AppConstants.spacingS,
+          Row(
             children: [
-              SizedBox(
-                width: 300,
+              Expanded(
                 child: TextFormField(
                   initialValue: detail['name'],
                   decoration: InputDecoration(
@@ -532,8 +508,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   validator: (value) => value!.isEmpty ? 'Please enter ornament name' : null,
                 ),
               ),
-              SizedBox(
-                width: 300,
+              const SizedBox(width: AppConstants.spacingS),
+              Expanded(
                 child: DropdownButtonFormField<String>(
                   value: detail['material'],
                   decoration: InputDecoration(
@@ -560,8 +536,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   validator: (value) => value == null ? 'Please select a material' : null,
                 ),
               ),
-              SizedBox(
-                width: 220,
+            ],
+          ),
+          const SizedBox(height: AppConstants.spacingS),
+          Row(
+            children: [
+              Expanded(
                 child: TextFormField(
                   initialValue: detail['weight'].toString(),
                   decoration: InputDecoration(
@@ -585,8 +565,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   },
                 ),
               ),
-              SizedBox(
-                width: 220,
+              const SizedBox(width: AppConstants.spacingS),
+              Expanded(
                 child: DropdownButtonFormField<String>(
                   value: detail['purity'],
                   decoration: InputDecoration(
@@ -613,8 +593,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   validator: (value) => value == null ? 'Please select purity' : null,
                 ),
               ),
-              SizedBox(
-                width: 200,
+              const SizedBox(width: AppConstants.spacingS),
+              Expanded(
                 child: TextFormField(
                   initialValue: detail['quantity'].toString(),
                   decoration: InputDecoration(
@@ -645,7 +625,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             child: IconButton(
               onPressed: () => _removeOrnamentDetail(index),
               icon: Icon(Icons.delete, color: AppConstants.errorColor),
-              tooltip: 'Remove',
             ),
           ),
         ],

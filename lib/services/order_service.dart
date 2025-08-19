@@ -1,10 +1,12 @@
+import 'dart:math';
+
 import 'package:file_picker/file_picker.dart';
 
 import '../models/order.dart';
 import '../models/user.dart';
 import 'api_service.dart';
 import '../constants/app_constants.dart';
-
+import 'dart:developer' as developer;
 class OrderService {
   // Get all orders
   static Future<List<Order>> getAllOrders(String? token) async {
@@ -13,7 +15,7 @@ class OrderService {
         AppConstants.ordersEndpoint,
         token: token,
       );
-
+          developer.log('response: ${response}');
       if (response['success'] == true && response['data'] != null) {
         final List<dynamic> ordersData = response['data'];
         return ordersData
