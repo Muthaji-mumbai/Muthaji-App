@@ -1,42 +1,42 @@
-import 'package:flutter/material.dart';
-import '../models/user.dart';
-import '../services/auth_service.dart';
+  import 'package:flutter/material.dart';
+  import '../models/user.dart';
+  import '../services/auth_service.dart';
 
-class AuthProvider extends ChangeNotifier {
-  User? _currentUser;
-  bool _isLoading = false;
-  String? _error;
+  class AuthProvider extends ChangeNotifier {
+    User? _currentUser;
+    bool _isLoading = false;
+    String? _error;
 
-  User? get currentUser => _currentUser;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
-  bool get isLoggedIn => _currentUser != null;
+    User? get currentUser => _currentUser;
+    bool get isLoading => _isLoading;
+    String? get error => _error;
+    bool get isLoggedIn => _currentUser != null;
 
-  // Check if user has specific role
-  bool hasRole(UserRole role) {
-    return _currentUser?.role == role;
-  }
-
-  // Check if user has any of the specified roles
-  bool hasAnyRole(List<UserRole> roles) {
-    return _currentUser != null && roles.contains(_currentUser!.role);
-  }
-
-  // Initialize auth state
-  Future<void> initializeAuth() async {
-    _setLoading(true);
-    try {
-      final isLoggedIn = await AuthService.checkAuthStatus();
-      if (isLoggedIn) {
-        _currentUser = AuthService.currentUser;
-        _error = null;
-      }
-    } catch (e) {
-      _error = 'Failed to initialize authentication';
-    } finally {
-      _setLoading(false);
+    // Check if user has specific role
+    bool hasRole(UserRole role) {
+      return _currentUser?.role == role;
     }
-  }
+
+    // Check if user has any of the specified roles
+    bool hasAnyRole(List<UserRole> roles) {
+      return _currentUser != null && roles.contains(_currentUser!.role);
+    }
+
+    // Initialize auth state
+    Future<void> initializeAuth() async {
+      _setLoading(true);
+      try {
+        final isLoggedIn = await AuthService.checkAuthStatus();
+        if (isLoggedIn) {
+          _currentUser = AuthService.currentUser;
+          _error = null;
+        }
+      } catch (e) {
+        _error = 'Failed to initialize authentication';
+      } finally {
+        _setLoading(false);
+      }
+    }
 
   // Login
 // Login
@@ -79,21 +79,21 @@ Future<bool> login(String email, String password) async {
     }
   }
 
-  // Clear error
-  void clearError() {
-    _error = null;
-    notifyListeners();
-  }
+    // Clear error
+    void clearError() {
+      _error = null;
+      notifyListeners();
+    }
 
-  // Set loading state
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
+    // Set loading state
+    void _setLoading(bool loading) {
+      _isLoading = loading;
+      notifyListeners();
+    }
 
-  // Update current user
-  void updateCurrentUser(User user) {
-    _currentUser = user;
-    notifyListeners();
+    // Update current user
+    void updateCurrentUser(User user) {
+      _currentUser = user;
+      notifyListeners();
+    }
   }
-}

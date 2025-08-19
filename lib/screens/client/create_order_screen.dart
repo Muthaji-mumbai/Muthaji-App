@@ -20,12 +20,17 @@ class CreateOrderScreen extends StatefulWidget {
   State<CreateOrderScreen> createState() => _CreateOrderScreenState();
 }
 
-class _CreateOrderScreenState extends State<CreateOrderScreen> {
+class _CreateOrderScreenState extends State<CreateOrderScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
   final _orderDateController = TextEditingController();
+
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   bool _isLoading = false;
   DateTime? _selectedOrderDate;
@@ -41,6 +46,24 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     super.initState();
     _orderDateController.text = DateTime.now().toIso8601String().split('T')[0];
     _selectedOrderDate = DateTime.now();
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _animationController.forward();
   }
 
   @override
@@ -49,6 +72,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     _amountController.dispose();
     _notesController.dispose();
     _orderDateController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -233,8 +257,22 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Order created successfully! Order ID: ${order.id}'),
+                content: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    const SizedBox(width: AppConstants.spacingS),
+                    Expanded(
+                      child: Text(
+                        'Order created successfully! ID: ${order.id}',
+                      ),
+                    ),
+                  ],
+                ),
                 backgroundColor: AppConstants.successColor,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                ),
               ),
             );
             Navigator.pop(context, true);
@@ -246,8 +284,18 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to create order: $e'),
+              content: Row(
+                children: [
+                  Icon(Icons.error, color: Colors.white),
+                  const SizedBox(width: AppConstants.spacingS),
+                  Expanded(child: Text('Failed to create order: $e')),
+                ],
+              ),
               backgroundColor: AppConstants.errorColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusM),
+              ),
             ),
           );
         }
@@ -467,6 +515,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -780,6 +829,26 @@ class _ImageEditorScreenState extends State<ImageEditorScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        CustomButton(
+          text: 'Cancel',
+          onPressed: () => Navigator.pop(context),
+          backgroundColor: AppConstants.errorColor,
+        ),
+        const SizedBox(width: AppConstants.spacingM),
+        CustomButton(
+          text: 'Create Order',
+          onPressed: _createOrder,
+          backgroundColor: AppConstants.successColor,
+          isLoading: _isLoading,
+        ),
+      ],
     );
   }
 }

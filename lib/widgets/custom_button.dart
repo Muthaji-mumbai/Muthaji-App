@@ -12,6 +12,8 @@ class CustomButton extends StatelessWidget {
   final double height;
   final IconData? icon;
   final bool isFullWidth;
+  final TextStyle? textStyle;
+  final EdgeInsets? padding;
 
   const CustomButton({
     super.key,
@@ -25,6 +27,8 @@ class CustomButton extends StatelessWidget {
     this.height = 60,
     this.icon,
     this.isFullWidth = false,
+    this.textStyle,
+    this.padding,
   });
 
   @override
@@ -44,41 +48,43 @@ class CustomButton extends StatelessWidget {
           shadowColor: buttonColor.withOpacity(0.3),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusM),
-            side: isOutlined
-                ? BorderSide(color: buttonColor, width: 2)
-                : BorderSide.none,
+            side:
+                isOutlined
+                    ? BorderSide(color: buttonColor, width: 2)
+                    : BorderSide.none,
           ),
           padding: const EdgeInsets.symmetric(
             horizontal: AppConstants.spacingL,
             vertical: AppConstants.spacingM,
           ),
         ),
-        child: isLoading
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(buttonTextColor),
-                ),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: 20),
-                    const SizedBox(width: AppConstants.spacingS),
-                  ],
-                  Text(
-                    text,
-                    style: AppConstants.bodyLarge.copyWith(
-                      color: buttonTextColor,
-                      fontWeight: FontWeight.w600,
-                    ),
+        child:
+            isLoading
+                ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(buttonTextColor),
                   ),
-                ],
-              ),
+                )
+                : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, size: 20),
+                      const SizedBox(width: AppConstants.spacingS),
+                    ],
+                    Text(
+                      text,
+                      style: AppConstants.bodyLarge.copyWith(
+                        color: buttonTextColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
       ),
     );
   }
@@ -124,16 +130,17 @@ class CustomIconButton extends StatelessWidget {
           ),
           padding: EdgeInsets.zero,
         ),
-        child: isLoading
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(buttonIconColor),
-                ),
-              )
-            : Icon(icon, size: size * 0.5),
+        child:
+            isLoading
+                ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(buttonIconColor),
+                  ),
+                )
+                : Icon(icon, size: size * 0.5),
       ),
     );
   }

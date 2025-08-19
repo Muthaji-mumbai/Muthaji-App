@@ -82,7 +82,7 @@ class OrderService {
     String? orderType,
     DateTime? orderDate,
     List<Map<String, dynamic>>? ornamentDetails,
-     List<PlatformFile>? files,
+    List<PlatformFile>? files,
     List<String>? images,
     String? token,
   }) async {
@@ -128,19 +128,9 @@ class OrderService {
       // Include the order ID in the request body as the backend expects
       final requestBody = Map<String, dynamic>.from(updateData);
 
-      // Try multiple approaches for the order ID field
-      // Some backends expect different field names or types
-      try {
-        final intId = int.parse(orderId);
-        requestBody['_id'] = intId;
-        requestBody['id'] = intId;
-        print('Using integer ID: $intId');
-      } catch (e) {
-        // If parsing fails, use the string ID
-        requestBody['_id'] = orderId;
-        requestBody['id'] = orderId;
-        print('Using string ID: $orderId');
-      }
+      // Always send IDs as strings to avoid type mismatches across backends
+      requestBody['_id'] = orderId;
+      requestBody['id'] = orderId;
 
       // Also try orderId field as some APIs expect this
       requestBody['orderId'] = orderId;

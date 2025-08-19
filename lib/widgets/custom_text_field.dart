@@ -13,8 +13,14 @@ class CustomTextField extends StatelessWidget {
   final int? maxLines;
   final bool enabled;
   final VoidCallback? onTap;
+  final bool isRequired;
+  
+  
 
   const CustomTextField({
+
+    this.isRequired = false,
+    
     super.key,
     required this.controller,
     required this.labelText,
