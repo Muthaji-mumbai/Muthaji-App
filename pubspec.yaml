@@ -62,6 +62,7 @@ dependencies:
   path_provider: ^2.1.4
   permission_handler: ^11.3.1
   image_picker: ^1.2.0
+  image_editor: ^1.6.0
 
   file_picker: ^10.3.1
 
