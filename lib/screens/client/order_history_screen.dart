@@ -1,12 +1,20 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:open_file/open_file.dart';
+import 'package:flutter/services.dart'; // For loading asset images
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
 import '../../models/user.dart';
 import '../../services/auth_service.dart';
-
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
 
@@ -14,20 +22,27 @@ class OrderHistoryScreen extends StatefulWidget {
   State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
 }
 
-class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
+class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTickerProviderStateMixin {
   List<Order> _allOrders = [];
   List<Order> _filteredOrders = [];
   bool _isLoading = true;
   String _searchQuery = '';
-  OrderStatus? _selectedStatus;
   DateTime? _fromDate;
   DateTime? _toDate;
   final Set<int> _expanded = <int>{};
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 5, vsync: this);
     _loadOrders();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadOrders() async {
@@ -75,9 +90,20 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
 
   void _applyFilters() {
     _filteredOrders = _allOrders.where((order) {
-      // Apply status filter
-      if (_selectedStatus != null && order.status != _selectedStatus) {
-        return false;
+      // Apply tab filter
+      switch (_tabController.index) {
+        case 1: // Pending
+          if (order.status != OrderStatus.pending) return false;
+          break;
+        case 2: // In Progress
+          if (order.status != OrderStatus.inProgress) return false;
+          break;
+        case 3: // Completed
+          if (order.status != OrderStatus.completed) return false;
+          break;
+        case 4: // Cancelled
+          if (order.status != OrderStatus.cancelled) return false;
+          break;
       }
 
       // Apply search filter
@@ -120,7 +146,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       ),
       body: Column(
         children: [
-          // Search and Filter Section
+          // Search and Filter Section with Tabs
           _buildSearchAndFilterSection(),
 
           // Orders List
@@ -196,30 +222,24 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
 
           const SizedBox(height: AppConstants.spacingM),
 
-          // Filters header
-          Row(
-            children: [
-              Text('Filters',
-                  style: AppConstants.bodyMedium
-                      .copyWith(fontWeight: FontWeight.w700)),
+          // Filters header and Tabs
+          TabBar(
+            controller: _tabController,
+            labelColor: AppConstants.primaryColor,
+            unselectedLabelColor: AppConstants.textSecondaryColor,
+            indicatorColor: AppConstants.primaryColor,
+            tabs: const [
+              Tab(text: 'All'),
+              Tab(text: 'Pending'),
+              Tab(text: 'In Progress'),
+              Tab(text: 'Completed'),
+              Tab(text: 'Cancelled'),
             ],
-          ),
-
-          const SizedBox(height: AppConstants.spacingS),
-
-          // Status Filter (restyled chips)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: AppConstants.spacingS,
-              runSpacing: AppConstants.spacingS,
-              children: [
-                _buildStatusChip(null, 'All'),
-                ...OrderStatus.values.map(
-                  (status) => _buildStatusChip(status, _getStatusText(status)),
-                ),
-              ],
-            ),
+            onTap: (index) {
+              setState(() {
+                _applyFilters();
+              });
+            },
           ),
 
           const SizedBox(height: AppConstants.spacingM),
@@ -279,7 +299,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       setState(() {
         if (isFrom) {
           _fromDate = picked;
-          // Ensure from <= to
           if (_toDate != null && _toDate!.isBefore(_fromDate!)) {
             _toDate = _fromDate;
           }
@@ -292,39 +311,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         _applyFilters();
       });
     }
-  }
-
-  Widget _buildStatusChip(OrderStatus? status, String label) {
-    final isSelected = _selectedStatus == status;
-    final color =
-        status != null ? _getStatusColor(status) : AppConstants.primaryColor;
-
-    return Padding(
-      padding: const EdgeInsets.only(right: AppConstants.spacingS),
-      child: FilterChip(
-        label: Text(label),
-        selected: isSelected,
-        onSelected: (selected) {
-          setState(() {
-            _selectedStatus = selected ? status : null;
-            _applyFilters();
-          });
-        },
-        backgroundColor: AppConstants.surfaceColor,
-        selectedColor: color.withOpacity(0.2),
-        checkmarkColor: color,
-        labelStyle: TextStyle(
-          color: isSelected ? color : AppConstants.textPrimaryColor,
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-        ),
-        side: BorderSide(
-          color:
-              isSelected
-                  ? color
-                  : AppConstants.textSecondaryColor.withOpacity(0.3),
-        ),
-      ),
-    );
   }
 
   // Header row for the table-like layout
@@ -368,35 +354,161 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   // Collapsible row with summary and expandable details
   Widget _buildOrderTile(int index, Order order) {
     final isOpen = _expanded.contains(index);
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
-      decoration: BoxDecoration(
-        color: AppConstants.surfaceColor,
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
-        boxShadow: AppConstants.cardShadow,
+    return Dismissible(
+      key: Key(order.id),
+      direction: DismissDirection.horizontal,
+      background: Container(
+        color: AppConstants.secondaryColor,
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: AppConstants.spacingM),
+        child: const Icon(Icons.update, color: Colors.white),
       ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          initiallyExpanded: isOpen,
-          onExpansionChanged: (open) {
-            setState(() {
-              if (open) {
-                _expanded.add(index);
-              } else {
-                _expanded.remove(index);
+      secondaryBackground: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: AppConstants.spacingM),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          if (order.status == OrderStatus.pending || order.status == OrderStatus.cancelled) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Cannot update status for pending or cancelled orders'),
+                  backgroundColor: AppConstants.errorColor,
+                ),
+              );
+            }
+            return false;
+          }
+          return await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Update Order?'),
+              content: const Text('Are you sure you want to set this order status to Pending?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          ) ?? false;
+        } else if (direction == DismissDirection.endToStart) {
+          return await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Delete Order?'),
+              content: const Text('Are you sure you want to delete this order? This action cannot be undone.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          ) ?? false;
+        }
+        return false;
+      },
+      onDismissed: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          try {
+            final token = AuthService.currentToken;
+            if (token != null) {
+              await OrderService.updateOrderStatus(
+                orderId: order.id,
+                newStatus: OrderStatus.pending,
+                token: token,
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Order updated to Pending'),
+                    backgroundColor: AppConstants.successColor,
+                  ),
+                );
               }
-            });
-          },
-          tilePadding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.spacingM,
-            vertical: AppConstants.spacingS,
+              _loadOrders();
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to update order: $e'),
+                  backgroundColor: AppConstants.errorColor,
+                ),
+              );
+            }
+            _loadOrders();
+          }
+        } else if (direction == DismissDirection.endToStart) {
+          try {
+            final token = AuthService.currentToken;
+            if (token != null) {
+              await OrderService.deleteOrder(orderId: order.id, token: token);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Order deleted successfully'),
+                    backgroundColor: AppConstants.successColor,
+                  ),
+                );
+              }
+              _loadOrders();
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to delete order: $e'),
+                  backgroundColor: AppConstants.errorColor,
+                ),
+              );
+            }
+            _loadOrders();
+          }
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
+        decoration: BoxDecoration(
+          color: AppConstants.surfaceColor,
+          borderRadius: BorderRadius.circular(AppConstants.radiusM),
+          boxShadow: AppConstants.cardShadow,
+        ),
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            initiallyExpanded: isOpen,
+            onExpansionChanged: (open) {
+              setState(() {
+                if (open) {
+                  _expanded.add(index);
+                } else {
+                  _expanded.remove(index);
+                }
+              });
+            },
+            tilePadding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.spacingM,
+              vertical: AppConstants.spacingS,
+            ),
+            title: _buildOrderSummary(index, order),
+            childrenPadding: const EdgeInsets.all(AppConstants.spacingM),
+            children: [
+              _buildOrderDetails(order),
+            ],
           ),
-          title: _buildOrderSummary(index, order),
-          childrenPadding: const EdgeInsets.all(AppConstants.spacingM),
-          children: [
-            _buildOrderDetails(order),
-          ],
         ),
       ),
     );
@@ -567,6 +679,24 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               label: Text('${order.pdfs.length} PDF(s)'),
             ),
         ],
+
+        // Generate PDF Button
+        Padding(
+          padding: const EdgeInsets.only(top: AppConstants.spacingM),
+          child: ElevatedButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PDFViewerScreen(order: order),
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppConstants.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Generate PDF'),
+          ),
+        ),
       ],
     );
   }
@@ -583,26 +713,26 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           ),
           const SizedBox(height: AppConstants.spacingM),
           Text(
-            _searchQuery.isNotEmpty || _selectedStatus != null
+            _searchQuery.isNotEmpty || _tabController.index > 0
                 ? 'No orders match your filters'
                 : 'No orders yet',
             style: AppConstants.headingSmall,
           ),
           const SizedBox(height: AppConstants.spacingS),
           Text(
-            _searchQuery.isNotEmpty || _selectedStatus != null
+            _searchQuery.isNotEmpty || _tabController.index > 0
                 ? 'Try adjusting your search or filters'
                 : 'Create your first order to get started',
             style: AppConstants.bodyMedium,
             textAlign: TextAlign.center,
           ),
-          if (_searchQuery.isNotEmpty || _selectedStatus != null) ...[
+          if (_searchQuery.isNotEmpty || _tabController.index > 0) ...[
             const SizedBox(height: AppConstants.spacingM),
             ElevatedButton(
               onPressed: () {
                 setState(() {
                   _searchQuery = '';
-                  _selectedStatus = null;
+                  _tabController.index = 0;
                   _applyFilters();
                 });
               },
@@ -778,3 +908,177 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     );
   }
 }
+
+// New Screen for PDF Viewing
+class PDFViewerScreen extends StatefulWidget {
+  final Order order;
+
+  const PDFViewerScreen({super.key, required this.order});
+
+  @override
+  State<PDFViewerScreen> createState() => _PDFViewerScreenState();
+}
+
+class _PDFViewerScreenState extends State<PDFViewerScreen> {
+  File? _pdfFile;
+
+  @override
+  void initState() {
+    super.initState();
+    _generatePDF();
+  }
+
+  Future<void> _generatePDF() async {
+    final pdf = pw.Document();
+    final logoBytes = await rootBundle.load('assets/icons/logo.png');
+    final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
+
+    // Load order images if any
+    final List<pw.Widget> imageWidgets = [];
+    for (final url in widget.order.images) {
+      try {
+        final response = await http.get(Uri.parse(url));
+        if (response.statusCode == 200) {
+          imageWidgets.add(pw.Image(pw.MemoryImage(response.bodyBytes), width: 200, height: 200));
+        }
+      } catch (e) {
+        // Skip failed images
+      }
+    }
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                children: [
+                  pw.Image(logoImage, width: 100, height: 100),
+                ],
+              ),
+              pw.SizedBox(height: 16),
+              pw.Text('Order Details', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 16),
+              pw.Text('Order ID: ${widget.order.id}'),
+              pw.Text('Status: ${widget.order.statusText}'),
+              pw.Text('Created At: ${_formatDate(widget.order.createdAt)}'),
+              if (widget.order.updatedAt != null) pw.Text('Updated At: ${_formatDate(widget.order.updatedAt!)}'),
+              if (widget.order.orderType != null) pw.Text('Type: ${widget.order.orderType}'),
+              if (widget.order.orderDate != null) pw.Text('Order Date: ${_formatDate(widget.order.orderDate!)}'),
+              pw.SizedBox(height: 16),
+              if (widget.order.ornamentDetails.isNotEmpty) ...[
+                pw.Text('Ornament Details:', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 8),
+                ...widget.order.ornamentDetails.map((d) => pw.Text('${d.name} - ${d.material} ${d.purity} - ${d.weight}g x ${d.quantity}')),
+                pw.SizedBox(height: 16),
+              ],
+              if (widget.order.notes != null && widget.order.notes!.isNotEmpty) ...[
+                pw.Text('Notes:', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 8),
+                pw.Text(widget.order.notes!),
+                pw.SizedBox(height: 16),
+              ],
+              if (imageWidgets.isNotEmpty) ...[
+                pw.Text('Images:', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 8),
+                ...imageWidgets.map((img) => pw.Container(
+                  margin: const pw.EdgeInsets.only(bottom: 8),
+                  child: img,
+                )),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/order_${widget.order.id}.pdf');
+      await file.writeAsBytes(await pdf.save());
+      setState(() {
+        _pdfFile = file;
+      });
+      // Open PDF directly in the screen
+      await _displayPDF(file);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate or view PDF: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _displayPDF(File file) async {
+    // This is a placeholder; you'll need a PDF viewer package like `flutter_pdfview`
+    // For now, we'll use OpenFile to open it
+    await OpenFile.open(file.path);
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
+
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Order PDF'),
+      backgroundColor: AppConstants.primaryColor,
+      foregroundColor: Colors.white,
+      actions: [
+        if (_pdfFile != null)
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () async {
+              await Share.shareXFiles(
+                [XFile(_pdfFile!.path)],
+                text: 'Sharing Order #${widget.order.id}',
+              );
+            },
+          ),
+      ],
+    ),
+    body: _pdfFile == null
+        ? const Center(child: CircularProgressIndicator())
+        : Column(
+            children: [
+              const Text(
+                'PDF Generated Successfully',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppConstants.spacingM),
+            Expanded(
+  child: PDFView(
+    filePath: _pdfFile!.path,
+    enableSwipe: true,
+    swipeHorizontal: true,
+    autoSpacing: true,
+    pageFling: true,
+    onError: (error) {
+      print(error.toString());
+    },
+  ),
+)
+            ],
+          ),
+  );
+}}
