@@ -124,26 +124,55 @@ class ApiService {
     }
   }
 
-  // Handle HTTP response
-// Handle HTTP response
-static Map<String, dynamic> _handleResponse(http.Response response) {
-  try {
-    final responseData = json.decode(response.body);
-    
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return responseData;
-    } else {
-      // For error status codes, return the parsed response instead of throwing
-      // This allows the calling code to access the error message from the API
-      return responseData;
+  // New method for multipart POST
+  static Future<Map<String, dynamic>> postMultipart(
+    String endpoint, {
+    required Map<String, String> fields,
+    List<http.MultipartFile>? files,
+    String? token,
+  }) async {
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl$endpoint'));
+
+      // Add token to headers if provided
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      // Add fields to the multipart request
+      request.fields.addAll(fields);
+
+      // Add files to the multipart request if provided
+      if (files != null) {
+        request.files.addAll(files);
+      }
+
+      // Send the multipart request
+      final response = await request.send();
+      final responseBody = await http.Response.fromStream(response);
+
+      return _handleResponse(http.Response(responseBody.body, response.statusCode));
+    } catch (e) {
+      throw Exception('Network error: $e');
     }
-  } catch (e) {
-    // If JSON parsing fails, return a generic error response
-    return {
-      'success': false,
-      'message': 'Request failed with status: ${response.statusCode}',
-      'data': null
-    };
   }
-}
+
+  // Handle HTTP response
+  static Map<String, dynamic> _handleResponse(http.Response response) {
+    try {
+      final responseData = json.decode(response.body);
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return responseData;
+      } else {
+        return responseData; // Return error response for handling by caller
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Request failed with status: ${response.statusCode}',
+        'data': null
+      };
+    }
+  }
 }

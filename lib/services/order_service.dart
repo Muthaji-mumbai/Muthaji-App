@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
 
 import '../models/order.dart';
 import '../models/user.dart';
@@ -74,47 +76,69 @@ class OrderService {
     }
   }
 
-  // Create new order
-  static Future<Order> createOrder({
-    required String clientId,
-    required String clientName,
-    String? description,
-    double? amount,
-    String? notes,
-    String? orderType,
-    DateTime? orderDate,
-    List<Map<String, dynamic>>? ornamentDetails,
-    List<PlatformFile>? files,
-    List<String>? images,
-    String? token,
-  }) async {
-    try {
-      final response = await ApiService.post(
-        AppConstants.ordersEndpoint,
-        body: {
-          'userid': clientId,
-          'description': description ?? '',
-          'amount': amount ?? 0.0,
-          'notes': notes ?? '',
-          'ordertype': orderType ?? 'Single',
-          'orderdate':
-              orderDate?.toIso8601String() ?? DateTime.now().toIso8601String(),
-          'ornamentdetails': ornamentDetails ?? [],
-          'image': images ?? [],
-        },
-        token: token,
-      );
+// Create new order
+static Future<Order> createOrder({
+  required String clientId,
+  required String clientName,
+  String? description,
+  double? amount,
+  String? notes,
+  String? orderType,
+  DateTime? orderDate,
+  List<Map<String, dynamic>>? ornamentDetails,
+  List<PlatformFile>? files,
+  String? token,
+}) async {
+  try {
+    // Prepare the request fields
+    final fields = {
+      'userid': clientId,
+      'description': description ?? '',
+      'amount': amount?.toString() ?? '0.0',
+      'notes': notes ?? '',
+      'ordertype': orderType ?? 'Single',
+      'orderdate': orderDate?.toIso8601String() ?? DateTime.now().toIso8601String(),
+      'ornamentdetails': jsonEncode(ornamentDetails ?? []),
+    };
 
-      if (response['success'] == true && response['data'] != null) {
-        return Order.fromJson(response['data']);
-      } else {
-        throw Exception(response['message'] ?? 'Failed to create order');
-      }
-    } catch (e) {
-      throw Exception('Error creating order: $e');
+    List<http.MultipartFile>? multipartFiles;
+    if (files != null && files.isNotEmpty) {
+      multipartFiles = files
+          .where((file) => file.bytes != null)
+          .map((file) => http.MultipartFile.fromBytes(
+                'image',
+                file.bytes!,
+                filename: file.name,
+              ))
+          .toList();
     }
-  }
 
+    // Use multipart request if files are present, otherwise use regular POST
+    final response = multipartFiles != null
+        ? await ApiService.postMultipart(
+            AppConstants.ordersEndpoint,
+            fields: fields,
+            files: multipartFiles,
+            token: token,
+          )
+        : await ApiService.post(
+            AppConstants.ordersEndpoint,
+            body: {
+              ...fields,
+              'image': files?.map((file) => file.name).toList() ?? [],
+            },
+            token: token,
+          );
+
+    if (response['success'] == true && response['data'] != null) {
+      return Order.fromJson(response['data']);
+    } else {
+      throw Exception(response['message'] ?? 'Failed to create order');
+    }
+  } catch (e) {
+    throw Exception('Error creating order: $e');
+  }
+}
   // Update order
   static Future<Order> updateOrder({
     required String orderId,

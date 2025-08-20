@@ -229,7 +229,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             orderType: _selectedOrderType,
             orderDate: _selectedOrderDate,
             ornamentDetails: _ornamentDetails.isNotEmpty ? _ornamentDetails : null,
-            images: _selectedFiles.isNotEmpty ? _selectedFiles.map((file) => file.name).toList() : null,
+            files: _selectedFiles.isNotEmpty ? _selectedFiles : null,
             token: token,
           );
           if (mounted) {
