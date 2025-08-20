@@ -10,7 +10,6 @@ import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
 import '../../services/auth_service.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -133,7 +132,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
     return Scaffold(
       backgroundColor: AppConstants.backgroundColor,
       appBar: AppBar(
-        title: const Text('Muthaji - Order History'),
+        title: const Text('Order History'),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -221,23 +220,23 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
 
           // Filters header and Tabs
           TabBar(
-            controller: _tabController,
-            labelColor: AppConstants.primaryColor,
-            unselectedLabelColor: AppConstants.textSecondaryColor,
-            indicatorColor: AppConstants.primaryColor,
-            tabs: const [
-              Tab(text: 'All'),
-              Tab(text: 'Pending'),
-              Tab(text: 'In Progress'),
-              Tab(text: 'Completed'),
-              Tab(text: 'Cancelled'),
-            ],
-            onTap: (index) {
-              setState(() {
-                _applyFilters();
-              });
-            },
-          ),
+  controller: _tabController,
+  labelColor: AppConstants.primaryColor,
+  unselectedLabelColor: AppConstants.textSecondaryColor,
+  indicatorColor: AppConstants.primaryColor,
+  tabs: const [
+    Tab(text: 'All'),
+    Tab(icon: Icon(Icons.hourglass_empty)),
+    Tab(icon: Icon(Icons.autorenew)),
+    Tab(icon: Icon(Icons.check_circle)),
+    Tab(icon: Icon(Icons.cancel)),
+  ],
+  onTap: (index) {
+    setState(() {
+      _applyFilters();
+    });
+  },
+),
 
           const SizedBox(height: AppConstants.spacingM),
 

@@ -299,9 +299,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildOrderDetailsSection(),
-                const SizedBox(height: AppConstants.spacingXL),
                 _buildImageSection(),
+                const SizedBox(height: AppConstants.spacingXL),
+                _buildOrderDetailsSection(),
                 const SizedBox(height: AppConstants.spacingXL),
                 _buildOrnamentDetailsSection(),
                 const SizedBox(height: AppConstants.spacingXL),
@@ -372,14 +372,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 ),
                 const SizedBox(width: AppConstants.spacingL),
                 Expanded(
-                  flex: 1,
+                 
                   child: GestureDetector(
                     onTap: _selectDate,
                     child: CustomTextField(
                       controller: _orderDateController,
                       labelText: 'Order Date',
                       hintText: 'Select date',
-                      prefixIcon: Icons.calendar_today,
+                      
                       enabled: false,
                       validator: (value) => value!.isEmpty ? 'Please select a date' : null,
                     ),
