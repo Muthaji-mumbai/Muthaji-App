@@ -24,13 +24,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   final PageController _pageController = PageController();
   final _orderDateController = TextEditingController();
   bool _isLoading = false;
+  bool _isPickingImage = false; // Loader for image picking
   DateTime? _selectedOrderDate;
   String _selectedOrderType = 'Single';
   List<Map<String, dynamic>> _ornamentDetails = [
     {
       'name': '',
       'material': 'Gold',
-      'weight': " ",
+      'weight': 0.0,
       'purity': '18K',
       'quantity': 1,
     }
@@ -39,7 +40,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   File? _currentEditingImage;
   final ImagePicker _picker = ImagePicker();
 
-  final List<String> _orderTypes = ['Single', 'Bulk', 'Custom'];
+  final List<String> _orderTypes = ['Single', 'Bulk']; // Limited to Single and Bulk
   final List<String> _materials = ['Gold', 'Rose Gold', 'White Gold', 'Platinum'];
   final List<String> _purities = ['18K', '22K', '24K'];
 
@@ -69,6 +70,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   }
 
   Future<void> _pickImage() async {
+    if (_isPickingImage) return; // Prevent multiple clicks
+    setState(() {
+      _isPickingImage = true;
+    });
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -85,10 +91,19 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 Navigator.pop(context);
                 final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
                 if (image != null) {
+                  final bytes = await image.readAsBytes();
                   setState(() {
-                    _currentEditingImage = File(image.path);
+                    _selectedFiles.add(PlatformFile(
+                      name: image.name,
+                      size: bytes.length,
+                      bytes: bytes,
+                    ));
+                    _isPickingImage = false;
                   });
-                  await _showImageEditor();
+                } else {
+                  setState(() {
+                    _isPickingImage = false;
+                  });
                 }
               },
             ),
@@ -99,10 +114,19 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 Navigator.pop(context);
                 final XFile? image = await _picker.pickImage(source: ImageSource.camera);
                 if (image != null) {
+                  final bytes = await image.readAsBytes();
                   setState(() {
-                    _currentEditingImage = File(image.path);
+                    _selectedFiles.add(PlatformFile(
+                      name: image.name,
+                      size: bytes.length,
+                      bytes: bytes,
+                    ));
+                    _isPickingImage = false;
                   });
-                  await _showImageEditor();
+                } else {
+                  setState(() {
+                    _isPickingImage = false;
+                  });
                 }
               },
             ),
@@ -120,12 +144,20 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   if (result != null) {
                     setState(() {
                       _selectedFiles.addAll(result.files);
+                      _isPickingImage = false;
+                    });
+                  } else {
+                    setState(() {
+                      _isPickingImage = false;
                     });
                   }
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error picking files: $e')),
                   );
+                  setState(() {
+                    _isPickingImage = false;
+                  });
                 }
               },
             ),
@@ -170,20 +202,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     }
   }
 
-  Future<void> _showImageEditor({int? editingIndex}) async {
-    Uint8List? bytes;
-    if (editingIndex != null) {
-      bytes = _selectedFiles[editingIndex].bytes;
-    } else if (_currentEditingImage != null) {
-      bytes = await _currentEditingImage!.readAsBytes();
-    }
-
+  Future<void> _showImageEditor(int editingIndex) async {
+    final bytes = _selectedFiles[editingIndex].bytes;
     if (bytes == null) return;
+
     final edited = await Navigator.push<Uint8List?>(
       context,
       MaterialPageRoute(
         builder: (editorContext) => ProImageEditor.memory(
-          bytes!,
+          bytes,
           callbacks: ProImageEditorCallbacks(
             onImageEditingComplete: (Uint8List bytes) async {
               Navigator.of(editorContext).pop(bytes);
@@ -195,27 +222,17 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     if (!mounted) return;
     if (edited != null) {
       setState(() {
-        final newFile = PlatformFile(
+        _selectedFiles[editingIndex] = PlatformFile(
           name: 'edited_image_${DateTime.now().millisecondsSinceEpoch}.jpg',
           size: edited.length,
           bytes: edited,
         );
-        if (editingIndex != null) {
-          _selectedFiles[editingIndex] = newFile;
-        } else {
-          _selectedFiles.add(newFile);
-        }
-        _currentEditingImage = null;
-      });
-    } else if (editingIndex == null) {
-      setState(() {
-        _currentEditingImage = null;
       });
     }
   }
 
   Future<void> _createOrder() async {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && !_isLoading) {
       setState(() {
         _isLoading = true;
       });
@@ -283,9 +300,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildOrderDetailsSection(),
-                const SizedBox(height: AppConstants.spacingL),
+                const SizedBox(height: AppConstants.spacingXL),
                 _buildImageSection(),
-                const SizedBox(height: AppConstants.spacingL),
+                const SizedBox(height: AppConstants.spacingXL),
                 _buildOrnamentDetailsSection(),
                 const SizedBox(height: AppConstants.spacingXL),
                 CustomButton(
@@ -323,13 +340,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             Text('Order Details', style: AppConstants.headingSmall),
             const SizedBox(height: AppConstants.spacingM),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
+                  flex: 1,
                   child: DropdownButtonFormField<String>(
                     value: _selectedOrderType,
                     decoration: InputDecoration(
                       labelText: 'Order Type',
-                    
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppConstants.radiusS),
                       ),
@@ -352,8 +370,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     validator: (value) => value == null ? 'Please select an order type' : null,
                   ),
                 ),
-                const SizedBox(width: AppConstants.spacingM),
+                const SizedBox(width: AppConstants.spacingL),
                 Expanded(
+                  flex: 1,
                   child: GestureDetector(
                     onTap: _selectDate,
                     child: CustomTextField(
@@ -389,17 +408,27 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Images', style: AppConstants.headingSmall),
-                FloatingActionButton.small(
-                  heroTag: 'pickImageFab',
-                  onPressed: _pickImage,
-                  backgroundColor: AppConstants.primaryColor,
-                  child: const Icon(Icons.add_a_photo),
-                ),
+                if (_isPickingImage)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: AppConstants.primaryColor,
+                      strokeWidth: 2,
+                    ),
+                  )
+                else
+                  FloatingActionButton.small(
+                    heroTag: 'pickImageFab',
+                    onPressed: _pickImage,
+                    backgroundColor: AppConstants.primaryColor,
+                    child: const Icon(Icons.add_a_photo),
+                  ),
               ],
             ),
             const SizedBox(height: AppConstants.spacingM),
             SizedBox(
-              height: 220,
+              height: 200,
               child: Container(
                 decoration: BoxDecoration(
                   color: AppConstants.surfaceColor,
@@ -407,32 +436,34 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   border: Border.all(color: AppConstants.primaryColor.withOpacity(0.15)),
                 ),
                 child: Center(
-                  child: _selectedFiles.isEmpty
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.image_outlined, size: 64, color: AppConstants.textSecondaryColor),
-                            const SizedBox(height: AppConstants.spacingS),
-                            Text('No images selected', style: AppConstants.bodySmall),
-                          ],
-                        )
-                      : PageView.builder(
-                          controller: _pageController,
-                          itemCount: _selectedFiles.length,
-                          itemBuilder: (context, index) {
-                            final file = _selectedFiles[index];
-                            final img = file.bytes;
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                                child: img != null
-                                    ? Image.memory(img, fit: BoxFit.contain)
-                                    : const SizedBox.shrink(),
-                              ),
-                            );
-                          },
-                        ),
+                  child: _isPickingImage
+                      ? const Center(child: CircularProgressIndicator(color: AppConstants.primaryColor))
+                      : (_selectedFiles.isEmpty
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.image_outlined, size: 64, color: AppConstants.textSecondaryColor),
+                                const SizedBox(height: AppConstants.spacingS),
+                                Text('No images selected', style: AppConstants.bodySmall),
+                              ],
+                            )
+                          : PageView.builder(
+                              controller: _pageController,
+                              itemCount: _selectedFiles.length,
+                              itemBuilder: (context, index) {
+                                final file = _selectedFiles[index];
+                                final img = file.bytes;
+                                return Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                                    child: img != null
+                                        ? Image.memory(img, fit: BoxFit.contain)
+                                        : const SizedBox.shrink(),
+                                  ),
+                                );
+                              },
+                            )),
                 ),
               ),
             ),
@@ -468,9 +499,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               ],
             ),
             const SizedBox(height: AppConstants.spacingM),
-            ..._ornamentDetails.asMap().entries.map((entry) {
-              return _buildOrnamentDetailCard(entry.key, entry.value);
-            }),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _ornamentDetails.length,
+              itemBuilder: (context, index) {
+                return _buildOrnamentDetailCard(index, _ornamentDetails[index]);
+              },
+            ),
           ],
         ),
       ),
@@ -488,8 +524,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
+                flex: 2,
                 child: TextFormField(
                   initialValue: detail['name'],
                   decoration: InputDecoration(
@@ -508,8 +546,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   validator: (value) => value!.isEmpty ? 'Please enter ornament name' : null,
                 ),
               ),
-              const SizedBox(width: AppConstants.spacingS),
+              const SizedBox(width: AppConstants.spacingM),
               Expanded(
+                flex: 1,
                 child: DropdownButtonFormField<String>(
                   value: detail['material'],
                   decoration: InputDecoration(
@@ -538,10 +577,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               ),
             ],
           ),
-          const SizedBox(height: AppConstants.spacingS),
+          const SizedBox(height: AppConstants.spacingM),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
+                flex: 1,
                 child: TextFormField(
                   initialValue: detail['weight'].toString(),
                   decoration: InputDecoration(
@@ -565,8 +606,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: AppConstants.spacingS),
+              const SizedBox(width: AppConstants.spacingM),
               Expanded(
+                flex: 1,
                 child: DropdownButtonFormField<String>(
                   value: detail['purity'],
                   decoration: InputDecoration(
@@ -593,8 +635,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   validator: (value) => value == null ? 'Please select purity' : null,
                 ),
               ),
-              const SizedBox(width: AppConstants.spacingS),
+              const SizedBox(width: AppConstants.spacingM),
               Expanded(
+                flex: 1,
                 child: TextFormField(
                   initialValue: detail['quantity'].toString(),
                   decoration: InputDecoration(
@@ -704,7 +747,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             right: -6,
             top: -6,
             child: InkWell(
-              onTap: () => setState(() => _selectedFiles.remove(file)),
+              onTap: () => setState(() => _selectedFiles.removeAt(index)),
               child: Container(
                 decoration: BoxDecoration(
                   color: AppConstants.errorColor,
@@ -719,7 +762,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             top: 4,
             left: 4,
             child: GestureDetector(
-              onTap: () => _showImageEditor(editingIndex: index),
+              onTap: () => _showImageEditor(index),
               child: Container(
                 decoration: const BoxDecoration(
                   color: Colors.black54,

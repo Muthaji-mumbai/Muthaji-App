@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -12,9 +13,9 @@ import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
-import '../../models/user.dart';
 import '../../services/auth_service.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
+
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
 
@@ -361,58 +362,42 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
         color: AppConstants.secondaryColor,
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: AppConstants.spacingM),
-        child: const Icon(Icons.update, color: Colors.white),
+        child: const Icon(Icons.cancel, color: Colors.white),
       ),
       secondaryBackground: Container(
         color: Colors.red,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: AppConstants.spacingM),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: const Icon(Icons.edit, color: Colors.white),
       ),
       confirmDismiss: (direction) async {
-        if (direction == DismissDirection.startToEnd) {
-          if (order.status == OrderStatus.pending || order.status == OrderStatus.cancelled) {
+        if (direction == DismissDirection.endToStart) { // Right swipe for edit
+          if (order.status != OrderStatus.pending) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Cannot update status for pending or cancelled orders'),
+                  content: Text('Can only edit pending orders'),
                   backgroundColor: AppConstants.errorColor,
                 ),
               );
             }
             return false;
           }
+          return await _showEditOrderDialog(order);
+        } else if (direction == DismissDirection.startToEnd) { // Left swipe for cancel
           return await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
-              title: const Text('Update Order?'),
-              content: const Text('Are you sure you want to set this order status to Pending?'),
+              title: const Text('Cancel Order?'),
+              content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Cancel'),
+                  child: const Text('No'),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          ) ?? false;
-        } else if (direction == DismissDirection.endToStart) {
-          return await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Delete Order?'),
-              content: const Text('Are you sure you want to delete this order? This action cannot be undone.'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('OK'),
+                  child: const Text('Yes'),
                 ),
               ],
             ),
@@ -421,56 +406,33 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
         return false;
       },
       onDismissed: (direction) async {
-        if (direction == DismissDirection.startToEnd) {
+        final token = AuthService.currentToken;
+        if (token == null) return;
+
+        if (direction == DismissDirection.endToStart) { // Right swipe (edit)
+          // Handle edit logic if needed after dialog (already handled in _showEditOrderDialog)
+          _loadOrders();
+        } else if (direction == DismissDirection.startToEnd) { // Left swipe (cancel)
           try {
-            final token = AuthService.currentToken;
-            if (token != null) {
-              await OrderService.updateOrderStatus(
-                orderId: order.id,
-                newStatus: OrderStatus.pending,
-                token: token,
-              );
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Order updated to Pending'),
-                    backgroundColor: AppConstants.successColor,
-                  ),
-                );
-              }
-              _loadOrders();
-            }
-          } catch (e) {
+            await OrderService.updateOrderStatus(
+              orderId: order.id,
+              newStatus: OrderStatus.cancelled,
+              token: token,
+            );
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Failed to update order: $e'),
-                  backgroundColor: AppConstants.errorColor,
+                  content: Text('Order cancelled successfully'),
+                  backgroundColor: AppConstants.successColor,
                 ),
               );
             }
             _loadOrders();
-          }
-        } else if (direction == DismissDirection.endToStart) {
-          try {
-            final token = AuthService.currentToken;
-            if (token != null) {
-              await OrderService.deleteOrder(orderId: order.id, token: token);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Order deleted successfully'),
-                    backgroundColor: AppConstants.successColor,
-                  ),
-                );
-              }
-              _loadOrders();
-            }
           } catch (e) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Failed to delete order: $e'),
+                  content: Text('Failed to cancel order: $e'),
                   backgroundColor: AppConstants.errorColor,
                 ),
               );
@@ -514,6 +476,125 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
     );
   }
 
+  Future<bool?> _showEditOrderDialog(Order order) async {
+    String description = order.description ?? '';
+    String notes = order.notes ?? '';
+    String orderType = order.orderType ?? 'Single';
+    DateTime orderDate = order.orderDate ?? order.createdAt;
+    List<Map<String, dynamic>> ornamentDetails = List.from(order.ornamentDetails);
+
+    return showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Order'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Description'),
+                  controller: TextEditingController(text: description),
+                  onChanged: (value) => description = value,
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Notes'),
+                  controller: TextEditingController(text: notes),
+                  onChanged: (value) => notes = value,
+                ),
+                DropdownButton<String>(
+                  value: orderType,
+                  items: ['Single', 'Bulk'].map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      orderType = newValue ?? 'Single';
+                    });
+                  },
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: 'Order Date'),
+                  controller: TextEditingController(text: _formatDate(orderDate)),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: orderDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        orderDate = picked;
+                      });
+                    }
+                  },
+                ),
+                // Ornament Details (Simplified for demo, enhance as needed)
+                if (ornamentDetails.isNotEmpty) ...[
+                  const Text('Ornament Details', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...ornamentDetails.map((detail) => ListTile(
+                    title: Text('${detail['name']} - ${detail['material']} ${detail['purity']} - ${detail['weight']}g x ${detail['quantity']}'),
+                  )),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final token = AuthService.currentToken;
+                if (token == null) return;
+
+                try {
+                  final updateData = {
+                    'description': description,
+                    'notes': notes,
+                    'ordertype': orderType,
+                    'orderdate': orderDate.toIso8601String(),
+                    'ornamentdetails': jsonEncode(ornamentDetails),
+                  };
+                  await OrderService.updateOrder(
+                    orderId: order.id,
+                    updateData: updateData,
+                    token: token,
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Order updated successfully'),
+                        backgroundColor: AppConstants.successColor,
+                      ),
+                    );
+                  }
+                  Navigator.pop(context, true);
+                  _loadOrders();
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to update order: $e'),
+                        backgroundColor: AppConstants.errorColor,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildOrderSummary(int index, Order order) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -530,7 +611,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
             Expanded(
               flex: 3,
               child: Text(
-                'Order #${order.id.substring(0, 8)}',
+                '${order.id.substring(0, 8)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppConstants.bodyMedium.copyWith(
@@ -704,7 +785,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
   Widget _buildEmptyState() {
     return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.history,
@@ -984,16 +1065,40 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
               if (imageWidgets.isNotEmpty) ...[
                 pw.Text('Images:', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 8),
-                ...imageWidgets.map((img) => pw.Container(
-                  margin: const pw.EdgeInsets.only(bottom: 8),
-                  child: img,
-                )),
+                for (int i = 0; i < imageWidgets.length; i++)
+                  pw.Container(
+                    margin: const pw.EdgeInsets.only(bottom: 8),
+                    child: imageWidgets[i],
+                  ),
               ],
             ],
           );
         },
       ),
     );
+
+    // Add additional page for the third image if there are 3 or more images
+    if (imageWidgets.length >= 3) {
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.SizedBox(height: 16),
+                pw.Text('Additional Images', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 16),
+                pw.Container(
+                  margin: const pw.EdgeInsets.only(bottom: 8),
+                  child: imageWidgets[2], // Third image on new page
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    }
 
     try {
       final dir = await getTemporaryDirectory();
@@ -1002,7 +1107,6 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
       setState(() {
         _pdfFile = file;
       });
-      // Open PDF directly in the screen
       await _displayPDF(file);
     } catch (e) {
       if (mounted) {
@@ -1017,8 +1121,6 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
   }
 
   Future<void> _displayPDF(File file) async {
-    // This is a placeholder; you'll need a PDF viewer package like `flutter_pdfview`
-    // For now, we'll use OpenFile to open it
     await OpenFile.open(file.path);
   }
 
@@ -1037,48 +1139,49 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
     }
   }
 
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: const Text('Order PDF'),
-      backgroundColor: AppConstants.primaryColor,
-      foregroundColor: Colors.white,
-      actions: [
-        if (_pdfFile != null)
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () async {
-              await Share.shareXFiles(
-                [XFile(_pdfFile!.path)],
-                text: 'Sharing Order #${widget.order.id}',
-              );
-            },
-          ),
-      ],
-    ),
-    body: _pdfFile == null
-        ? const Center(child: CircularProgressIndicator())
-        : Column(
-            children: [
-              const Text(
-                'PDF Generated Successfully',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: AppConstants.spacingM),
-            Expanded(
-  child: PDFView(
-    filePath: _pdfFile!.path,
-    enableSwipe: true,
-    swipeHorizontal: true,
-    autoSpacing: true,
-    pageFling: true,
-    onError: (error) {
-      print(error.toString());
-    },
-  ),
-)
-            ],
-          ),
-  );
-}}
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Order PDF'),
+        backgroundColor: AppConstants.primaryColor,
+        foregroundColor: Colors.white,
+        actions: [
+          if (_pdfFile != null)
+            IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () async {
+                await Share.shareXFiles(
+                  [XFile(_pdfFile!.path)],
+                  text: 'Sharing Order #${widget.order.id}',
+                );
+              },
+            ),
+        ],
+      ),
+      body: _pdfFile == null
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                const Text(
+                  'PDF Generated Successfully',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: AppConstants.spacingM),
+                Expanded(
+                  child: PDFView(
+                    filePath: _pdfFile!.path,
+                    enableSwipe: true,
+                    swipeHorizontal: true,
+                    autoSpacing: true,
+                    pageFling: true,
+                    onError: (error) {
+                      print(error.toString());
+                    },
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
