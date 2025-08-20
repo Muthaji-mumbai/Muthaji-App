@@ -149,7 +149,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
               ),
             ),
             pw.Text(
-              'Professional Jewelry Services',
+              'MGRS. OF CZ Gold Jewelry ',
               style: pw.TextStyle(
                 fontSize: 10,
                 color: PdfColors.grey600,
@@ -367,7 +367,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(
-            'Thank you for choosing SoloShine!',
+            'Thank you for choosing Muthaji!',
             style: pw.TextStyle(
               fontSize: 12,
               fontStyle: pw.FontStyle.italic,
@@ -557,7 +557,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
               onPressed: () async {
                 await Share.shareXFiles(
                   [XFile(_pdfFile!.path)],
-                  text: 'Sharing Invoice #${widget.order.id}',
+                  text: 'Sharing Pdf #${widget.order.id}',
                 );
               },
             ),
@@ -571,7 +571,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
                   Text(
-                    'Generating Professional Invoice...',
+                    'Generating  Pdf...',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                 ],
@@ -587,7 +587,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
                       Icon(Icons.check_circle, color: Colors.green.shade600),
                       const SizedBox(width: 8),
                       const Text(
-                        'Professional Invoice Generated Successfully',
+                        'Pdf Generated Successfully',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
