@@ -282,10 +282,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               'Client: ${order.clientName}',
               style: AppConstants.bodyMedium.copyWith(color: AppConstants.textSecondaryColor),
             ),
-            Text(
-              '\$${order.amount.toStringAsFixed(2)} • ${_formatDate(order.createdAt)}',
-              style: AppConstants.bodySmall.copyWith(color: AppConstants.textSecondaryColor),
-            ),
+            
           ],
         ),
         trailing: Container(

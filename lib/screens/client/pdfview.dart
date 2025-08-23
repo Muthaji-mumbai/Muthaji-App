@@ -141,7 +141,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
             pw.Image(logoImage, width: 80, height: 80),
             pw.SizedBox(height: 10),
             pw.Text(
-              'Muthaji',
+              'MUTHAJI',
               style: pw.TextStyle(
                 fontSize: 20,
                 fontWeight: pw.FontWeight.bold,
@@ -149,7 +149,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
               ),
             ),
             pw.Text(
-              'MGRS. OF CZ Gold Jewelry ',
+              'MGRS. OF CZ GOLD JEWELRY ',
               style: pw.TextStyle(
                 fontSize: 10,
                 color: PdfColors.grey600,
