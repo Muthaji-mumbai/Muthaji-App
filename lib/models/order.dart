@@ -4,40 +4,72 @@ enum OrderStatus { pending, confirmed, inProgress, completed, cancelled }
 
 class OrnamentDetail {
   final String id;
-  final String name;
-  final String material;
+  // For new API: name is an object with id and categoryname. We store both.
+  final String nameId; // maps from name._id or name (string id)
+  final String name; // display name, e.g., categoryname or fallback string
+  final String material; // kept for backward compatibility
   final double weight;
   final String purity;
   final int quantity;
+  final String? remarks; // new
+  final List<String> images; // per-ornament images (new API)
 
   OrnamentDetail({
     required this.id,
+    required this.nameId,
     required this.name,
-    required this.material,
+    this.material = '',
     required this.weight,
     required this.purity,
     required this.quantity,
+    this.remarks,
+    this.images = const [],
   });
 
   factory OrnamentDetail.fromJson(Map<String, dynamic> json) {
+    // Handle name being string or nested object
+    String nameId = '';
+    String displayName = '';
+    final rawName = json['name'];
+    if (rawName is Map<String, dynamic>) {
+      nameId = (rawName['_id'] ?? rawName['id'] ?? '').toString();
+      displayName = (rawName['categoryname'] ?? rawName['name'] ?? '').toString();
+    } else if (rawName != null) {
+      nameId = rawName.toString();
+      displayName = rawName.toString();
+    }
+
+    // Per-item images list (new API)
+    List<String> itemImages = [];
+    if (json['image'] is List) {
+      itemImages = List<String>.from(json['image']);
+    }
+
     return OrnamentDetail(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
-      name: json['name'] ?? '',
+      nameId: nameId,
+      name: displayName,
       material: json['material'] ?? '',
       weight: (json['weight'] ?? 0).toDouble(),
       purity: json['purity'] ?? '',
-      quantity: json['quantity'] ?? 0,
+      quantity: (json['quantity'] ?? 0) is int
+          ? (json['quantity'] ?? 0)
+          : int.tryParse((json['quantity'] ?? '0').toString()) ?? 0,
+      remarks: json['remarks'],
+      images: itemImages,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': name,
+      'name': nameId.isNotEmpty ? nameId : name,
       'material': material,
       'weight': weight,
       'purity': purity,
       'quantity': quantity,
+      if (remarks != null) 'remarks': remarks,
+      if (images.isNotEmpty) 'image': images,
     };
   }
 }
@@ -55,10 +87,11 @@ class Order {
   final String? assignedEmployeeId;
 
   // New fields from API
-  final String? orderType;
+  final String? orderType; // server may set it to "Single"
+  final String? orderNo; // orderno (new)
   final DateTime? orderDate;
   final List<OrnamentDetail> ornamentDetails;
-  final List<String> images;
+  final List<String> images; // kept for backward compatibility if order-level images exist
   final List<String> pdfs;
 
   Order({
@@ -73,6 +106,7 @@ class Order {
     this.notes,
     this.assignedEmployeeId,
     this.orderType,
+    this.orderNo,
     this.orderDate,
     this.ornamentDetails = const [],
     this.images = const [],
@@ -101,20 +135,19 @@ class Order {
     // Parse ornament details
     List<OrnamentDetail> ornamentDetails = [];
     if (json['ornamentdetails'] != null) {
-      ornamentDetails =
-          (json['ornamentdetails'] as List)
-              .map((detail) => OrnamentDetail.fromJson(detail))
-              .toList();
+      ornamentDetails = (json['ornamentdetails'] as List)
+          .map((detail) => OrnamentDetail.fromJson(detail))
+          .toList();
     }
 
-    // Parse images and PDFs
+    // Parse images and PDFs (older responses may have order-level images)
     List<String> images = [];
-    if (json['image'] != null) {
+    if (json['image'] != null && json['image'] is List) {
       images = List<String>.from(json['image']);
     }
 
     List<String> pdfs = [];
-    if (json['pdf'] != null) {
+    if (json['pdf'] != null && json['pdf'] is List) {
       pdfs = List<String>.from(json['pdf']);
     }
 
@@ -125,17 +158,15 @@ class Order {
       description: json['description'] ?? 'Order',
       amount: (json['amount'] ?? 0).toDouble(),
       status: _parseStatus(json['status']),
-      createdAt:
-          json['createdAt'] != null
-              ? DateTime.parse(json['createdAt'])
-              : DateTime.now(),
-      updatedAt:
-          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
       notes: json['notes'],
       assignedEmployeeId: json['assignedEmployeeId'],
       orderType: json['ordertype'],
-      orderDate:
-          json['orderdate'] != null ? DateTime.parse(json['orderdate']) : null,
+      orderNo: json['orderno']?.toString(),
+      orderDate: json['orderdate'] != null ? DateTime.parse(json['orderdate']) : null,
       ornamentDetails: ornamentDetails,
       images: images,
       pdfs: pdfs,
@@ -179,9 +210,9 @@ class Order {
       'notes': notes,
       'assignedEmployeeId': assignedEmployeeId,
       'orderType': orderType,
+      'orderNo': orderNo,
       'orderDate': orderDate?.toIso8601String(),
-      'ornamentDetails':
-          ornamentDetails.map((detail) => detail.toJson()).toList(),
+      'ornamentDetails': ornamentDetails.map((d) => d.toJson()).toList(),
       'images': images,
       'pdfs': pdfs,
     };
@@ -199,6 +230,7 @@ class Order {
     String? notes,
     String? assignedEmployeeId,
     String? orderType,
+    String? orderNo,
     DateTime? orderDate,
     List<OrnamentDetail>? ornamentDetails,
     List<String>? images,
@@ -216,6 +248,7 @@ class Order {
       notes: notes ?? this.notes,
       assignedEmployeeId: assignedEmployeeId ?? this.assignedEmployeeId,
       orderType: orderType ?? this.orderType,
+      orderNo: orderNo ?? this.orderNo,
       orderDate: orderDate ?? this.orderDate,
       ornamentDetails: ornamentDetails ?? this.ornamentDetails,
       images: images ?? this.images,

@@ -6,8 +6,13 @@ import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/splash_screen.dart';
 import 'constants/app_constants.dart';
+import 'services/navigation_service.dart';
+import 'services/api_service.dart';
+import 'services/auth_service.dart';
 
 void main() {
+  // Register a global unauthorized handler used by ApiService
+  ApiService.setUnauthorizedHandler(AuthService.handleUnauthorized);
   runApp(const MyApp());
 }
 
@@ -25,6 +30,7 @@ class MyApp extends StatelessWidget {
           theme: AppConstants.lightTheme,
           // darkTheme: AppConstants.darkTheme,
           // themeMode: ThemeMode.system,
+          navigatorKey: NavigationService.navigatorKey,
           home: const AuthWrapper(),
         ),
         breakpoints: [

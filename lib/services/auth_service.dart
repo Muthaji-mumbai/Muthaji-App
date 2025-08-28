@@ -1,105 +1,149 @@
   import 'dart:convert';
-  import 'package:shared_preferences/shared_preferences.dart';
-  import '../models/user.dart';
-  import 'api_service.dart';
-  import '../constants/app_constants.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/user.dart';
+import 'api_service.dart';
+import '../constants/app_constants.dart';
+import 'navigation_service.dart';
+import '../screens/login_screen.dart';
 
-  class AuthService {
-    static const String _userKey = 'user';
-    static const String _tokenKey = 'token';
+class AuthService {
+  static const String _userKey = 'user';
+  static const String _tokenKey = 'token';
 
-    static User? _currentUser;
-    static String? _currentToken;
+  static User? _currentUser;
+  static String? _currentToken;
+  static bool _handlingUnauthorized = false;
 
-    static User? get currentUser => _currentUser;
-    static String? get currentToken => _currentToken;
-    static bool get isLoggedIn => _currentUser != null;
+  static User? get currentUser => _currentUser;
+  static String? get currentToken => _currentToken;
+  static bool get isLoggedIn => _currentUser != null;
 
-    // Login method using real API
- // Login method using real API
-static Future<Map<String, dynamic>> login(String email, String password) async {
-  try {
-    final response = await ApiService.post(
-      AppConstants.loginEndpoint,
-      body: {'email': email, 'password': password},
-    );
+  // Login method using real API
+  static Future<Map<String, dynamic>> login(String email, String password) async {
+    try {
+      final response = await ApiService.post(
+        AppConstants.loginEndpoint,
+        body: {'email': email, 'password': password},
+      );
 
-    if (response['success'] == true && response['data'] != null) {
-      final userData = response['data'];
+      if (response['success'] == true && response['data'] != null) {
+        final userData = response['data'];
 
-      // Create user from API response
-      print("userdata: $userData");
-      _currentUser = User.fromJson(userData);
-      _currentToken = userData['token'];
+        // Create user from API response
+        print("userdata: $userData");
+        _currentUser = User.fromJson(userData);
+        _currentToken = userData['token'];
 
-      // Save to local storage
-      await _saveUserToStorage();
-      return {'success': true, 'message': response['message'] ?? 'Login successful'};
-    } else {
-      return {'success': false, 'message': response['message'] ?? 'Login failed'};
+        // Save to local storage
+        await _saveUserToStorage();
+        return {'success': true, 'message': response['message'] ?? 'Login successful'};
+      } else {
+        return {'success': false, 'message': response['message'] ?? 'Login failed'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Login failed: $e'};
     }
-  } catch (e) {
-    return {'success': false, 'message': 'Login failed: $e'};
+  }
+
+  // Logout method
+  static Future<void> logout() async {
+    _currentUser = null;
+    _currentToken = null;
+
+    // Clear local storage
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_userKey);
+    await prefs.remove(_tokenKey);
+  }
+
+  // Check if user is logged in on app start
+  static Future<bool> checkAuthStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString(_userKey);
+      final token = prefs.getString(_tokenKey);
+
+      if (userJson != null && token != null) {
+        final userData = json.decode(userJson);
+        _currentUser = User.fromJson(userData);
+        _currentToken = token;
+        return true;
+      }
+    } catch (e) {
+      print('Error checking auth status: $e');
+    }
+    return false;
+  }
+
+  // Save user to local storage
+  static Future<void> _saveUserToStorage() async {
+    if (_currentUser != null && _currentToken != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_userKey, json.encode(_currentUser!.toJson()));
+      await prefs.setString(_tokenKey, _currentToken!);
+    }
+  }
+
+  // Check if current user has specific role
+  static bool hasRole(UserRole role) {
+    return _currentUser?.role == role;
+  }
+
+  // Check if current user has any of the specified roles
+  static bool hasAnyRole(List<UserRole> roles) {
+    return _currentUser != null && roles.contains(_currentUser!.role);
+  }
+
+  // Get user by role for demo purposes (fallback)
+  static User getDemoUser(UserRole role) {
+    return User(
+      id: role.toString(),
+      name: 'Demo ${role.toString().split('.').last}',
+      email: 'demo@example.com',
+      phone: '+1234567890',
+      role: role,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  // Handle 401/expired token globally
+  static Future<void> handleUnauthorized() async {
+    if (_handlingUnauthorized) return;
+    _handlingUnauthorized = true;
+    try {
+      // Clear local session
+      await logout();
+
+      final context = NavigationService.navigatorKey.currentState?.overlay?.context;
+
+      if (context != null) {
+        // Show a session expired dialog
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Session expired'),
+            content: const Text('Your session has expired. Please log in again.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+
+        // Navigate to login screen and clear back stack
+        NavigationService.navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (_) {
+      // Ignore
+    } finally {
+      _handlingUnauthorized = false;
+    }
   }
 }
-    // Logout method
-    static Future<void> logout() async {
-      _currentUser = null;
-      _currentToken = null;
-
-      // Clear local storage
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_userKey);
-      await prefs.remove(_tokenKey);
-    }
-
-    // Check if user is logged in on app start
-    static Future<bool> checkAuthStatus() async {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final userJson = prefs.getString(_userKey);
-        final token = prefs.getString(_tokenKey);
-
-        if (userJson != null && token != null) {
-          final userData = json.decode(userJson);
-          _currentUser = User.fromJson(userData);
-          _currentToken = token;
-          return true;
-        }
-      } catch (e) {
-        print('Error checking auth status: $e');
-      }
-      return false;
-    }
-
-    // Save user to local storage
-    static Future<void> _saveUserToStorage() async {
-      if (_currentUser != null && _currentToken != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_userKey, json.encode(_currentUser!.toJson()));
-        await prefs.setString(_tokenKey, _currentToken!);
-      }
-    }
-
-    // Check if current user has specific role
-    static bool hasRole(UserRole role) {
-      return _currentUser?.role == role;
-    }
-
-    // Check if current user has any of the specified roles
-    static bool hasAnyRole(List<UserRole> roles) {
-      return _currentUser != null && roles.contains(_currentUser!.role);
-    }
-
-    // Get user by role for demo purposes (fallback)
-    static User getDemoUser(UserRole role) {
-      return User(
-        id: role.toString(),
-        name: 'Demo ${role.toString().split('.').last}',
-        email: 'demo@example.com',
-        phone: '+1234567890',
-        role: role,
-        createdAt: DateTime.now(),
-      );
-    }
-  }

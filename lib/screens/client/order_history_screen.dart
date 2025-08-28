@@ -1,10 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import 'package:flutter/services.dart'; // For loading asset images
 import 'package:soloshine/screens/client/pdfview.dart';
+import 'package:soloshine/screens/client/order_image_generator.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
@@ -51,12 +50,34 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
       final token = AuthService.currentToken;
 
       if (currentUser != null && token != null) {
-        final orders = await OrderService.getOrdersByClient(
+        // First try client-filtered orders
+        final clientOrders = await OrderService.getOrdersByClient(
           currentUser.id,
           token,
         );
+
+        List<Order> effectiveOrders = clientOrders;
+
+        // Temporary debug fallback: if none matched but server has data, show all
+        if (clientOrders.isEmpty) {
+          final all = await OrderService.getAllOrders(token);
+          if (all.isNotEmpty) {
+            effectiveOrders = all;
+            // Notify once
+            // if (mounted) {
+            //   ScaffoldMessenger.of(context).showSnackBar(
+            //     SnackBar(
+            //       content: const Text('Showing all orders (debug): logged-in user has no matching orders'),
+            //       backgroundColor: AppConstants.warningColor,
+            //       duration: const Duration(seconds: 2),
+            //     ),
+            //   );
+            // }
+          }
+        }
+
         setState(() {
-          _allOrders = orders;
+          _allOrders = effectiveOrders;
           _applyFilters();
           _isLoading = false;
         });
@@ -107,6 +128,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
         final query = _searchQuery.toLowerCase();
         return order.description.toLowerCase().contains(query) ||
             order.id.toLowerCase().contains(query) ||
+            (order.orderNo?.toLowerCase().contains(query) ?? false) ||
             order.statusText.toLowerCase().contains(query);
       }
 
@@ -220,23 +242,23 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
 
           // Filters header and Tabs
           TabBar(
-  controller: _tabController,
-  labelColor: AppConstants.primaryColor,
-  unselectedLabelColor: AppConstants.textSecondaryColor,
-  indicatorColor: AppConstants.primaryColor,
-  tabs: const [
-    Tab(text: 'All'),
-    Tab(icon: Icon(Icons.hourglass_empty)),
-    Tab(icon: Icon(Icons.autorenew)),
-    Tab(icon: Icon(Icons.check_circle)),
-    Tab(icon: Icon(Icons.cancel)),
-  ],
-  onTap: (index) {
-    setState(() {
-      _applyFilters();
-    });
-  },
-),
+            controller: _tabController,
+            labelColor: AppConstants.primaryColor,
+            unselectedLabelColor: AppConstants.textSecondaryColor,
+            indicatorColor: AppConstants.primaryColor,
+            tabs: const [
+              Tab(text: 'All'),
+              Tab(icon: Icon(Icons.hourglass_empty)),
+              Tab(icon: Icon(Icons.autorenew)),
+              Tab(icon: Icon(Icons.check_circle)),
+              Tab(icon: Icon(Icons.cancel)),
+            ],
+            onTap: (index) {
+              setState(() {
+                _applyFilters();
+              });
+            },
+          ),
 
           const SizedBox(height: AppConstants.spacingM),
 
@@ -328,17 +350,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
             child: Text('Sl No', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
           Expanded(
+            flex: 4,
+            child: Text('Order No',
+                style: AppConstants.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+          ),
+          Expanded(
             flex: 3,
-            child: Text('Order number',
-                style: AppConstants.bodySmall.copyWith(fontWeight: FontWeight.w700)),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text('Type',
-                style: AppConstants.bodySmall.copyWith(fontWeight: FontWeight.w700)),
-          ),
-          Expanded(
-            flex: 2,
             child: Text('Order date',
                 style: AppConstants.bodySmall.copyWith(fontWeight: FontWeight.w700)),
           ),
@@ -474,7 +491,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
   Future<bool?> _showEditOrderDialog(Order order) async {
     String description = order.description ?? '';
     String notes = order.notes ?? '';
-    String orderType = order.orderType ?? 'Single';
     DateTime orderDate = order.orderDate ?? order.createdAt;
     List<Map<String, dynamic>> ornamentDetails = List.from(order.ornamentDetails);
 
@@ -497,20 +513,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
                   controller: TextEditingController(text: notes),
                   onChanged: (value) => notes = value,
                 ),
-                DropdownButton<String>(
-                  value: orderType,
-                  items: ['Single', 'Bulk'].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      orderType = newValue ?? 'Single';
-                    });
-                  },
-                ),
                 TextField(
                   decoration: const InputDecoration(labelText: 'Order Date'),
                   controller: TextEditingController(text: _formatDate(orderDate)),
@@ -532,7 +534,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
                 if (ornamentDetails.isNotEmpty) ...[
                   const Text('Ornament Details', style: TextStyle(fontWeight: FontWeight.bold)),
                   ...ornamentDetails.map((detail) => ListTile(
-                    title: Text('${detail['name']} - ${detail['material']} ${detail['purity']} - ${detail['weight']}g x ${detail['quantity']}'),
+                    title: Text('${detail['name']} - ${detail['purity']} - ${detail['weight']}g x ${detail['quantity']}'),
+                    subtitle: (detail['remarks'] != null && (detail['remarks'] as String).isNotEmpty)
+                        ? Text('Remarks: ${detail['remarks']}')
+                        : null,
                   )),
                 ],
               ],
@@ -552,9 +557,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
                   final updateData = {
                     'description': description,
                     'notes': notes,
-                    'ordertype': orderType,
                     'orderdate': orderDate.toIso8601String(),
-                    'ornamentdetails': jsonEncode(ornamentDetails),
+                    'ornamentDetails': jsonEncode(ornamentDetails),
                   };
                   await OrderService.updateOrder(
                     orderId: order.id,
@@ -604,9 +608,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
                   )),
             ),
             Expanded(
-              flex: 3,
+              flex: 4,
               child: Text(
-                '${order.id.substring(0, 8)}',
+                order.orderNo?.isNotEmpty == true ? order.orderNo! : order.id.substring(0, 8),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppConstants.bodyMedium.copyWith(
@@ -616,16 +620,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
               ),
             ),
             Expanded(
-              flex: 2,
-              child: Text(
-                order.orderType ?? '-',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppConstants.bodySmall,
-              ),
-            ),
-            Expanded(
-              flex: 2,
+              flex: 3,
               child: Text(
                 _formatFriendlyDate(order.orderDate ?? order.createdAt),
                 maxLines: 1,
@@ -685,19 +680,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
           ],
         ),
 
-        // Order type/date
-        if (order.orderType != null || order.orderDate != null)
-          Row(
-            children: [
-              if (order.orderType != null)
-                Text('Type: ${order.orderType!}',
-                    style: AppConstants.bodySmall),
-              if (order.orderType != null && order.orderDate != null)
-                const SizedBox(width: AppConstants.spacingL),
-              if (order.orderDate != null)
-                Text('Order Date: ${_formatDate(order.orderDate!)}',
-                    style: AppConstants.bodySmall),
-            ],
+        // Order date
+        if (order.orderDate != null)
+          Padding(
+            padding: const EdgeInsets.only(top: AppConstants.spacingXS),
+            child: Text('Order Date: ${_formatDate(order.orderDate!)}',
+                style: AppConstants.bodySmall),
           ),
 
         // Ornament details
@@ -710,18 +698,33 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
           const SizedBox(height: AppConstants.spacingS),
           ...order.ornamentDetails.map((d) => Padding(
                 padding: const EdgeInsets.only(bottom: AppConstants.spacingS),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(d.name, style: AppConstants.bodyMedium),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(d.name, style: AppConstants.bodyMedium),
+                        ),
+                        Text('${d.purity}',
+                            style: AppConstants.bodySmall.copyWith(
+                                color: AppConstants.textSecondaryColor)),
+                        const SizedBox(width: AppConstants.spacingM),
+                        Text('${d.weight}g x ${d.quantity}',
+                            style: AppConstants.bodySmall.copyWith(
+                                color: AppConstants.textSecondaryColor)),
+                      ],
                     ),
-                    Text('${d.material} • ${d.purity}',
-                        style: AppConstants.bodySmall.copyWith(
-                            color: AppConstants.textSecondaryColor)),
-                    const SizedBox(width: AppConstants.spacingM),
-                    Text('${d.weight}g x ${d.quantity}',
-                        style: AppConstants.bodySmall.copyWith(
-                            color: AppConstants.textSecondaryColor)),
+                    if (d.remarks != null && d.remarks!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppConstants.spacingXS),
+                        child: Text('Remarks: ${d.remarks!}', style: AppConstants.bodySmall),
+                      ),
+                    if (d.images.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppConstants.spacingXS),
+                        child: _buildImageThumbnails(d.images),
+                      ),
                   ],
                 ),
               )),
@@ -771,6 +774,24 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
               foregroundColor: Colors.white,
             ),
             child: const Text('Generate PDF'),
+          ),
+        ),
+
+        // Generate Image Button
+        Padding(
+          padding: const EdgeInsets.only(top: AppConstants.spacingM),
+          child: ElevatedButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OrderImageGenerator(order: order),
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppConstants.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Generate Image'),
           ),
         ),
       ],

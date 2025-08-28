@@ -8,6 +8,12 @@ class ApiService {
     'Content-Type': 'application/json',
   };
 
+  // Unauthorized handler registration
+  static Future<void> Function()? _onUnauthorized;
+  static void setUnauthorizedHandler(Future<void> Function() handler) {
+    _onUnauthorized = handler;
+  }
+
   // Generic GET request
   static Future<Map<String, dynamic>> get(
     String endpoint, {
@@ -160,6 +166,17 @@ class ApiService {
   // Handle HTTP response
   static Map<String, dynamic> _handleResponse(http.Response response) {
     try {
+      // Handle unauthorized centrally
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        // Fire-and-forget the unauthorized handler
+        _onUnauthorized?.call();
+        return {
+          'success': false,
+          'message': 'Unauthorized',
+          'data': null,
+        };
+      }
+
       final responseData = json.decode(response.body);
       
       if (response.statusCode >= 200 && response.statusCode < 300) {
