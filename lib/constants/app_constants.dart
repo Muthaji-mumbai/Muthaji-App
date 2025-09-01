@@ -30,6 +30,7 @@ class AppConstants {
   static const String usersEndpoint = '/user';
   static const String ordersEndpoint = '/order';
   static const String profileEndpoint = '/profile';
+  static const String categoriesEndpoint = '/category';
 
   // Text Styles
   static TextStyle get headingLarge => GoogleFonts.inter(

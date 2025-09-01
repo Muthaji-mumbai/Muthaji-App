@@ -11,6 +11,8 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../services/order_service.dart';
 import '../../services/auth_service.dart';
+import '../../models/category.dart';
+import '../../services/category_service.dart';
 
 class CreateOrderScreen extends StatefulWidget {
   const CreateOrderScreen({super.key});
@@ -24,33 +26,69 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   final PageController _pageController = PageController();
   final _orderDateController = TextEditingController();
   bool _isLoading = false;
-  bool _isPickingImage = false; // Loader for image picking
+  bool _isPickingImage = false;
   DateTime? _selectedOrderDate;
   List<Map<String, dynamic>> _ornamentDetails = [
     {
       'name': '',
+      'categoryId': '', 
       'weight': 0.0,
       'purity': '',
       'quantity': 1,
       'remarks': '',
     }
   ];
-  // Per-ornament images. Each index matches _ornamentDetails index.
   List<List<PlatformFile>> _ornamentImages = [[]];
   File? _currentEditingImage;
   final ImagePicker _picker = ImagePicker();
+  List<Datum> _categories = []; 
+  bool _loadingCategories = true; 
+  String? _categoriesError; 
+  static const List<String> _purityOptions = [
+    '18K Yellow gold',
+    '18K Rose gold', 
+    '18K White gold',
+    'Other'
+  ];
 
   @override
   void initState() {
     super.initState();
     _orderDateController.text = DateTime.now().toIso8601String().split('T')[0];
     _selectedOrderDate = DateTime.now();
+    _fetchCategories(); 
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final token = AuthService.currentToken;
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      final response = await CategoryService.getAllCategories(token);
+      setState(() {
+        _categories = response.data; 
+        _loadingCategories = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loadingCategories = false;
+        _categoriesError = 'Failed to load categories: $e. Enter manually.';
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading categories: $e')),
+        );
+      }
+    }
   }
 
   void _addOrnamentDetail() {
     setState(() {
       _ornamentDetails.add({
         'name': '',
+        'categoryId': '', 
         'weight': 0.0,
         'purity': '',
         'quantity': 1,
@@ -130,14 +168,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         final currentUser = context.read<AuthProvider>().currentUser;
         final token = AuthService.currentToken;
         if (currentUser != null && token != null) {
-          // Build ornament details payload per new API
+          // Format the payload to match the required structure
           final detailsPayload = _ornamentDetails.map((d) => {
-                'name': d['name'],
+                'name': d['categoryId'], // Send category ID as name
                 'weight': d['weight'],
                 'purity': d['purity'],
                 'quantity': d['quantity'],
                 if ((d['remarks'] as String).isNotEmpty) 'remarks': d['remarks'],
               }).toList();
+
           final order = await OrderService.createOrder(
             clientId: currentUser.id,
             clientName: currentUser.name,
@@ -146,6 +185,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             ornamentImages: _ornamentImages,
             token: token,
           );
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -210,6 +250,116 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         _orderDateController.text = picked.toIso8601String().split('T')[0];
       });
     }
+  }
+
+  // Custom searchable dropdown widget
+  Widget _buildCategoryDropdown(int index, Map<String, dynamic> detail) {
+    return _loadingCategories
+        ? const Center(child: CircularProgressIndicator())
+        : _categoriesError != null
+            ? TextFormField(
+                initialValue: detail['name'],
+                decoration: InputDecoration(
+                  labelText: 'Category ID / Name ($_categoriesError)',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingS,
+                    vertical: AppConstants.spacingS,
+                  ),
+                ),
+                onChanged: (value) => setState(() {
+                  _ornamentDetails[index]['name'] = value;
+                }),
+                validator: (value) => value!.isEmpty ? 'Please enter category id/name' : null,
+              )
+            : GestureDetector(
+                onTap: () => _showCategoryDialog(index, detail),
+                child: AbsorbPointer(
+                  child: TextFormField(
+                    decoration: InputDecoration(
+                      labelText: 'Category ID / Name',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacingS,
+                        vertical: AppConstants.spacingS,
+                      ),
+                      suffixIcon: const Icon(Icons.arrow_drop_down),
+                    ),
+                    controller: TextEditingController(text: detail['name']),
+                    validator: (value) => value!.isEmpty ? 'Please select a category' : null,
+                    enabled: false,
+                  ),
+                ),
+              );
+  }
+
+  Future<void> _showCategoryDialog(int index, Map<String, dynamic> detail) async {
+    String searchQuery = '';
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final filteredCategories = _categories
+                .where((category) => category.categoryname.toLowerCase().contains(searchQuery.toLowerCase()))
+                .toList();
+            return AlertDialog(
+              title: const Text('Select Category'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Search',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.search),
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          searchQuery = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 200,
+                      child: ListView.builder(
+                        itemCount: filteredCategories.length,
+                        itemBuilder: (context, i) {
+                          final category = filteredCategories[i];
+                          return ListTile(
+                            title: Text(category.categoryname),
+                            onTap: () {
+                              setState(() {
+                                _ornamentDetails[index]['name'] = category.categoryname;
+                                _ornamentDetails[index]['categoryId'] = category.id; 
+                              });
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -336,23 +486,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             children: [
               Expanded(
                 flex: 2,
-                child: TextFormField(
-                  initialValue: detail['name'],
-                  decoration: InputDecoration(
-                    labelText: 'Category ID / Name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingS,
-                      vertical: AppConstants.spacingS,
-                    ),
-                  ),
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['name'] = value;
-                  }),
-                  validator: (value) => value!.isEmpty ? 'Please enter category id/name' : null,
-                ),
+                child: _buildCategoryDropdown(index, detail),
               ),
             ],
           ),
@@ -388,10 +522,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               const SizedBox(width: AppConstants.spacingM),
               Expanded(
                 flex: 1,
-                child: TextFormField(
-                  initialValue: detail['purity'],
+                child: DropdownButtonFormField(
                   decoration: InputDecoration(
-                    labelText: 'Purity (e.g., 18K Yellow gold)',
+                    labelText: 'Purity',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppConstants.radiusS),
                     ),
@@ -400,10 +533,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       vertical: AppConstants.spacingS,
                     ),
                   ),
+                  items: _purityOptions.map((option) => DropdownMenuItem(
+                    child: Text(option),
+                    value: option,
+                  )).toList(),
                   onChanged: (value) => setState(() {
                     _ornamentDetails[index]['purity'] = value;
                   }),
-                  validator: (value) => value == null || value.isEmpty ? 'Please enter purity' : null,
+                  validator: (value) => value == null ? 'Please select purity' : null,
                 ),
               ),
               const SizedBox(width: AppConstants.spacingM),
