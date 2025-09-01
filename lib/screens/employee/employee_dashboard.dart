@@ -102,25 +102,25 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               ),
             ),
       floatingActionButtons: [
-        FloatingActionButton(
-          onPressed: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const CreateClientScreen()),
-            );
-            if (result == true) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Client created successfully'),
-                  backgroundColor: AppConstants.successColor,
-                ),
-              );
-            }
-          },
-          backgroundColor: AppConstants.successColor,
-          tooltip: 'New Client',
-          child: const Icon(Icons.person_add),
-        ),
+        // FloatingActionButton(
+        //   onPressed: () async {
+        //     final result = await Navigator.push(
+        //       context,
+        //       // MaterialPageRoute(builder: (context) => const CreateClientScreen()),
+        //     );
+        //     if (result == true) {
+        //       ScaffoldMessenger.of(context).showSnackBar(
+        //         const SnackBar(
+        //           content: Text('Client created successfully'),
+        //           backgroundColor: AppConstants.successColor,
+        //         ),
+        //       );
+        //     }
+        //   },
+        //   backgroundColor: AppConstants.successColor,
+        //   tooltip: 'New Client',
+        //   child: const Icon(Icons.person_add),
+        // ),
       ],
     );
   }
@@ -183,26 +183,26 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               backgroundColor: AppConstants.primaryColor,
               isFullWidth: true,
             ),
-            CustomButton(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const CreateClientScreen()),
-                );
-                if (result == true) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Client created successfully'),
-                      backgroundColor: AppConstants.successColor,
-                    ),
-                  );
-                }
-              },
-              text: 'Create Client',
-              icon: Icons.person_add,
-              backgroundColor: AppConstants.successColor,
-              isFullWidth: true,
-            ),
+            // CustomButton(
+            //   onPressed: () async {
+            //     final result = await Navigator.push(
+            //       context,
+            //       MaterialPageRoute(builder: (context) => const CreateClientScreen()),
+            //     );
+            //     if (result == true) {
+            //       ScaffoldMessenger.of(context).showSnackBar(
+            //         const SnackBar(
+            //           content: Text('Client created successfully'),
+            //           backgroundColor: AppConstants.successColor,
+            //         ),
+            //       );
+            //     }
+            //   },
+            //   text: 'Create Client',
+            //   icon: Icons.person_add,
+            //   backgroundColor: AppConstants.successColor,
+            //   isFullWidth: true,
+            // ),
           ],
         ),
       ],

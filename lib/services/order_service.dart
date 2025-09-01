@@ -106,7 +106,7 @@ class OrderService {
         if (description != null) 'description': description,
         if (amount != null) 'amount': amount.toString(),
         if (notes != null) 'notes': notes,
-        // Backend sets ordertype=Single for clients; omit sending it
+        'ordertype': 'Single',
         'orderdate': (orderDate ?? DateTime.now()).toIso8601String().split('T').first,
         // API expects camelCase key per screenshot
         'ornamentDetails': jsonEncode(ornamentDetails),
