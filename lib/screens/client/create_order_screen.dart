@@ -13,6 +13,7 @@ import '../../services/order_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/category.dart';
 import '../../services/category_service.dart';
+import '../../models/user.dart';
 
 class CreateOrderScreen extends StatefulWidget {
   const CreateOrderScreen({super.key});
@@ -183,11 +184,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 if ((d['remarks'] as String).isNotEmpty) 'remarks': d['remarks'],
               }).toList();
 
+          // For customers, always use 'Single' order type regardless of selection
+          final orderType = currentUser.role == UserRole.client ? 'Single' : _selectedOrderType;
+          
           final order = await OrderService.createOrder(
             clientId: currentUser.id,
             clientName: currentUser.name,
             orderDate: _selectedOrderDate,
-            orderType: _selectedOrderType,
+            orderType: orderType,
             ornamentDetails: detailsPayload,
             ornamentImages: _ornamentImages,
             token: token,
@@ -229,6 +233,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     _orderDateController.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  bool _shouldShowOrderTypeSelection() {
+    final currentUser = context.read<AuthProvider>().currentUser;
+    return currentUser != null && 
+           (currentUser.role == UserRole.admin || currentUser.role == UserRole.employee);
   }
 
   Future<void> _selectDate() async {
@@ -436,31 +446,34 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 validator: (value) => value!.isEmpty ? 'Please select a date' : null,
               ),
             ),
-            const SizedBox(height: AppConstants.spacingM),
-            Text('Order Type', style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-            const SizedBox(height: AppConstants.spacingS),
-            Wrap(
-              spacing: AppConstants.spacingS,
-              children: _orderTypeOptions.map((type) {
-                final isSelected = _selectedOrderType == type;
-                return FilterChip(
-                  label: Text(type),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedOrderType = type;
-                    });
-                  },
-                  backgroundColor: AppConstants.surfaceColor,
-                  selectedColor: AppConstants.primaryColor.withOpacity(0.2),
-                  checkmarkColor: AppConstants.primaryColor,
-                  labelStyle: TextStyle(
-                    color: isSelected ? AppConstants.primaryColor : AppConstants.textPrimaryColor,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                );
-              }).toList(),
-            ),
+            // Show order type selection only for admin and employee users
+            if (_shouldShowOrderTypeSelection()) ...[
+              const SizedBox(height: AppConstants.spacingM),
+              Text('Order Type', style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: AppConstants.spacingS),
+              Wrap(
+                spacing: AppConstants.spacingS,
+                children: _orderTypeOptions.map((type) {
+                  final isSelected = _selectedOrderType == type;
+                  return FilterChip(
+                    label: Text(type),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedOrderType = type;
+                      });
+                    },
+                    backgroundColor: AppConstants.surfaceColor,
+                    selectedColor: AppConstants.primaryColor.withOpacity(0.2),
+                    checkmarkColor: AppConstants.primaryColor,
+                    labelStyle: TextStyle(
+                      color: isSelected ? AppConstants.primaryColor : AppConstants.textPrimaryColor,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
           ],
         ),
       ),
