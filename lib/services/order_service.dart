@@ -1,11 +1,9 @@
   import 'dart:convert';
-import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/order.dart';
-import '../models/user.dart';
 import 'api_service.dart';
 import '../constants/app_constants.dart';
 import 'dart:developer' as developer;
@@ -18,7 +16,7 @@ class OrderService {
         AppConstants.ordersEndpoint,
         token: token,
       );
-      developer.log('response: ${response}');
+      developer.log('response: $response');
       if (response['success'] == true && response['data'] != null) {
         final List<dynamic> ordersData = response['data'];
         return ordersData
@@ -82,7 +80,7 @@ class OrderService {
         return null;
       }
     } catch (e) {
-      print('Error fetching order by ID: $e');
+      developer.log('Error fetching order by ID: $e');
       return null;
     }
   }
@@ -179,8 +177,8 @@ class OrderService {
       // Also try orderId field as some APIs expect this
       requestBody['orderId'] = orderId;
 
-      print('Sending update request for order: $orderId');
-      print('Request body: $requestBody');
+      developer.log('Sending update request for order: $orderId');
+      developer.log('Request body: $requestBody');
 
       // Try the specific endpoint first
       try {
@@ -196,7 +194,7 @@ class OrderService {
           throw Exception(response['message'] ?? 'Failed to update order');
         }
       } catch (e) {
-        print('Specific endpoint failed, trying root endpoint: $e');
+        developer.log('Specific endpoint failed, trying root endpoint: $e');
 
         // If specific endpoint fails, try the root endpoint
         final response = await ApiService.patch(
@@ -212,7 +210,7 @@ class OrderService {
         }
       }
     } catch (e) {
-      print('Error in updateOrder: $e');
+      developer.log('Error in updateOrder: $e');
       throw Exception('Error updating order: $e');
     }
   }
@@ -233,8 +231,8 @@ class OrderService {
         updateData['assignedEmployeeId'] = assignedEmployeeId;
       }
 
-      print('Updating order status for order ID: $orderId');
-      print('Update data: $updateData');
+      developer.log('Updating order status for order ID: $orderId');
+      developer.log('Update data: $updateData');
 
       return await updateOrder(
         orderId: orderId,
@@ -242,7 +240,7 @@ class OrderService {
         token: token,
       );
     } catch (e) {
-      print('Error in updateOrderStatus: $e');
+      developer.log('Error in updateOrderStatus: $e');
       throw Exception('Error updating order status: $e');
     }
   }

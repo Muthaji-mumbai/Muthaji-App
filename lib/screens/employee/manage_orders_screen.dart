@@ -4,9 +4,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:soloshine/screens/employee/order_detailed_screen.dart';
 import '../../models/order.dart';
-import '../../models/user.dart';
 import '../../services/order_service.dart';
-import '../../services/user_service.dart';
 import '../../services/auth_service.dart';
 import '../../constants/app_constants.dart';
 import '../../widgets/custom_button.dart';
@@ -23,12 +21,14 @@ class ManageOrdersScreen extends StatefulWidget {
 class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
   List<Order> _allOrders = [];
   List<Order> _filteredOrders = [];
-  List<User> _employees = [];
 
   OrderStatus? _selectedStatus;
   String _searchQuery = '';
-  String? _selectedEmployeeId;
   final TextEditingController _searchController = TextEditingController();
+
+  String? _selectedOrderType; // 'Single' | 'Bulk'
+  bool _selectionMode = false;
+  final Set<String> _selectedOrderIds = {};
 
   String _selectedRange = 'All time';
   DateTime? _startDate;
@@ -66,12 +66,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
       final token = AuthService.currentToken;
       if (token != null) {
         final orders = await OrderService.getAllOrders(token);
-        final employees = await UserService.getUsersByRole(UserRole.employee, token);
 
         setState(() {
           _allOrders = orders;
           _filteredOrders = orders;
-          _employees = employees;
           _isLoading = false;
         });
       } else {
@@ -94,7 +92,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
         final matchesSearch = _searchQuery.isEmpty ||
             order.clientName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
             order.description.toLowerCase().contains(_searchQuery.toLowerCase());
-        final matchesEmployee = _selectedEmployeeId == null || order.assignedEmployeeId == _selectedEmployeeId;
+        final matchesType = _selectedOrderType == null || (_selectedOrderType == (order.orderType ?? 'Single'));
 
         final created = order.createdAt;
         bool matchesDate = true;
@@ -128,7 +126,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
             break;
         }
 
-        return matchesStatus && matchesSearch && matchesEmployee && matchesDate;
+        return matchesStatus && matchesSearch && matchesType && matchesDate;
       }).toList();
     });
   }
@@ -160,77 +158,91 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
     }
   }
 
-  Future<void> _assignOrder(Order order, String employeeId) async {
-    try {
-      final token = AuthService.currentToken;
-      if (token != null) {
-        await OrderService.updateOrderStatus(
-          orderId: order.id,
-          newStatus: order.status,
-          assignedEmployeeId: employeeId,
-          token: token,
-        );
-        _loadData();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Order assigned successfully')),
-          );
-        }
+  void _toggleSelection(String orderId, bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedOrderIds.add(orderId);
       } else {
-        throw Exception('No authentication token');
+        _selectedOrderIds.remove(orderId);
       }
+      _selectionMode = _selectedOrderIds.isNotEmpty;
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedOrderIds.clear();
+      _selectionMode = false;
+    });
+  }
+
+  Future<void> _bulkChangeStatus(OrderStatus status) async {
+    final token = AuthService.currentToken;
+    if (token == null || _selectedOrderIds.isEmpty) return;
+    try {
+      for (final id in _selectedOrderIds) {
+        final order = _allOrders.firstWhere((o) => o.id == id);
+        await OrderService.updateOrderStatus(orderId: order.id, newStatus: status, token: token);
+      }
+      await _loadData();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Updated ${_selectedOrderIds.length} orders')),
+      );
+      _clearSelection();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error assigning order: $e')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Bulk update failed: $e')),
+      );
     }
   }
 
-  Future<void> _deleteOrder(String orderId) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Order'),
-        content: const Text('Are you sure you want to delete this order? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: AppConstants.errorColor),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
+  // Future<void> _deleteOrder(String orderId) async {
+  //   final confirmed = await showDialog<bool>(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Delete Order'),
+  //       content: const Text('Are you sure you want to delete this order? This action cannot be undone.'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(false),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(true),
+  //           style: TextButton.styleFrom(foregroundColor: AppConstants.errorColor),
+  //           child: const Text('Delete'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
 
-    if (confirmed == true) {
-      try {
-        final token = AuthService.currentToken;
-        if (token != null) {
-          await OrderService.deleteOrder(orderId: orderId, token: token);
-          await _loadData();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Order deleted successfully'),
-              backgroundColor: AppConstants.successColor,
-            ),
-          );
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting order: $e'),
-            backgroundColor: AppConstants.errorColor,
-          ),
-        );
-      }
-    }
-  }
+  //   if (confirmed == true) {
+  //     try {
+  //       final token = AuthService.currentToken;
+  //       if (token != null) {
+  //         await OrderService.deleteOrder(orderId: orderId, token: token);
+  //         await _loadData();
+  //         if (!mounted) return;
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           const SnackBar(
+  //             content: Text('Order deleted successfully'),
+  //             backgroundColor: AppConstants.successColor,
+  //           ),
+  //         );
+  //       }
+  //     } catch (e) {
+  //       if (!mounted) return;
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text('Error deleting order: $e'),
+  //           backgroundColor: AppConstants.errorColor,
+  //         ),
+  //       );
+  //     }
+  //   }
+  // }
 
   void _navigateToUpdateOrder(Order order) {
     Navigator.push(
@@ -245,9 +257,25 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Orders'),
+        title: Text(_selectionMode ? '${_selectedOrderIds.length} selected' : 'Manage Orders'),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
+        actions: [
+          if (_selectionMode) ...[
+            IconButton(
+              tooltip: 'Clear Selection',
+              icon: const Icon(Icons.clear_all),
+              onPressed: _clearSelection,
+            ),
+            PopupMenuButton<OrderStatus>(
+              tooltip: 'Bulk Change Status',
+              onSelected: (st) => _bulkChangeStatus(st),
+              itemBuilder: (context) => [
+                ...OrderStatus.values.map((s) => PopupMenuItem(value: s, child: Text(s.toString().split('.').last))),
+              ],
+            ),
+          ],
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(AppConstants.spacingM),
@@ -340,6 +368,30 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
                       borderRadius: BorderRadius.circular(AppConstants.radiusS),
                     ),
                   ),
+                  hint: const Text('Order Type'),
+                  value: _selectedOrderType,
+                  items: const [
+                    DropdownMenuItem<String>(value: 'Single', child: Text('Single')),
+                    DropdownMenuItem<String>(value: 'Bulk', child: Text('Bulk')),
+                  ],
+                  onChanged: (val) {
+                    _selectedOrderType = val;
+                    _applyFilters();
+                  },
+                ),
+              ),
+              if (!isMobile) const SizedBox(width: AppConstants.spacingS),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingS,
+                      vertical: AppConstants.spacingXS,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                    ),
+                  ),
                   hint: const Text('Date Range'),
                   value: _selectedRange,
                   items: _ranges
@@ -385,6 +437,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
                     _searchQuery = '';
                     _searchController.text = '';
                     _selectedStatus = null;
+                    _selectedOrderType = null;
                     _selectedRange = 'All time';
                     _startDate = null;
                     _endDate = null;
@@ -409,7 +462,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
           Icon(
             Icons.inbox_outlined,
             size: 64,
-            color: AppConstants.textSecondaryColor.withOpacity(0.5),
+            color: AppConstants.textSecondaryColor.withValues(alpha: 0.5),
           ),
           const SizedBox(height: AppConstants.spacingM),
           Text(
@@ -437,144 +490,174 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
         borderRadius: BorderRadius.circular(AppConstants.radiusM),
       ),
       elevation: 2,
-      child: ExpansionTile(
-        leading: CircleAvatar(
-          backgroundColor: _getStatusColor(order.status).withOpacity(0.1),
-          child: Icon(
-            Icons.shopping_cart,
-            color: _getStatusColor(order.status),
-            size: 20,
-          ),
-        ),
-        title: Text(
-          order.description,
-          style: AppConstants.bodyLarge.copyWith(fontWeight: FontWeight.w600),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Client: ${order.clientName}',
-              style: AppConstants.bodyMedium.copyWith(color: AppConstants.textSecondaryColor),
-            ),
-            
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert),
-          onSelected: (value) {
-            if (value == 'edit') {
-              _navigateToUpdateOrder(order);
-            } else if (value == 'status') {
-              _showStatusUpdateDialog(order);
-            } else if (value == 'assign') {
-              _showAssignEmployeeDialog(order);
-            } else if (value == 'delete') {
-              _deleteOrder(order.id);
-            } else if (value == 'full_details') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => OrderDetailsScreen(order: order),
-                ),
-              );
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'edit',
-              child: Text('Edit Order'),
-            ),
-            const PopupMenuItem(
-              value: 'status',
-              child: Text('Update Status'),
-            ),
-            const PopupMenuItem(
-              value: 'assign',
-              child: Text('Assign Employee'),
-            ),
-            const PopupMenuItem(
-              value: 'full_details',
-              child: Text('Full Details'),
-            ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Text('Delete Order'),
-            ),
-          ],
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(AppConstants.spacingM),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildOrderDetail('Order ID', order.id),
-                if (order.orderType != null) _buildOrderDetail('Type', order.orderType!),
-                if (order.orderDate != null) _buildOrderDetail('Order Date', _formatDate(order.orderDate!)),
-                if (order.notes != null && order.notes!.isNotEmpty) _buildOrderDetail('Notes', order.notes!),
-                if (order.ornamentDetails.isNotEmpty) ...[
-                  const SizedBox(height: AppConstants.spacingS),
-                  Text(
-                    'Ornament Details:',
-                    style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  ...order.ornamentDetails.map(
-                    (detail) => Padding(
-                      padding: const EdgeInsets.only(left: AppConstants.spacingM, top: AppConstants.spacingXS),
-                      child: Text(
-                        '• ${detail.name} - ${detail.material} (${detail.weight}g, ${detail.purity}) x${detail.quantity}',
-                        style: AppConstants.bodySmall,
+      child: GestureDetector(
+        onLongPress: () => _toggleSelection(order.id, true),
+        child: ExpansionTile(
+          leading: CircleAvatar(
+            backgroundColor: _getStatusColor(order.status).withValues(alpha: 0.1),
+            child: order.images.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.network(
+                      order.images.first,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Icon(
+                        Icons.image_not_supported,
+                        color: _getStatusColor(order.status),
+                        size: 20,
                       ),
                     ),
+                  )
+                : Icon(
+                    Icons.shopping_cart,
+                    color: _getStatusColor(order.status),
+                    size: 20,
                   ),
-                ],
-                if (order.images.isNotEmpty) ...[
-                  const SizedBox(height: AppConstants.spacingS),
-                  Text(
-                    'Images:',
-                    style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+          ),
+          title: Text(
+            '${order.orderNo ?? order.id}  •  ${order.clientName}',
+            style: AppConstants.headingSmall.copyWith(fontWeight: FontWeight.w700),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                order.description,
+                style: AppConstants.bodyMedium.copyWith(color: AppConstants.textSecondaryColor),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (_selectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: _selectedOrderIds.contains(order.id),
+                        onChanged: (val) => _toggleSelection(order.id, val ?? false),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text('Select for bulk action'),
+                    ],
                   ),
-                  SizedBox(
-                    height: 80,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: order.images.length,
-                      itemBuilder: (context, index) {
-                        final imageUrl = order.images[index];
-                        return GestureDetector(
-                          onTap: () => _showFullScreenImage(order.images, index),
-                          child: Container(
-                            margin: const EdgeInsets.only(right: AppConstants.spacingS),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                imageUrl,
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    width: 80,
-                                    height: 80,
-                                    color: AppConstants.textSecondaryColor.withOpacity(0.1),
-                                    child: const Icon(Icons.image_not_supported),
-                                  );
-                                },
+                ),
+            ],
+          ),
+          trailing: PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'edit') {
+                _navigateToUpdateOrder(order);
+              } else if (value == 'status') {
+                _showStatusUpdateDialog(order);
+              }
+              //  else if (value == 'delete') {
+              //   _deleteOrder(order.id);
+              // } 
+              else if (value == 'full_details') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OrderDetailsScreen(order: order),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: Text('Edit Order'),
+              ),
+              const PopupMenuItem(
+                value: 'status',
+                child: Text('Update Status'),
+              ),
+              const PopupMenuItem(
+                value: 'full_details',
+                child: Text('Full Details'),
+              ),
+              // if (order.orderType == 'Single')
+              //   const PopupMenuItem(
+              //     value: 'delete',
+              //     child: Text('Delete Order'),
+              //   ),
+            ],
+          ),
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppConstants.spacingM),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildOrderDetail('Order ID', order.id),
+                  if (order.orderType != null) _buildOrderDetail('Type', order.orderType!),
+                  if (order.orderDate != null) _buildOrderDetail('Order Date', _formatDate(order.orderDate!)),
+                  if (order.notes != null && order.notes!.isNotEmpty) _buildOrderDetail('Notes', order.notes!),
+                  if (order.ornamentDetails.isNotEmpty) ...[
+                    const SizedBox(height: AppConstants.spacingS),
+                    Text(
+                      'Ornament Details:',
+                      style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    ...order.ornamentDetails.map(
+                      (detail) => Padding(
+                        padding: const EdgeInsets.only(left: AppConstants.spacingM, top: AppConstants.spacingXS),
+                        child: Text(
+                          '• ${detail.name} - ${detail.material} (${detail.weight}g, ${detail.purity}) x${detail.quantity}',
+                          style: AppConstants.bodySmall,
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (order.images.isNotEmpty) ...[
+                    const SizedBox(height: AppConstants.spacingS),
+                    Text(
+                      'Images:',
+                      style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(
+                      height: 80,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: order.images.length,
+                        itemBuilder: (context, index) {
+                          final imageUrl = order.images[index];
+                          return GestureDetector(
+                            onTap: () => _showFullScreenImage(order.images, index),
+                            child: Container(
+                              margin: const EdgeInsets.only(right: AppConstants.spacingS),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  imageUrl,
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      width: 80,
+                                      height: 80,
+                                      color: AppConstants.textSecondaryColor.withValues(alpha: 0.1),
+                                      child: const Icon(Icons.image_not_supported),
+                                    );
+                                  },
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -677,65 +760,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
     );
   }
 
-  void _showAssignEmployeeDialog(Order order) {
-    String? selectedEmployeeId = order.assignedEmployeeId;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Assign Employee'),
-        content: StatefulBuilder(
-          builder: (context, setState) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacingS,
-                    vertical: AppConstants.spacingXS,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                  ),
-                ),
-                hint: const Text('Select Employee'),
-                value: selectedEmployeeId,
-                items: _employees
-                    .map(
-                      (employee) => DropdownMenuItem(
-                        value: employee.id,
-                        child: Text(employee.name),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedEmployeeId = value;
-                  });
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          CustomButton(
-            onPressed: () {
-              if (selectedEmployeeId != null && selectedEmployeeId != order.assignedEmployeeId) {
-                Navigator.of(context).pop();
-                _assignOrder(order, selectedEmployeeId!);
-              }
-            },
-            text: 'Assign',
-            backgroundColor: AppConstants.primaryColor,
-          ),
-        ],
-      ),
-    );
-  }
+  // Removed assign-employee dialog and related code as per requirements
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';

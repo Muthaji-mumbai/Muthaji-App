@@ -10,7 +10,6 @@ import '../../models/order.dart';
 import '../../models/user.dart';
 import '../dashboard_screen.dart';
 import 'manage_orders_screen.dart';
-import 'create_client_screen.dart';
 import '../client/create_order_screen.dart';
 
 class EmployeeDashboard extends StatefulWidget {
@@ -109,6 +108,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               context,
               MaterialPageRoute(builder: (context) => const CreateOrderScreen()),
             );
+            if (!mounted) return;
             if (result == true) {
               _loadOrders(); // Refresh orders after creation
               ScaffoldMessenger.of(context).showSnackBar(
@@ -152,7 +152,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           const SizedBox(height: AppConstants.spacingS),
           Text(
             'Manage your orders and assist clients efficiently',
-            style: AppConstants.bodyMedium.copyWith(color: Colors.white.withOpacity(0.9)),
+            style: AppConstants.bodyMedium.copyWith(color: Colors.white.withValues(alpha: 0.9)),
           ),
         ],
       ),
@@ -191,6 +191,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                   context,
                   MaterialPageRoute(builder: (context) => const CreateOrderScreen()),
                 );
+                if (!mounted) return;
                 if (result == true) {
                   _loadOrders(); // Refresh orders after creation
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -269,7 +270,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
       elevation: 2,
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: _getStatusColor(order.status).withOpacity(0.1),
+          backgroundColor: _getStatusColor(order.status).withValues(alpha: 0.1),
           child: Icon(Icons.shopping_cart, color: _getStatusColor(order.status), size: 20),
         ),
         title: Text(
@@ -285,7 +286,6 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               'Client: ${order.clientName}',
               style: AppConstants.bodyMedium.copyWith(color: AppConstants.textSecondaryColor),
             ),
-            
           ],
         ),
         trailing: Container(
@@ -294,7 +294,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
             vertical: AppConstants.spacingXS,
           ),
           decoration: BoxDecoration(
-            color: _getStatusColor(order.status).withOpacity(0.1),
+            color: _getStatusColor(order.status).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppConstants.radiusS),
           ),
           child: Text(
@@ -356,7 +356,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                                 return Container(
                                   width: 80,
                                   height: 80,
-                                  color: AppConstants.textSecondaryColor.withOpacity(0.1),
+                                  color: AppConstants.textSecondaryColor.withValues(alpha: 0.1),
                                   child: const Icon(Icons.image_not_supported),
                                 );
                               },
@@ -475,7 +475,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           Icon(
             Icons.inbox_outlined,
             size: 48,
-            color: AppConstants.textSecondaryColor.withOpacity(0.5),
+            color: AppConstants.textSecondaryColor.withValues(alpha: 0.5),
           ),
           const SizedBox(height: AppConstants.spacingM),
           Text(title, style: AppConstants.bodyLarge),
