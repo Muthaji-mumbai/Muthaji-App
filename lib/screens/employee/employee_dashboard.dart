@@ -11,6 +11,7 @@ import '../../models/user.dart';
 import '../dashboard_screen.dart';
 import 'manage_orders_screen.dart';
 import 'create_client_screen.dart';
+import '../client/create_order_screen.dart';
 
 class EmployeeDashboard extends StatefulWidget {
   const EmployeeDashboard({super.key});
@@ -102,25 +103,26 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               ),
             ),
       floatingActionButtons: [
-        // FloatingActionButton(
-        //   onPressed: () async {
-        //     final result = await Navigator.push(
-        //       context,
-        //       // MaterialPageRoute(builder: (context) => const CreateClientScreen()),
-        //     );
-        //     if (result == true) {
-        //       ScaffoldMessenger.of(context).showSnackBar(
-        //         const SnackBar(
-        //           content: Text('Client created successfully'),
-        //           backgroundColor: AppConstants.successColor,
-        //         ),
-        //       );
-        //     }
-        //   },
-        //   backgroundColor: AppConstants.successColor,
-        //   tooltip: 'New Client',
-        //   child: const Icon(Icons.person_add),
-        // ),
+        FloatingActionButton(
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const CreateOrderScreen()),
+            );
+            if (result == true) {
+              _loadOrders(); // Refresh orders after creation
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Order created successfully'),
+                  backgroundColor: AppConstants.successColor,
+                ),
+              );
+            }
+          },
+          backgroundColor: AppConstants.successColor,
+          tooltip: 'Create New Order',
+          child: const Icon(Icons.add_shopping_cart),
+        ),
       ],
     );
   }
@@ -183,26 +185,27 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               backgroundColor: AppConstants.primaryColor,
               isFullWidth: true,
             ),
-            // CustomButton(
-            //   onPressed: () async {
-            //     final result = await Navigator.push(
-            //       context,
-            //       MaterialPageRoute(builder: (context) => const CreateClientScreen()),
-            //     );
-            //     if (result == true) {
-            //       ScaffoldMessenger.of(context).showSnackBar(
-            //         const SnackBar(
-            //           content: Text('Client created successfully'),
-            //           backgroundColor: AppConstants.successColor,
-            //         ),
-            //       );
-            //     }
-            //   },
-            //   text: 'Create Client',
-            //   icon: Icons.person_add,
-            //   backgroundColor: AppConstants.successColor,
-            //   isFullWidth: true,
-            // ),
+            CustomButton(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CreateOrderScreen()),
+                );
+                if (result == true) {
+                  _loadOrders(); // Refresh orders after creation
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Order created successfully'),
+                      backgroundColor: AppConstants.successColor,
+                    ),
+                  );
+                }
+              },
+              text: 'Create Order',
+              icon: Icons.add_shopping_cart,
+              backgroundColor: AppConstants.successColor,
+              isFullWidth: true,
+            ),
           ],
         ),
       ],
