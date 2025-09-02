@@ -145,6 +145,16 @@ class Order {
     if (json['image'] != null && json['image'] is List) {
       images = List<String>.from(json['image']);
     }
+    // Aggregate per-ornament images if order-level images are empty
+    if (images.isEmpty && ornamentDetails.isNotEmpty) {
+      final agg = <String>[];
+      for (final d in ornamentDetails) {
+        if (d.images.isNotEmpty) {
+          agg.addAll(d.images);
+        }
+      }
+      images = agg;
+    }
 
     List<String> pdfs = [];
     if (json['pdf'] != null && json['pdf'] is List) {

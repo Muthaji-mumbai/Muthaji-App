@@ -963,7 +963,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                               size: 24,
                             ),
                           ),
-                  ),
+                  ),  
                 ),
                 if (isSelected)
                   Positioned(

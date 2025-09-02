@@ -92,7 +92,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                     const SizedBox(height: AppConstants.spacingL),
                     _buildQuickActions(),
                     const SizedBox(height: AppConstants.spacingL),
-                    _buildAssignedOrders(),
+                    // _buildAssignedOrders(),
                     const SizedBox(height: AppConstants.spacingL),
                     _buildPendingOrders(),
                     const SizedBox(height: AppConstants.spacingL),
@@ -213,30 +213,30 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
     );
   }
 
-  Widget _buildAssignedOrders() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('My Assigned Orders', style: AppConstants.headingSmall),
-            TextButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ManageOrdersScreen()),
-              ),
-              child: const Text('View All'),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppConstants.spacingM),
-        if (_assignedOrders.isEmpty)
-          _buildEmptyState('No Assigned Orders', 'Orders assigned to you will appear here.'),
-        ..._assignedOrders.take(3).map((order) => _buildOrderCard(order, true)),
-      ],
-    );
-  }
+  // Widget _buildAssignedOrders() {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Row(
+  //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //         children: [
+  //           Text('My Assigned Orders', style: AppConstants.headingSmall),
+  //           TextButton(
+  //             onPressed: () => Navigator.push(
+  //               context,
+  //               MaterialPageRoute(builder: (context) => const ManageOrdersScreen()),
+  //             ),
+  //             child: const Text('View All'),
+  //           ),
+  //         ],
+  //       ),
+  //       const SizedBox(height: AppConstants.spacingM),
+  //       if (_assignedOrders.isEmpty)
+  //         _buildEmptyState('No Assigned Orders', 'Orders assigned to you will appear here.'),
+  //       ..._assignedOrders.take(3).map((order) => _buildOrderCard(order, true)),
+  //     ],
+  //   );
+  // }
 
   Widget _buildPendingOrders() {
     return Column(
