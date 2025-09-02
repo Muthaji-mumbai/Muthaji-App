@@ -28,6 +28,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   bool _isLoading = false;
   bool _isPickingImage = false;
   DateTime? _selectedOrderDate;
+  String _selectedOrderType = 'Single';
   List<Map<String, dynamic>> _ornamentDetails = [
     {
       'name': '',
@@ -49,6 +50,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     '18K Rose gold', 
     '18K White gold',
     'Other'
+  ];
+  
+  static const List<String> _orderTypeOptions = [
+    'Single',
+    'Bulk'
   ];
 
   @override
@@ -181,6 +187,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             clientId: currentUser.id,
             clientName: currentUser.name,
             orderDate: _selectedOrderDate,
+            orderType: _selectedOrderType,
             ornamentDetails: detailsPayload,
             ornamentImages: _ornamentImages,
             token: token,
@@ -428,6 +435,31 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 enabled: false,
                 validator: (value) => value!.isEmpty ? 'Please select a date' : null,
               ),
+            ),
+            const SizedBox(height: AppConstants.spacingM),
+            Text('Order Type', style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: AppConstants.spacingS),
+            Wrap(
+              spacing: AppConstants.spacingS,
+              children: _orderTypeOptions.map((type) {
+                final isSelected = _selectedOrderType == type;
+                return FilterChip(
+                  label: Text(type),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedOrderType = type;
+                    });
+                  },
+                  backgroundColor: AppConstants.surfaceColor,
+                  selectedColor: AppConstants.primaryColor.withOpacity(0.2),
+                  checkmarkColor: AppConstants.primaryColor,
+                  labelStyle: TextStyle(
+                    color: isSelected ? AppConstants.primaryColor : AppConstants.textPrimaryColor,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ),

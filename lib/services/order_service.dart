@@ -95,6 +95,7 @@ class OrderService {
     double? amount,
     String? notes,
     DateTime? orderDate,
+    String? orderType,
     required List<Map<String, dynamic>> ornamentDetails,
     List<List<PlatformFile>>? ornamentImages, // per-ornament images group
     String? token,
@@ -106,7 +107,7 @@ class OrderService {
         if (description != null) 'description': description,
         if (amount != null) 'amount': amount.toString(),
         if (notes != null) 'notes': notes,
-        'ordertype': 'Single',
+        'ordertype': orderType ?? 'Single',
         'orderdate': (orderDate ?? DateTime.now()).toIso8601String().split('T').first,
         // API expects camelCase key per screenshot
         'ornamentDetails': jsonEncode(ornamentDetails),
