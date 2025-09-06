@@ -69,6 +69,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
   _AdminView _currentView = _AdminView.dashboard;
   int _chartDays = 14;
 
+  // Chart visibility toggles
+  bool _showSingleOrders = true;
+  bool _showBulkOrders = true;
+  bool _showTotalOrders = true;
+
+  // Sample data for the charts - replace with your actual data
+  List<FlSpot> _singleOrdersData = [];
+  List<FlSpot> _bulkOrdersData = [];
+  List<FlSpot> _totalOrdersData = [];
+
   // Navigation bar for switching views
   Widget _buildNavigationBar() {
     return Container(
@@ -172,6 +182,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void initState() {
     super.initState();
     _loadDashboardData();
+    _generateSampleChartData();
+  }
+
+  void _generateSampleChartData() {
+    // Generate sample data for the last 14 days
+    final now = DateTime.now();
+    _singleOrdersData = List.generate(_chartDays, (index) {
+      final day = now.subtract(Duration(days: _chartDays - 1 - index));
+      return FlSpot(
+        index.toDouble(),
+        (10 + (index * 2) + (index % 3) * 5).toDouble(),
+      );
+    });
+
+    _bulkOrdersData = List.generate(_chartDays, (index) {
+      final day = now.subtract(Duration(days: _chartDays - 1 - index));
+      return FlSpot(
+        index.toDouble(),
+        (5 + (index * 1.5) + (index % 4) * 3).toDouble(),
+      );
+    });
+
+    _totalOrdersData = List.generate(_chartDays, (index) {
+      final singleValue = _singleOrdersData[index].y;
+      final bulkValue = _bulkOrdersData[index].y;
+      return FlSpot(index.toDouble(), singleValue + bulkValue);
+    });
   }
 
   void _loadDashboardData() async {
@@ -282,6 +319,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       _buildWelcomeSection(currentUser!),
                       const SizedBox(height: AppConstants.spacingL),
                     ],
+                    // Add line chart at the top for both views
+                    _buildOrderTrendsChart(),
+                    const SizedBox(height: AppConstants.spacingL),
                     _buildNavigationBar(),
                     Builder(
                       builder: (context) {
@@ -325,6 +365,375 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ),
       ],
     );
+  }
+
+  Widget _buildOrderTrendsChart() {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingL),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+        boxShadow: AppConstants.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Order Trends', style: AppConstants.headingMedium),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: _chartDays,
+                  items:
+                      const [7, 14, 30, 90]
+                          .map(
+                            (d) => DropdownMenuItem<int>(
+                              value: d,
+                              child: Text('Last $d days'),
+                            ),
+                          )
+                          .toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _chartDays = val;
+                        _generateSampleChartData(); // Regenerate data for new period
+                      });
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.spacingM),
+
+          // Chart Legend/Toggle Buttons
+          Wrap(
+            spacing: AppConstants.spacingM,
+            runSpacing: AppConstants.spacingS,
+            children: [
+              _buildLegendButton(
+                'Single Orders',
+                AppConstants.primaryColor,
+                _showSingleOrders,
+                () => setState(() => _showSingleOrders = !_showSingleOrders),
+              ),
+              _buildLegendButton(
+                'Bulk Orders',
+                AppConstants.accentColor,
+                _showBulkOrders,
+                () => setState(() => _showBulkOrders = !_showBulkOrders),
+              ),
+              _buildLegendButton(
+                'Total Orders',
+                AppConstants.secondaryColor,
+                _showTotalOrders,
+                () => setState(() => _showTotalOrders = !_showTotalOrders),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppConstants.spacingL),
+          SizedBox(height: 300, child: _buildInteractiveLineChart()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendButton(
+    String label,
+    Color color,
+    bool isVisible,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.spacingM,
+          vertical: AppConstants.spacingS,
+        ),
+        decoration: BoxDecoration(
+          color:
+              isVisible ? color.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(AppConstants.radiusS),
+          border: Border.all(color: isVisible ? color : Colors.grey, width: 2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: isVisible ? color : Colors.grey,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: AppConstants.spacingS),
+            Text(
+              label,
+              style: AppConstants.bodyMedium.copyWith(
+                color: isVisible ? color : Colors.grey,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: AppConstants.spacingS),
+            Icon(
+              isVisible ? Icons.visibility : Icons.visibility_off,
+              size: 16,
+              color: isVisible ? color : Colors.grey,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInteractiveLineChart() {
+    List<LineChartBarData> lineBarsData = [];
+
+    if (_showSingleOrders) {
+      lineBarsData.add(
+        LineChartBarData(
+          spots: _singleOrdersData,
+          isCurved: true,
+          color: AppConstants.primaryColor,
+          barWidth: 3,
+          isStrokeCapRound: true,
+          dotData: FlDotData(
+            show: true,
+            getDotPainter:
+                (spot, percent, barData, index) => FlDotCirclePainter(
+                  radius: 4,
+                  color: AppConstants.primaryColor,
+                  strokeWidth: 2,
+                  strokeColor: Colors.white,
+                ),
+          ),
+          belowBarData: BarAreaData(
+            show: true,
+            color: AppConstants.primaryColor.withOpacity(0.1),
+          ),
+        ),
+      );
+    }
+
+    if (_showBulkOrders) {
+      lineBarsData.add(
+        LineChartBarData(
+          spots: _bulkOrdersData,
+          isCurved: true,
+          color: AppConstants.accentColor,
+          barWidth: 3,
+          isStrokeCapRound: true,
+          dotData: FlDotData(
+            show: true,
+            getDotPainter:
+                (spot, percent, barData, index) => FlDotCirclePainter(
+                  radius: 4,
+                  color: AppConstants.accentColor,
+                  strokeWidth: 2,
+                  strokeColor: Colors.white,
+                ),
+          ),
+          belowBarData: BarAreaData(
+            show: true,
+            color: AppConstants.accentColor.withOpacity(0.1),
+          ),
+        ),
+      );
+    }
+
+    if (_showTotalOrders) {
+      lineBarsData.add(
+        LineChartBarData(
+          spots: _totalOrdersData,
+          isCurved: true,
+          color: AppConstants.secondaryColor,
+          barWidth: 4,
+          isStrokeCapRound: true,
+          dotData: FlDotData(
+            show: true,
+            getDotPainter:
+                (spot, percent, barData, index) => FlDotCirclePainter(
+                  radius: 5,
+                  color: AppConstants.secondaryColor,
+                  strokeWidth: 2,
+                  strokeColor: Colors.white,
+                ),
+          ),
+          belowBarData: BarAreaData(show: false),
+        ),
+      );
+    }
+
+    if (lineBarsData.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.visibility_off,
+              size: 48,
+              color: Colors.grey.withOpacity(0.5),
+            ),
+            const SizedBox(height: AppConstants.spacingM),
+            Text(
+              'No data visible',
+              style: AppConstants.bodyLarge.copyWith(
+                color: Colors.grey,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              'Toggle the legend buttons above to show data',
+              style: AppConstants.bodyMedium.copyWith(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return LineChart(
+      LineChartData(
+        lineBarsData: lineBarsData,
+        minX: 0,
+        maxX: (_chartDays - 1).toDouble(),
+        minY: 0,
+        maxY: _getMaxY(),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              interval: _getYInterval(),
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  value.toInt().toString(),
+                  style: AppConstants.bodySmall.copyWith(
+                    color: AppConstants.textSecondaryColor,
+                  ),
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 30,
+              interval: _getXInterval(),
+              getTitlesWidget: (value, meta) {
+                final dayIndex = value.toInt();
+                if (dayIndex < 0 || dayIndex >= _chartDays)
+                  return const SizedBox();
+
+                final date = DateTime.now().subtract(
+                  Duration(days: _chartDays - 1 - dayIndex),
+                );
+                return Text(
+                  '${date.day}/${date.month}',
+                  style: AppConstants.bodySmall.copyWith(
+                    color: AppConstants.textSecondaryColor,
+                  ),
+                );
+              },
+            ),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        gridData: FlGridData(
+          show: true,
+          drawHorizontalLine: true,
+          drawVerticalLine: false,
+          horizontalInterval: _getYInterval(),
+          getDrawingHorizontalLine: (value) {
+            return FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1);
+          },
+        ),
+        borderData: FlBorderData(
+          show: true,
+          border: Border(
+            bottom: BorderSide(color: Colors.grey.withOpacity(0.3)),
+            left: BorderSide(color: Colors.grey.withOpacity(0.3)),
+          ),
+        ),
+        lineTouchData: LineTouchData(
+          enabled: true,
+          touchTooltipData: LineTouchTooltipData(
+            // tooltipBgColor: AppConstants.surfaceColor,
+            tooltipBorder: BorderSide(color: Colors.grey.withOpacity(0.3)),
+            getTooltipItems: (touchedSpots) {
+              return touchedSpots.map((LineBarSpot touchedSpot) {
+                String label = '';
+                Color? color = touchedSpot.bar.color;
+
+                if (touchedSpot.barIndex == 0 && _showSingleOrders) {
+                  label = 'Single Orders';
+                } else if ((touchedSpot.barIndex == 1 &&
+                        _showBulkOrders &&
+                        !_showSingleOrders) ||
+                    (touchedSpot.barIndex == 1 &&
+                        _showBulkOrders &&
+                        _showSingleOrders)) {
+                  label = 'Bulk Orders';
+                } else if (_showTotalOrders) {
+                  label = 'Total Orders';
+                }
+
+                return LineTooltipItem(
+                  '$label\n${touchedSpot.y.toInt()}',
+                  AppConstants.bodySmall.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              }).toList();
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  double _getMaxY() {
+    double maxY = 0;
+    if (_showSingleOrders) {
+      maxY = _singleOrdersData.map((e) => e.y).reduce((a, b) => a > b ? a : b);
+    }
+    if (_showBulkOrders) {
+      final bulkMax = _bulkOrdersData
+          .map((e) => e.y)
+          .reduce((a, b) => a > b ? a : b);
+      if (bulkMax > maxY) maxY = bulkMax;
+    }
+    if (_showTotalOrders) {
+      final totalMax = _totalOrdersData
+          .map((e) => e.y)
+          .reduce((a, b) => a > b ? a : b);
+      if (totalMax > maxY) maxY = totalMax;
+    }
+    return (maxY * 1.1).ceilToDouble(); // Add 10% padding
+  }
+
+  double _getYInterval() {
+    final maxY = _getMaxY();
+    if (maxY <= 10) return 2;
+    if (maxY <= 50) return 10;
+    if (maxY <= 100) return 20;
+    return (maxY / 5).ceilToDouble();
+  }
+
+  double _getXInterval() {
+    if (_chartDays <= 7) return 1;
+    if (_chartDays <= 30) return (_chartDays / 7).ceilToDouble();
+    return (_chartDays / 10).ceilToDouble();
   }
 
   Widget _buildDashboardView() {
@@ -468,41 +877,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'subtitle': 'View and update orders',
         'icon': Icons.assignment,
         'color': AppConstants.primaryColor,
-        'onTap':
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const ManageOrdersScreen(),
-              ),
-            ).then((_) => _loadDashboardData()),
-      },
-      {
-        'title': 'Create Order',
-        'subtitle': 'Add new order',
-        'icon': Icons.add_shopping_cart,
-        'color': AppConstants.successColor,
-        'onTap': () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CreateOrderScreen()),
-          );
-          if (!mounted) return;
-          if (result == true) {
-            _loadDashboardData();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Order created successfully'),
-                backgroundColor: AppConstants.successColor,
-              ),
-            );
-          }
-        },
-      },
-      {
-        'title': 'User Management',
-        'subtitle': 'Manage system users',
-        'icon': Icons.people_alt,
-        'color': AppConstants.accentColor,
         'onTap':
             () => Navigator.push(
               context,
@@ -749,68 +1123,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       children: [
         Text('Analytics & Reports', style: AppConstants.headingSmall),
         const SizedBox(height: AppConstants.spacingL),
-        _buildOrderTrendsChart(),
-        const SizedBox(height: AppConstants.spacingL),
         _buildPieChartsSection(),
         const SizedBox(height: AppConstants.spacingL),
         _buildDetailedStatistics(),
       ],
-    );
-  }
-
-  Widget _buildOrderTrendsChart() {
-    return Container(
-      padding: const EdgeInsets.all(AppConstants.spacingL),
-      decoration: BoxDecoration(
-        color: AppConstants.surfaceColor,
-        borderRadius: BorderRadius.circular(AppConstants.radiusL),
-        boxShadow: AppConstants.cardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Order Trends', style: AppConstants.headingMedium),
-              DropdownButtonHideUnderline(
-                child: DropdownButton<int>(
-                  value: _chartDays,
-                  items:
-                      const [7, 14, 30, 90]
-                          .map(
-                            (d) => DropdownMenuItem<int>(
-                              value: d,
-                              child: Text('Last $d days'),
-                            ),
-                          )
-                          .toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _chartDays = val);
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppConstants.spacingL),
-          SizedBox(height: 300, child: _buildLineChart()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLineChart() {
-    // Simplified line chart implementation - you can reuse your existing chart logic here
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
-      ),
-      child: const Center(
-        child: Text(
-          'Order Trends Chart\n(Line chart implementation goes here)',
-        ),
-      ),
     );
   }
 
