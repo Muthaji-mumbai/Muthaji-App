@@ -33,6 +33,7 @@ class AppConstants {
   static const String categoriesEndpoint = '/category';
   static const String dashboardEndpoint = '/dashboard';
   
+  
 
   // Text Styles
   static TextStyle get headingLarge => GoogleFonts.inter(

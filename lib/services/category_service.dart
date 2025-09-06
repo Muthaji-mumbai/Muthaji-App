@@ -3,6 +3,7 @@ import 'package:soloshine/services/api_service.dart';
 import 'package:soloshine/constants/app_constants.dart';
 
 class CategoryService {
+  // Get all categories
   static Future<Category> getAllCategories(String token) async {
     try {
       final response = await ApiService.get(
@@ -18,6 +19,66 @@ class CategoryService {
       }
     } catch (e) {
       throw Exception('Error fetching categories: $e');
+    }
+  }
+
+  // Create a new category
+  static Future<Category> createCategory(String categoryName, String token) async {
+    try {
+      final response = await ApiService.post(
+        AppConstants.categoriesEndpoint,
+        body: {
+          'categoryname': categoryName,
+        },
+        token: token,
+      );
+
+      if (response['success'] == true && response['data'] != null) {
+        return Category.fromJson(response['data']);
+      } else {
+        throw Exception(response['message'] ?? 'Failed to create category');
+      }
+    } catch (e) {
+      throw Exception('Error creating category: $e');
+    }
+  }
+
+  // Update an existing category
+  static Future<Category> updateCategory(String categoryId, String categoryName, String token) async {
+    try {
+      final response = await ApiService.patch(
+        '${AppConstants.categoriesEndpoint}/$categoryId',
+        body: {
+          'categoryname': categoryName,
+        },
+        token: token,
+      );
+
+      if (response['success'] == true && response['data'] != null) {
+        return Category.fromJson(response['data']);
+      } else {
+        throw Exception(response['message'] ?? 'Failed to update category');
+      }
+    } catch (e) {
+      throw Exception('Error updating category: $e');
+    }
+  }
+
+  // Delete a category
+  static Future<bool> deleteCategory(String categoryId, String token) async {
+    try {
+      final response = await ApiService.delete(
+        '${AppConstants.categoriesEndpoint}/$categoryId',
+        token: token,
+      );
+
+      if (response['success'] == true) {
+        return true;
+      } else {
+        throw Exception(response['message'] ?? 'Failed to delete category');
+      }
+    } catch (e) {
+      throw Exception('Error deleting category: $e');
     }
   }
 }

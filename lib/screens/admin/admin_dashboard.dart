@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:responsive_framework/responsive_framework.dart';
+import 'package:soloshine/screens/admin/categorycreatescreen.dart';
 import 'package:soloshine/screens/employee/manage_orders_screen.dart';
 import 'package:soloshine/services/dashboard_service.dart';
 import '../../providers/auth_provider.dart';
@@ -9,11 +10,13 @@ import '../../constants/app_constants.dart';
 import '../../widgets/custom_button.dart';
 import '../../services/order_service.dart';
 import '../../services/user_service.dart';
+import '../../services/category_service.dart';
 import '../../models/order.dart';
 import '../../models/user.dart';
 import '../dashboard_screen.dart';
 import '../client/create_order_screen.dart';
 import 'user_management_screen.dart';
+
 
 enum _AdminView { dashboard, reports }
 
@@ -881,16 +884,45 @@ class _AdminDashboardState extends State<AdminDashboard> {
             () => Navigator.push(
               context,
               MaterialPageRoute(
+                builder: (context) => const ManageOrdersScreen(),
+              ),
+            ),
+      },
+      {
+        'title': 'User Management',
+        'subtitle': 'View and manage users',
+        'icon': Icons.bar_chart,
+        'color': AppConstants.secondaryColor,
+        'onTap':
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(
                 builder: (context) => const UserManagementScreen(),
               ),
             ),
       },
       {
-        'title': 'View Reports',
-        'subtitle': 'Analytics & insights',
-        'icon': Icons.bar_chart,
-        'color': AppConstants.secondaryColor,
-        'onTap': () => setState(() => _currentView = _AdminView.reports),
+        'title': 'Create Category',
+        'subtitle': 'Add new product category',
+        'icon': Icons.category,
+        'color': AppConstants.accentColor,
+        'onTap': () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CreateCategoryScreen(),
+            ),
+          );
+          if (!mounted) return;
+          if (result == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Category created successfully'),
+                backgroundColor: AppConstants.successColor,
+              ),
+            );
+          }
+        },
       },
     ];
 
