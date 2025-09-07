@@ -1,4 +1,5 @@
 import 'package:soloshine/models/category.dart';
+import 'package:soloshine/models/categoryResponse.dart';
 import 'package:soloshine/services/api_service.dart';
 import 'package:soloshine/constants/app_constants.dart';
 
@@ -10,7 +11,7 @@ class CategoryService {
         AppConstants.categoriesEndpoint,
         token: token,
       );
-      
+
       // The API returns the full Category structure directly
       if (response['success'] == true && response['data'] != null) {
         return Category.fromJson(response);
@@ -23,18 +24,19 @@ class CategoryService {
   }
 
   // Create a new category
-  static Future<Category> createCategory(String categoryName, String token) async {
+  static Future<CategoryResponse> createCategory(
+    String categoryName,
+    String token,
+  ) async {
     try {
       final response = await ApiService.post(
         AppConstants.categoriesEndpoint,
-        body: {
-          'categoryname': categoryName,
-        },
+        body: {'categoryname': categoryName},
         token: token,
       );
 
       if (response['success'] == true && response['data'] != null) {
-        return Category.fromJson(response['data']);
+        return CategoryResponse.fromJson(response);
       } else {
         throw Exception(response['message'] ?? 'Failed to create category');
       }
@@ -44,18 +46,20 @@ class CategoryService {
   }
 
   // Update an existing category
-  static Future<Category> updateCategory(String categoryId, String categoryName, String token) async {
+  static Future<CategoryResponse> updateCategory(
+    String categoryId,
+    String categoryName,
+    String token,
+  ) async {
     try {
       final response = await ApiService.patch(
         '${AppConstants.categoriesEndpoint}/$categoryId',
-        body: {
-          'categoryname': categoryName,
-        },
+        body: {'categoryname': categoryName},
         token: token,
       );
 
       if (response['success'] == true && response['data'] != null) {
-        return Category.fromJson(response['data']);
+        return CategoryResponse.fromJson(response);
       } else {
         throw Exception(response['message'] ?? 'Failed to update category');
       }

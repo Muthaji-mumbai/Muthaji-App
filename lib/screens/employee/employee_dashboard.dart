@@ -38,9 +38,15 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
       final token = AuthService.currentToken;
 
       if (currentUser != null && token != null) {
-        final assignedOrders = await OrderService.getOrdersByEmployee(currentUser.id, token);
-        final pendingOrders = await OrderService.getOrdersByStatus(OrderStatus.pending, token);
-
+        final assignedOrders = await OrderService.getOrdersByEmployee(
+          currentUser.id,
+          token,
+        );
+        final pendingOrders = await OrderService.getOrdersByStatus(
+          OrderStatus.pending,
+          token,
+        );
+        print("Saaigned ORDER=========>${assignedOrders.length}");
         setState(() {
           _assignedOrders = assignedOrders;
           _pendingOrders = pendingOrders;
@@ -79,34 +85,37 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           tooltip: 'Refresh',
         ),
       ],
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadOrders,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppConstants.spacingM),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildWelcomeSection(currentUser!),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildQuickActions(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    // _buildAssignedOrders(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildPendingOrders(),
-                    const SizedBox(height: AppConstants.spacingL),
-                    _buildStatistics(),
-                  ],
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                onRefresh: _loadOrders,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppConstants.spacingM),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildWelcomeSection(currentUser!),
+                      const SizedBox(height: AppConstants.spacingL),
+                      _buildQuickActions(),
+                      const SizedBox(height: AppConstants.spacingL),
+                      // _buildAssignedOrders(),
+                      const SizedBox(height: AppConstants.spacingL),
+                      _buildPendingOrders(),
+                      const SizedBox(height: AppConstants.spacingL),
+                      _buildStatistics(),
+                    ],
+                  ),
                 ),
               ),
-            ),
       floatingActionButtons: [
         FloatingActionButton(
           onPressed: () async {
             final result = await Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const CreateOrderScreen()),
+              MaterialPageRoute(
+                builder: (context) => const CreateOrderScreen(),
+              ),
             );
             if (!mounted) return;
             if (result == true) {
@@ -128,7 +137,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   }
 
   Widget _buildWelcomeSection(User user) {
-    final displayName = user.name.isNotEmpty ? user.name : user.email.split('@')[0];
+    final displayName =
+        user.name.isNotEmpty ? user.name : user.email.split('@')[0];
 
     return Container(
       width: double.infinity,
@@ -152,7 +162,9 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           const SizedBox(height: AppConstants.spacingS),
           Text(
             'Manage your orders and assist clients efficiently',
-            style: AppConstants.bodyMedium.copyWith(color: Colors.white.withValues(alpha: 0.9)),
+            style: AppConstants.bodyMedium.copyWith(
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
           ),
         ],
       ),
@@ -176,10 +188,13 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           childAspectRatio: isMobile ? 4 : 3,
           children: [
             CustomButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ManageOrdersScreen()),
-              ),
+              onPressed:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ManageOrdersScreen(),
+                    ),
+                  ),
               text: 'Manage Orders',
               icon: Icons.manage_accounts,
               backgroundColor: AppConstants.primaryColor,
@@ -189,7 +204,9 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               onPressed: () async {
                 final result = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const CreateOrderScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const CreateOrderScreen(),
+                  ),
                 );
                 if (!mounted) return;
                 if (result == true) {
@@ -247,17 +264,23 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           children: [
             Text('Pending Orders', style: AppConstants.headingSmall),
             TextButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ManageOrdersScreen()),
-              ),
+              onPressed:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ManageOrdersScreen(),
+                    ),
+                  ),
               child: const Text('View All'),
             ),
           ],
         ),
         const SizedBox(height: AppConstants.spacingM),
         if (_pendingOrders.isEmpty)
-          _buildEmptyState('No Pending Orders', 'All orders have been processed.'),
+          _buildEmptyState(
+            'No Pending Orders',
+            'All orders have been processed.',
+          ),
         ..._pendingOrders.take(3).map((order) => _buildOrderCard(order, false)),
       ],
     );
@@ -266,12 +289,18 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   Widget _buildOrderCard(Order order, bool isAssigned) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radiusM)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+      ),
       elevation: 2,
       child: ExpansionTile(
         leading: CircleAvatar(
           backgroundColor: _getStatusColor(order.status).withValues(alpha: 0.1),
-          child: Icon(Icons.shopping_cart, color: _getStatusColor(order.status), size: 20),
+          child: Icon(
+            Icons.shopping_cart,
+            color: _getStatusColor(order.status),
+            size: 20,
+          ),
         ),
         title: Text(
           order.description,
@@ -284,7 +313,9 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           children: [
             Text(
               'Client: ${order.clientName}',
-              style: AppConstants.bodyMedium.copyWith(color: AppConstants.textSecondaryColor),
+              style: AppConstants.bodyMedium.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
             ),
           ],
         ),
@@ -312,18 +343,29 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildOrderDetail('Order ID', order.id),
-                if (order.orderType != null) _buildOrderDetail('Type', order.orderType!),
-                if (order.orderDate != null) _buildOrderDetail('Order Date', _formatDate(order.orderDate!)),
-                if (order.notes != null && order.notes!.isNotEmpty) _buildOrderDetail('Notes', order.notes!),
+                if (order.orderType != null)
+                  _buildOrderDetail('Type', order.orderType!),
+                if (order.orderDate != null)
+                  _buildOrderDetail(
+                    'Order Date',
+                    _formatDate(order.orderDate!),
+                  ),
+                if (order.notes != null && order.notes!.isNotEmpty)
+                  _buildOrderDetail('Notes', order.notes!),
                 if (order.ornamentDetails.isNotEmpty) ...[
                   const SizedBox(height: AppConstants.spacingS),
                   Text(
                     'Ornament Details:',
-                    style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                    style: AppConstants.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   ...order.ornamentDetails.map(
                     (detail) => Padding(
-                      padding: const EdgeInsets.only(left: AppConstants.spacingM, top: AppConstants.spacingXS),
+                      padding: const EdgeInsets.only(
+                        left: AppConstants.spacingM,
+                        top: AppConstants.spacingXS,
+                      ),
                       child: Text(
                         '• ${detail.name} - ${detail.material} (${detail.weight}g, ${detail.purity}) x${detail.quantity}',
                         style: AppConstants.bodySmall,
@@ -335,7 +377,9 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                   const SizedBox(height: AppConstants.spacingS),
                   Text(
                     'Images:',
-                    style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                    style: AppConstants.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   SizedBox(
                     height: 80,
@@ -344,7 +388,9 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                       itemCount: order.images.length,
                       itemBuilder: (context, index) {
                         return Container(
-                          margin: const EdgeInsets.only(right: AppConstants.spacingS),
+                          margin: const EdgeInsets.only(
+                            right: AppConstants.spacingS,
+                          ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
@@ -356,7 +402,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                                 return Container(
                                   width: 80,
                                   height: 80,
-                                  color: AppConstants.textSecondaryColor.withValues(alpha: 0.1),
+                                  color: AppConstants.textSecondaryColor
+                                      .withValues(alpha: 0.1),
                                   child: const Icon(Icons.image_not_supported),
                                 );
                               },
@@ -371,10 +418,13 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                   Padding(
                     padding: const EdgeInsets.only(top: AppConstants.spacingM),
                     child: CustomButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const ManageOrdersScreen()),
-                      ),
+                      onPressed:
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ManageOrdersScreen(),
+                            ),
+                          ),
                       text: 'Manage Order',
                       backgroundColor: AppConstants.primaryColor,
                       isFullWidth: true,
@@ -412,9 +462,12 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
 
   Widget _buildStatistics() {
     final totalAssigned = _assignedOrders.length;
-    final pendingAssigned = _assignedOrders.where((o) => o.status == OrderStatus.pending).length;
-    final inProgressAssigned = _assignedOrders.where((o) => o.status == OrderStatus.inProgress).length;
-    final completedAssigned = _assignedOrders.where((o) => o.status == OrderStatus.completed).length;
+    final pendingAssigned =
+        _assignedOrders.where((o) => o.status == OrderStatus.pending).length;
+    final inProgressAssigned =
+        _assignedOrders.where((o) => o.status == OrderStatus.inProgress).length;
+    final completedAssigned =
+        _assignedOrders.where((o) => o.status == OrderStatus.completed).length;
 
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
 
@@ -431,17 +484,42 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           mainAxisSpacing: AppConstants.spacingM,
           childAspectRatio: 1.5,
           children: [
-            _buildStatCard('Total Assigned', totalAssigned.toString(), Icons.assignment_ind, AppConstants.primaryColor),
-            _buildStatCard('Pending', pendingAssigned.toString(), Icons.pending, AppConstants.warningColor),
-            _buildStatCard('In Progress', inProgressAssigned.toString(), Icons.work, AppConstants.secondaryColor),
-            _buildStatCard('Completed', completedAssigned.toString(), Icons.check_circle, AppConstants.successColor),
+            _buildStatCard(
+              'Total Assigned',
+              totalAssigned.toString(),
+              Icons.assignment_ind,
+              AppConstants.primaryColor,
+            ),
+            _buildStatCard(
+              'Pending',
+              pendingAssigned.toString(),
+              Icons.pending,
+              AppConstants.warningColor,
+            ),
+            _buildStatCard(
+              'In Progress',
+              inProgressAssigned.toString(),
+              Icons.work,
+              AppConstants.secondaryColor,
+            ),
+            _buildStatCard(
+              'Completed',
+              completedAssigned.toString(),
+              Icons.check_circle,
+              AppConstants.successColor,
+            ),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingM),
       decoration: BoxDecoration(
@@ -455,7 +533,11 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           Icon(icon, color: color, size: 28),
           const SizedBox(height: AppConstants.spacingS),
           Text(value, style: AppConstants.headingSmall.copyWith(color: color)),
-          Text(title, style: AppConstants.bodySmall, textAlign: TextAlign.center),
+          Text(
+            title,
+            style: AppConstants.bodySmall,
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
@@ -480,7 +562,11 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           const SizedBox(height: AppConstants.spacingM),
           Text(title, style: AppConstants.bodyLarge),
           const SizedBox(height: AppConstants.spacingS),
-          Text(subtitle, style: AppConstants.bodyMedium, textAlign: TextAlign.center),
+          Text(
+            subtitle,
+            style: AppConstants.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
