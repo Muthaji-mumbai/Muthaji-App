@@ -306,7 +306,7 @@ class _UpdateOrderScreenState extends State<UpdateOrderScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Update Order #${_order!.id.substring(0, 8)}'),
+        title: Text('Update Order #${_order!.orderNo}'),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
       ),

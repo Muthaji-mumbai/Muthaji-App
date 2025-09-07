@@ -448,7 +448,7 @@ class _ClientDashboardState extends State<ClientDashboard>
             children: [
               Expanded(
                 child: Text(
-                  'Order #${order.id.substring(0, 8)}',
+                  'Order #${order.orderNo}',
                   style: AppConstants.bodyMedium.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppConstants.primaryColor,

@@ -7,16 +7,13 @@ import 'package:soloshine/screens/employee/manage_orders_screen.dart';
 import 'package:soloshine/services/dashboard_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
-import '../../widgets/custom_button.dart';
 import '../../services/order_service.dart';
 import '../../services/user_service.dart';
-import '../../services/category_service.dart';
 import '../../models/order.dart';
 import '../../models/user.dart';
 import '../dashboard_screen.dart';
 import '../client/create_order_screen.dart';
 import 'user_management_screen.dart';
-
 
 enum _AdminView { dashboard, reports }
 
@@ -69,18 +66,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
   List<Order> _allOrders = [];
   List<User> _recentUsers = [];
   bool _isLoading = true;
+  bool _isLoadingGraphData = false;
   _AdminView _currentView = _AdminView.dashboard;
-  int _chartDays = 14;
+  int _chartDays = 7;
 
   // Chart visibility toggles
   bool _showSingleOrders = true;
   bool _showBulkOrders = true;
   bool _showTotalOrders = true;
 
-  // Sample data for the charts - replace with your actual data
+  // Real data for the charts from API
   List<FlSpot> _singleOrdersData = [];
   List<FlSpot> _bulkOrdersData = [];
   List<FlSpot> _totalOrdersData = [];
+  List<Map<String, dynamic>> _graphData = [];
 
   // Navigation bar for switching views
   Widget _buildNavigationBar() {
@@ -185,33 +184,79 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void initState() {
     super.initState();
     _loadDashboardData();
-    _generateSampleChartData();
+    _loadGraphData();
   }
 
-  void _generateSampleChartData() {
-    // Generate sample data for the last 14 days
-    final now = DateTime.now();
-    _singleOrdersData = List.generate(_chartDays, (index) {
-      final day = now.subtract(Duration(days: _chartDays - 1 - index));
-      return FlSpot(
-        index.toDouble(),
-        (10 + (index * 2) + (index % 3) * 5).toDouble(),
-      );
+  Future<void> _loadGraphData() async {
+    setState(() {
+      _isLoadingGraphData = true;
     });
 
-    _bulkOrdersData = List.generate(_chartDays, (index) {
-      final day = now.subtract(Duration(days: _chartDays - 1 - index));
-      return FlSpot(
-        index.toDouble(),
-        (5 + (index * 1.5) + (index % 4) * 3).toDouble(),
-      );
-    });
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final token = authProvider.currentUser?.token;
 
-    _totalOrdersData = List.generate(_chartDays, (index) {
-      final singleValue = _singleOrdersData[index].y;
-      final bulkValue = _bulkOrdersData[index].y;
-      return FlSpot(index.toDouble(), singleValue + bulkValue);
-    });
+      if (token != null) {
+        // Calculate date range based on selected days
+        final endDate = DateTime.now();
+        final startDate = endDate.subtract(Duration(days: _chartDays - 1));
+
+        // Format dates as YYYY-MM-DD
+        final startDateStr =
+            '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+        final endDateStr =
+            '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+
+        final graphData = await AdminDashboardService.getGraphData(
+          token,
+          startDateStr,
+          endDateStr,
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          _graphData = graphData;
+          _processGraphData();
+        });
+      }
+    } catch (e) {
+      print('Error loading graph data: $e');
+      // Set empty data on error
+      if (mounted) {
+        setState(() {
+          _graphData = [];
+          _singleOrdersData = [];
+          _bulkOrdersData = [];
+          _totalOrdersData = [];
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingGraphData = false;
+        });
+      }
+    }
+  }
+
+  void _processGraphData() {
+    _singleOrdersData = [];
+    _bulkOrdersData = [];
+    _totalOrdersData = [];
+
+    for (int i = 0; i < _graphData.length; i++) {
+      final data = _graphData[i];
+      _singleOrdersData.add(
+        FlSpot(i.toDouble(), (data['singleOrders'] ?? 0).toDouble()),
+      );
+      _bulkOrdersData.add(
+        FlSpot(i.toDouble(), (data['bulkOrders'] ?? 0).toDouble()),
+      );
+      _totalOrdersData.add(
+        FlSpot(i.toDouble(), (data['totalOrders'] ?? 0).toDouble()),
+      );
+    }
   }
 
   void _loadDashboardData() async {
@@ -401,8 +446,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     if (val != null) {
                       setState(() {
                         _chartDays = val;
-                        _generateSampleChartData(); // Regenerate data for new period
                       });
+                      _loadGraphData(); // Reload real data for new period
                     }
                   },
                 ),
@@ -438,7 +483,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
 
           const SizedBox(height: AppConstants.spacingL),
-          SizedBox(height: 300, child: _buildInteractiveLineChart()),
+          SizedBox(
+            height: 300,
+            child:
+                _isLoadingGraphData
+                    ? const Center(child: CircularProgressIndicator())
+                    : _buildInteractiveLineChart(),
+          ),
         ],
       ),
     );
@@ -578,20 +629,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.visibility_off,
+              _graphData.isEmpty
+                  ? Icons.bar_chart_outlined
+                  : Icons.visibility_off,
               size: 48,
               color: Colors.grey.withOpacity(0.5),
             ),
             const SizedBox(height: AppConstants.spacingM),
             Text(
-              'No data visible',
+              _graphData.isEmpty ? 'No data available' : 'No data visible',
               style: AppConstants.bodyLarge.copyWith(
                 color: Colors.grey,
                 fontWeight: FontWeight.w600,
               ),
             ),
             Text(
-              'Toggle the legend buttons above to show data',
+              _graphData.isEmpty
+                  ? 'No orders found for the selected period'
+                  : 'Toggle the legend buttons above to show data',
               style: AppConstants.bodyMedium.copyWith(color: Colors.grey),
             ),
           ],
@@ -603,7 +658,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       LineChartData(
         lineBarsData: lineBarsData,
         minX: 0,
-        maxX: (_chartDays - 1).toDouble(),
+        maxX: (_graphData.length - 1).toDouble(),
         minY: 0,
         maxY: _getMaxY(),
         titlesData: FlTitlesData(
@@ -629,18 +684,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
               interval: _getXInterval(),
               getTitlesWidget: (value, meta) {
                 final dayIndex = value.toInt();
-                if (dayIndex < 0 || dayIndex >= _chartDays)
+                if (dayIndex < 0 || dayIndex >= _graphData.length)
                   return const SizedBox();
 
-                final date = DateTime.now().subtract(
-                  Duration(days: _chartDays - 1 - dayIndex),
-                );
-                return Text(
-                  '${date.day}/${date.month}',
-                  style: AppConstants.bodySmall.copyWith(
-                    color: AppConstants.textSecondaryColor,
-                  ),
-                );
+                // Use actual date from API data
+                final dateStr = _graphData[dayIndex]['date'] as String?;
+                if (dateStr != null) {
+                  final date = DateTime.parse(dateStr);
+                  return Text(
+                    '${date.day}/${date.month}',
+                    style: AppConstants.bodySmall.copyWith(
+                      color: AppConstants.textSecondaryColor,
+                    ),
+                  );
+                }
+                return const SizedBox();
               },
             ),
           ),
@@ -734,9 +792,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   double _getXInterval() {
-    if (_chartDays <= 7) return 1;
-    if (_chartDays <= 30) return (_chartDays / 7).ceilToDouble();
-    return (_chartDays / 10).ceilToDouble();
+    final dataLength = _graphData.length;
+    if (dataLength <= 7) return 1;
+    if (dataLength <= 30) return (dataLength / 7).ceilToDouble();
+    return (dataLength / 10).ceilToDouble();
   }
 
   Widget _buildDashboardView() {

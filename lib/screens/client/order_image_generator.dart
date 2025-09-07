@@ -43,7 +43,8 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
 
   List<String> get _currentOrnamentImages {
     if (widget.order.ornamentDetails.isEmpty) return widget.order.images;
-    final selectedOrnament = widget.order.ornamentDetails[_currentOrnamentIndex];
+    final selectedOrnament =
+        widget.order.ornamentDetails[_currentOrnamentIndex];
     return selectedOrnament.images.isNotEmpty
         ? selectedOrnament.images
         : widget.order.images;
@@ -58,9 +59,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         key: _repaintBoundaryKey,
         child: Container(
           color: const Color(0xFFF8FAFC),
-          child: widget.order.ornamentDetails.isEmpty
-              ? _buildSingleOrderView()
-              : _buildMultiOrnamentView(),
+          child:
+              widget.order.ornamentDetails.isEmpty
+                  ? _buildSingleOrderView()
+                  : _buildMultiOrnamentView(),
         ),
       ),
     );
@@ -97,15 +99,19 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         Container(
           margin: const EdgeInsets.only(right: 16),
           child: Material(
-            color: _isGeneratingImage 
-                ? const Color(0xFFE2E8F0) 
-                : const Color(0xFF3B82F6),
+            color:
+                _isGeneratingImage
+                    ? const Color(0xFFE2E8F0)
+                    : const Color(0xFF3B82F6),
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: _isGeneratingImage ? null : _generateAndShareImage,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -119,20 +125,17 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                         ),
                       )
                     else
-                      Icon(
-                        Icons.share_outlined,
-                        size: 18,
-                        color: Colors.white,
-                      ),
+                      Icon(Icons.share_outlined, size: 18, color: Colors.white),
                     const SizedBox(width: 8),
                     Text(
                       _isGeneratingImage ? 'Sharing...' : 'Share',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: _isGeneratingImage 
-                            ? const Color(0xFF64748B)
-                            : Colors.white,
+                        color:
+                            _isGeneratingImage
+                                ? const Color(0xFF64748B)
+                                : Colors.white,
                       ),
                     ),
                   ],
@@ -198,8 +201,8 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           _buildOrnamentCard(ornament),
           const SizedBox(height: 20),
           _buildImagesSection(
-            ornament.images.isNotEmpty ? ornament.images : widget.order.images, 
-            ornament.name
+            ornament.images.isNotEmpty ? ornament.images : widget.order.images,
+            ornament.name,
           ),
         ],
       ),
@@ -275,7 +278,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
   Widget _buildStatusBadge(String status) {
     Color backgroundColor;
     Color textColor;
-    
+
     switch (status.toLowerCase()) {
       case 'completed':
         backgroundColor = const Color(0xFF10B981).withOpacity(0.1);
@@ -293,7 +296,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         backgroundColor = const Color(0xFF64748B).withOpacity(0.1);
         textColor = const Color(0xFF64748B);
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -319,7 +322,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             Expanded(
               child: _buildInfoItem(
                 'Order Number',
-                widget.order.id.substring(0, 12),
+                widget.order.orderNo!,
                 Icons.tag,
               ),
             ),
@@ -359,21 +362,14 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFE2E8F0),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                icon,
-                size: 16,
-                color: const Color(0xFF64748B),
-              ),
+              Icon(icon, size: 16, color: const Color(0xFF64748B)),
               const SizedBox(width: 8),
               Text(
                 label,
@@ -505,24 +501,22 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     );
   }
 
-  Widget _buildSpecItem(String label, String value, IconData icon, Color color) {
+  Widget _buildSpecItem(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: color.withOpacity(0.2), width: 1),
       ),
       child: Column(
         children: [
-          Icon(
-            icon,
-            size: 24,
-            color: color,
-          ),
+          Icon(icon, size: 24, color: color),
           const SizedBox(height: 8),
           Text(
             label,
@@ -597,7 +591,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     if (images.isEmpty) {
       return _buildNoImagesState();
     }
-    
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -662,10 +656,11 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: images.length,
             separatorBuilder: (context, index) => const SizedBox(height: 16),
-            itemBuilder: (context, index) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildModernImageCard(images[index]),
-            ),
+            itemBuilder:
+                (context, index) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _buildModernImageCard(images[index]),
+                ),
           ),
           const SizedBox(height: 24),
         ],
@@ -748,10 +743,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             const SizedBox(height: 4),
             Text(
               'Failed to load image',
-              style: TextStyle(
-                fontSize: 12,
-                color: const Color(0xFF64748B),
-              ),
+              style: TextStyle(fontSize: 12, color: const Color(0xFF64748B)),
             ),
           ],
         ),
@@ -801,10 +793,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             const SizedBox(height: 8),
             Text(
               'Images will appear here when uploaded',
-              style: TextStyle(
-                fontSize: 14,
-                color: const Color(0xFF94A3B8),
-              ),
+              style: TextStyle(fontSize: 14, color: const Color(0xFF94A3B8)),
             ),
           ],
         ),
@@ -850,9 +839,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                     height: 8,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(4),
-                      color: index == _currentOrnamentIndex
-                          ? const Color(0xFF3B82F6)
-                          : const Color(0xFFE2E8F0),
+                      color:
+                          index == _currentOrnamentIndex
+                              ? const Color(0xFF3B82F6)
+                              : const Color(0xFFE2E8F0),
                     ),
                   ),
                 ),
@@ -869,7 +859,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     setState(() {
       _isGeneratingImage = true;
     });
-    
+
     try {
       // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
@@ -892,20 +882,25 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           duration: const Duration(seconds: 2),
         ),
       );
-      
+
       // Capture the entire screen
-      RenderRepaintBoundary boundary = _repaintBoundaryKey.currentContext!
-          .findRenderObject() as RenderRepaintBoundary;
+      RenderRepaintBoundary boundary =
+          _repaintBoundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      ByteData? byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       Uint8List pngBytes = byteData!.buffer.asUint8List();
-      
+
       // Prepare files for sharing
       final directory = await getTemporaryDirectory();
       List<XFile> files = [];
-      
+
       // Add main screen capture
-      final screenFile = File('${directory.path}/order_${widget.order.id}_${DateTime.now().millisecondsSinceEpoch}.png');
+      final screenFile = File(
+        '${directory.path}/order_${widget.order.id}_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
       await screenFile.writeAsBytes(pngBytes);
       files.add(XFile(screenFile.path));
 
@@ -915,7 +910,9 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           final imageUrl = _currentOrnamentImages[i];
           final response = await http.get(Uri.parse(imageUrl));
           if (response.statusCode == 200) {
-            final imageFile = File('${directory.path}/order_image_${widget.order.id}_$i.png');
+            final imageFile = File(
+              '${directory.path}/order_image_${widget.order.id}_$i.png',
+            );
             await imageFile.writeAsBytes(response.bodyBytes);
             files.add(XFile(imageFile.path));
           }
@@ -935,11 +932,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           SnackBar(
             content: Row(
               children: [
-                Icon(
-                  Icons.check_circle,
-                  color: Colors.white,
-                  size: 20,
-                ),
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
                 const SizedBox(width: 16),
                 Text('Order details shared successfully!'),
               ],
@@ -954,11 +947,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           SnackBar(
             content: Row(
               children: [
-                Icon(
-                  Icons.error_outline,
-                  color: Colors.white,
-                  size: 20,
-                ),
+                Icon(Icons.error_outline, color: Colors.white, size: 20),
                 const SizedBox(width: 16),
                 Expanded(child: Text('Failed to share: $e')),
               ],
@@ -977,8 +966,20 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
   }
 
   String _formatDate(DateTime date) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }

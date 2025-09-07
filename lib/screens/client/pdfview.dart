@@ -163,7 +163,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
           crossAxisAlignment: pw.CrossAxisAlignment.end,
           children: [
             pw.Text(
-              'Order #${widget.order.id}',
+              'Order #${widget.order.orderNo}',
               style: pw.TextStyle(
                 fontSize: 16,
                 fontWeight: pw.FontWeight.bold,
@@ -414,7 +414,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
                         ),
                       ),
                       pw.Text(
-                        'Order #${widget.order.id}',
+                        'Order #${widget.order.orderNo}',
                         style: pw.TextStyle(
                           fontSize: 12,
                           color: PdfColors.grey600,

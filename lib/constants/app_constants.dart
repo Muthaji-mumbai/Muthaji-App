@@ -20,7 +20,7 @@ class AppConstants {
   static const Color darkSurfaceColor = Color(0xFF111827); // Gray 900
   static const Color darkTextPrimaryColor = Color(0xFFF3F4F6); // Gray 100
   static const Color darkTextSecondaryColor = Color(0xFF9CA3AF); // Gray 400
- 
+
   // API Configuration
   static const String baseUrl = 'https://soloshine-backend.onrender.com';
   static const String loginEndpoint = '/auth/login';
@@ -32,8 +32,7 @@ class AppConstants {
   static const String profileEndpoint = '/profile';
   static const String categoriesEndpoint = '/category';
   static const String dashboardEndpoint = '/dashboard';
-  
-  
+  static const String dashboardGraphEndpoint = '/dashboard/graph';
 
   // Text Styles
   static TextStyle get headingLarge => GoogleFonts.inter(
@@ -120,61 +119,63 @@ class AppConstants {
 
   // ThemeData (Light)
   static ThemeData get lightTheme => ThemeData(
-        colorScheme: ColorScheme(
-          brightness: Brightness.light,
-          primary: primaryColor,
-          onPrimary: Colors.white,
-          secondary: secondaryColor,
-          onSecondary: Colors.white,
-          error: errorColor,
-          onError: Colors.white,
-          background: backgroundColor,
-          onBackground: textPrimaryColor,
-          surface: surfaceColor,
-          onSurface: textPrimaryColor,
-        ),
-        scaffoldBackgroundColor: backgroundColor,
-        useMaterial3: true,
-        fontFamily: 'Inter',
-        textTheme: GoogleFonts.interTextTheme().apply(
-          bodyColor: textPrimaryColor,
-          displayColor: textPrimaryColor,
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        cardColor: surfaceColor,
-      );
+    colorScheme: ColorScheme(
+      brightness: Brightness.light,
+      primary: primaryColor,
+      onPrimary: Colors.white,
+      secondary: secondaryColor,
+      onSecondary: Colors.white,
+      error: errorColor,
+      onError: Colors.white,
+      background: backgroundColor,
+      onBackground: textPrimaryColor,
+      surface: surfaceColor,
+      onSurface: textPrimaryColor,
+    ),
+    scaffoldBackgroundColor: backgroundColor,
+    useMaterial3: true,
+    fontFamily: 'Inter',
+    textTheme: GoogleFonts.interTextTheme().apply(
+      bodyColor: textPrimaryColor,
+      displayColor: textPrimaryColor,
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: primaryColor,
+      foregroundColor: Colors.white,
+      elevation: 0,
+    ),
+    cardColor: surfaceColor,
+  );
 
   // ThemeData (Dark)
   static ThemeData get darkTheme => ThemeData(
-        colorScheme: ColorScheme(
-          brightness: Brightness.dark,
-          primary: primaryColor,
-          onPrimary: Colors.white,
-          secondary: secondaryColor,
-          onSecondary: Colors.white,
-          error: errorColor,
-          onError: Colors.white,
-          background: darkBackgroundColor,
-          onBackground: darkTextPrimaryColor,
-          surface: darkSurfaceColor,
-          onSurface: darkTextPrimaryColor,
-        ),
-        scaffoldBackgroundColor: darkBackgroundColor,
-        useMaterial3: true,
-        fontFamily: 'Inter',
-        textTheme: GoogleFonts.interTextTheme(ThemeData(brightness: Brightness.dark).textTheme).apply(
-          bodyColor: darkTextPrimaryColor,
-          displayColor: darkTextPrimaryColor,
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        cardColor: darkSurfaceColor,
-      );
+    colorScheme: ColorScheme(
+      brightness: Brightness.dark,
+      primary: primaryColor,
+      onPrimary: Colors.white,
+      secondary: secondaryColor,
+      onSecondary: Colors.white,
+      error: errorColor,
+      onError: Colors.white,
+      background: darkBackgroundColor,
+      onBackground: darkTextPrimaryColor,
+      surface: darkSurfaceColor,
+      onSurface: darkTextPrimaryColor,
+    ),
+    scaffoldBackgroundColor: darkBackgroundColor,
+    useMaterial3: true,
+    fontFamily: 'Inter',
+    textTheme: GoogleFonts.interTextTheme(
+      ThemeData(brightness: Brightness.dark).textTheme,
+    ).apply(
+      bodyColor: darkTextPrimaryColor,
+      displayColor: darkTextPrimaryColor,
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: primaryColor,
+      foregroundColor: Colors.white,
+      elevation: 0,
+    ),
+    cardColor: darkSurfaceColor,
+  );
 }
