@@ -3,13 +3,16 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:flutter/foundation.dart';
+import 'package:printing/printing.dart';
+import '../../utils/pdf_web.dart'
+    if (dart.library.html) '../../utils/pdf_web_web.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:soloshine/constants/app_constants.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:open_file/open_file.dart';
 import 'package:flutter/services.dart'; // For loading asset images
 import '../../models/order.dart';
@@ -60,6 +63,17 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
 
     // Save and display PDF
     try {
+      if (kIsWeb) {
+        try {
+          await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+          return;
+        } catch (_) {
+          final bytes = await pdf.save();
+          openPdfInNewTab(bytes);
+          return;
+        }
+      }
+
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/invoice_${widget.order.id}.pdf');
       await file.writeAsBytes(await pdf.save());
@@ -90,7 +104,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
             // Header with logo and company info
             _buildHeader(logoImage),
             pw.SizedBox(height: 30),
-            
+
             // Invoice title
             pw.Center(
               child: pw.Text(
@@ -103,23 +117,24 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
               ),
             ),
             pw.SizedBox(height: 30),
-            
+
             // Order information section
             _buildOrderInfoSection(),
             pw.SizedBox(height: 25),
-            
+
             // Order details table
             if (widget.order.ornamentDetails.isNotEmpty) ...[
               _buildOrderDetailsTable(),
               pw.SizedBox(height: 25),
             ],
-            
+
             // Notes section
-            if (widget.order.notes != null && widget.order.notes!.isNotEmpty) ...[
+            if (widget.order.notes != null &&
+                widget.order.notes!.isNotEmpty) ...[
               _buildNotesSection(),
               pw.SizedBox(height: 20),
             ],
-            
+
             // Footer
             pw.Spacer(),
             _buildFooter(),
@@ -150,14 +165,11 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
             ),
             pw.Text(
               'MGRS. OF CZ GOLD JEWELRY ',
-              style: pw.TextStyle(
-                fontSize: 10,
-                color: PdfColors.grey600,
-              ),
+              style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
             ),
           ],
         ),
-        
+
         // Invoice details
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.end,
@@ -223,10 +235,16 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _buildInfoRow('Created:', _formatDateForInvoice(widget.order.createdAt)),
+                    _buildInfoRow(
+                      'Created:',
+                      _formatDateForInvoice(widget.order.createdAt),
+                    ),
                     pw.SizedBox(height: 5),
                     if (widget.order.updatedAt != null)
-                      _buildInfoRow('Updated:', _formatDateForInvoice(widget.order.updatedAt!)),
+                      _buildInfoRow(
+                        'Updated:',
+                        _formatDateForInvoice(widget.order.updatedAt!),
+                      ),
                   ],
                 ),
               ),
@@ -424,7 +442,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
                   ),
                 ),
                 pw.SizedBox(height: 30),
-                
+
                 // First image
                 pw.Container(
                   alignment: pw.Alignment.center,
@@ -458,7 +476,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Second image if exists
                 if (i + 1 < images.length) ...[
                   pw.SizedBox(height: 40),
@@ -495,7 +513,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
                     ),
                   ),
                 ],
-                
+
                 // Page footer
                 pw.Spacer(),
                 pw.Container(
@@ -508,7 +526,10 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
                   child: pw.Center(
                     child: pw.Text(
                       'Page ${(i ~/ 2) + 2} - Images ${i + 1}${i + 1 < images.length ? ' & ${i + 2}' : ''}',
-                      style: pw.TextStyle(fontSize: 10, color: PdfColors.grey500),
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        color: PdfColors.grey500,
+                      ),
                     ),
                   ),
                 ),
@@ -524,20 +545,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
     await OpenFile.open(file.path);
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays == 0) {
-      return 'Today';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
-  }
+  // Removed unused _formatDate
 
   String _formatDateForInvoice(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -547,7 +555,7 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Invoice #${widget.order.id}'),
+        title: Text('Invoice #${widget.order.orderNo ?? widget.order.id}'),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
         actions: [
@@ -555,67 +563,70 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
             IconButton(
               icon: const Icon(Icons.share),
               onPressed: () async {
-                await Share.shareXFiles(
-                  [XFile(_pdfFile!.path)],
-                  text: 'Sharing Pdf #${widget.order.id}',
-                );
+                await Share.shareXFiles([
+                  XFile(_pdfFile!.path),
+                ], text: 'Sharing Pdf #${widget.order.id}');
               },
             ),
         ],
       ),
-      body: _pdfFile == null
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body:
+          _pdfFile == null
+              ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text(
+                      'Generating PDF...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+              : Column(
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text(
-                    'Generating  Pdf...',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    color: Colors.green.shade50,
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green.shade600),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Pdf Generated Successfully',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: PDFView(
+                      filePath: _pdfFile!.path,
+                      enableSwipe: true,
+                      swipeHorizontal: true,
+                      autoSpacing: true,
+                      pageFling: true,
+                      pageSnap: true,
+                      fitPolicy: FitPolicy.BOTH,
+                      onError: (error) {
+                        print('PDF View Error: $error');
+                      },
+                      onPageChanged: (page, total) {
+                        print('Page $page of $total');
+                      },
+                    ),
                   ),
                 ],
               ),
-            )
-          : Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  color: Colors.green.shade50,
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.green.shade600),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Pdf Generated Successfully',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: PDFView(
-                    filePath: _pdfFile!.path,
-                    enableSwipe: true,
-                    swipeHorizontal: true,
-                    autoSpacing: true,
-                    pageFling: true,
-                    pageSnap: true,
-                    fitPolicy: FitPolicy.BOTH,
-                    onError: (error) {
-                      print('PDF View Error: $error');
-                    },
-                    onPageChanged: (page, total) {
-                      print('Page $page of $total');
-                    },
-                  ),
-                ),
-              ],
-            ),
     );
   }
 }

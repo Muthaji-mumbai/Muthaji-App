@@ -3,12 +3,11 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:soloshine/screens/employee/order_detailed_screen.dart';
+import 'package:soloshine/screens/client/pdfview.dart';
 import '../../models/order.dart';
 import '../../services/order_service.dart';
 import '../../services/auth_service.dart';
 import '../../constants/app_constants.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
 import 'update_order_screen.dart';
 
 class ManageOrdersScreen extends StatefulWidget {
@@ -18,7 +17,8 @@ class ManageOrdersScreen extends StatefulWidget {
   State<ManageOrdersScreen> createState() => _ManageOrdersScreenState();
 }
 
-class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProviderStateMixin {
+class _ManageOrdersScreenState extends State<ManageOrdersScreen>
+    with TickerProviderStateMixin {
   List<Order> _allOrders = [];
   List<Order> _filteredOrders = [];
 
@@ -95,7 +95,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
             content: Text('Error loading data: $e'),
             backgroundColor: AppConstants.errorColor,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -104,47 +106,65 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
 
   void _applyFilters() {
     setState(() {
-      _filteredOrders = _allOrders.where((order) {
-        final matchesStatus = _selectedStatus == null || order.status == _selectedStatus;
-        final matchesSearch = _searchQuery.isEmpty ||
-            order.clientName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            order.description.toLowerCase().contains(_searchQuery.toLowerCase());
-        final matchesType = _selectedOrderType == null || (_selectedOrderType == (order.orderType ?? 'Single'));
+      _filteredOrders =
+          _allOrders.where((order) {
+            final matchesStatus =
+                _selectedStatus == null || order.status == _selectedStatus;
+            final matchesSearch =
+                _searchQuery.isEmpty ||
+                order.clientName.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ) ||
+                order.description.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                );
+            final matchesType =
+                _selectedOrderType == null ||
+                (_selectedOrderType == (order.orderType ?? 'Single'));
 
-        final created = order.createdAt;
-        bool matchesDate = true;
-        final now = DateTime.now();
-        switch (_selectedRange) {
-          case 'All time':
-            matchesDate = true;
-            break;
-          case 'Today':
-            final startOfDay = DateTime(now.year, now.month, now.day);
-            final endOfDay = startOfDay.add(const Duration(days: 1));
-            matchesDate = created.isAfter(startOfDay) && created.isBefore(endOfDay);
-            break;
-          case 'Last 7 days':
-            final from = now.subtract(const Duration(days: 7));
-            matchesDate = created.isAfter(from);
-            break;
-          case 'Last 30 days':
-            final from = now.subtract(const Duration(days: 30));
-            matchesDate = created.isAfter(from);
-            break;
-          case 'Custom':
-            if (_startDate != null) {
-              final start = DateTime(_startDate!.year, _startDate!.month, _startDate!.day);
-              if (created.isBefore(start)) matchesDate = false;
+            final created = order.createdAt;
+            bool matchesDate = true;
+            final now = DateTime.now();
+            switch (_selectedRange) {
+              case 'All time':
+                matchesDate = true;
+                break;
+              case 'Today':
+                final startOfDay = DateTime(now.year, now.month, now.day);
+                final endOfDay = startOfDay.add(const Duration(days: 1));
+                matchesDate =
+                    created.isAfter(startOfDay) && created.isBefore(endOfDay);
+                break;
+              case 'Last 7 days':
+                final from = now.subtract(const Duration(days: 7));
+                matchesDate = created.isAfter(from);
+                break;
+              case 'Last 30 days':
+                final from = now.subtract(const Duration(days: 30));
+                matchesDate = created.isAfter(from);
+                break;
+              case 'Custom':
+                if (_startDate != null) {
+                  final start = DateTime(
+                    _startDate!.year,
+                    _startDate!.month,
+                    _startDate!.day,
+                  );
+                  if (created.isBefore(start)) matchesDate = false;
+                }
+                if (_endDate != null) {
+                  final end = DateTime(
+                    _endDate!.year,
+                    _endDate!.month,
+                    _endDate!.day,
+                  ).add(const Duration(days: 1));
+                  if (created.isAfter(end)) matchesDate = false;
+                }
+                break;
             }
-            if (_endDate != null) {
-              final end = DateTime(_endDate!.year, _endDate!.month, _endDate!.day).add(const Duration(days: 1));
-              if (created.isAfter(end)) matchesDate = false;
-            }
-            break;
-        }
 
-        return matchesStatus && matchesSearch && matchesType && matchesDate;
-      }).toList();
+            return matchesStatus && matchesSearch && matchesType && matchesDate;
+          }).toList();
     });
   }
 
@@ -170,7 +190,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
               ),
               backgroundColor: AppConstants.successColor,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
@@ -190,7 +212,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
             ),
             backgroundColor: AppConstants.errorColor,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -221,7 +245,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
     try {
       for (final id in _selectedOrderIds) {
         final order = _allOrders.firstWhere((o) => o.id == id);
-        await OrderService.updateOrderStatus(orderId: order.id, newStatus: status, token: token);
+        await OrderService.updateOrderStatus(
+          orderId: order.id,
+          newStatus: status,
+          token: token,
+        );
       }
       await _loadData();
       if (!mounted) return;
@@ -236,7 +264,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
           ),
           backgroundColor: AppConstants.successColor,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       _clearSelection();
@@ -253,7 +283,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
           ),
           backgroundColor: AppConstants.errorColor,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -262,39 +294,54 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
   Future<void> _deleteOrder(String orderId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-            SizedBox(width: 12),
-            Text('Delete Order'),
-          ],
-        ),
-        content: const Text(
-          'Are you sure you want to delete this order? This action cannot be undone.',
-          style: TextStyle(fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.errorColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            title: const Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.orange,
+                  size: 28,
+                ),
+                SizedBox(width: 12),
+                Text('Delete Order'),
+              ],
             ),
-            child: const Text('Delete'),
+            content: const Text(
+              'Are you sure you want to delete this order? This action cannot be undone.',
+              style: TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.errorColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Delete'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirmed == true) {
@@ -315,7 +362,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
               ),
               backgroundColor: AppConstants.successColor,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
@@ -332,7 +381,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
             ),
             backgroundColor: AppConstants.errorColor,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -368,11 +419,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
         backgroundColor: Colors.white,
         foregroundColor: AppConstants.primaryColor,
         title: Text(
-          _selectionMode ? '${_selectedOrderIds.length} selected' : 'Manage Orders',
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-          ),
+          _selectionMode
+              ? '${_selectedOrderIds.length} selected'
+              : 'Manage Orders',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 20),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -409,25 +459,28 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                   child: const Icon(Icons.sync_alt_rounded, size: 20),
                 ),
                 onSelected: (st) => _bulkChangeStatus(st),
-                itemBuilder: (context) => [
-                  ...OrderStatus.values.map((s) => PopupMenuItem(
-                    value: s,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          margin: const EdgeInsets.only(right: 12),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(s),
-                            shape: BoxShape.circle,
+                itemBuilder:
+                    (context) => [
+                      ...OrderStatus.values.map(
+                        (s) => PopupMenuItem(
+                          value: s,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                margin: const EdgeInsets.only(right: 12),
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(s),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              Text(s.toString().split('.').last),
+                            ],
                           ),
                         ),
-                        Text(s.toString().split('.').last),
-                      ],
-                    ),
-                  )),
-                ],
+                      ),
+                    ],
               ),
             ),
           ] else ...[
@@ -437,9 +490,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _showFilters 
-                    ? AppConstants.primaryColor.withOpacity(0.2)
-                    : AppConstants.primaryColor.withOpacity(0.1),
+                  color:
+                      _showFilters
+                          ? AppConstants.primaryColor.withOpacity(0.2)
+                          : AppConstants.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -469,14 +523,20 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                 decoration: InputDecoration(
                   hintText: 'Search orders, clients, descriptions...',
                   hintStyle: TextStyle(color: Colors.grey.shade500),
-                  prefixIcon: Icon(Icons.search_rounded, color: Colors.grey.shade400),
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    color: Colors.grey.shade400,
+                  ),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                 ),
               ),
             ),
           ),
-          
+
           // Advanced Filters - Collapsible
           AnimatedBuilder(
             animation: _filterAnimation,
@@ -491,37 +551,41 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
               );
             },
           ),
-          
+
           // Summary Bar
           _buildSummaryBar(),
-          
+
           // Orders List
           Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text('Loading orders...', style: TextStyle(color: Colors.grey)),
-                      ],
-                    ),
-                  )
-                : _filteredOrders.isEmpty
+            child:
+                _isLoading
+                    ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text(
+                            'Loading orders...',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    )
+                    : _filteredOrders.isEmpty
                     ? _buildEmptyState()
                     : RefreshIndicator(
-                        onRefresh: _loadData,
-                        color: AppConstants.primaryColor,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(20),
-                          itemCount: _filteredOrders.length,
-                          itemBuilder: (context, index) {
-                            final order = _filteredOrders[index];
-                            return _buildOrderCard(order);
-                          },
-                        ),
+                      onRefresh: _loadData,
+                      color: AppConstants.primaryColor,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(20),
+                        itemCount: _filteredOrders.length,
+                        itemBuilder: (context, index) {
+                          final order = _filteredOrders[index];
+                          return _buildOrderCard(order);
+                        },
                       ),
+                    ),
           ),
         ],
       ),
@@ -530,7 +594,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
 
   Widget _buildAdvancedFilters() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -543,7 +607,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
         children: [
           Row(
             children: [
-              Icon(Icons.tune_rounded, color: AppConstants.primaryColor, size: 20),
+              Icon(
+                Icons.tune_rounded,
+                color: AppConstants.primaryColor,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Advanced Filters',
@@ -556,22 +624,30 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
             ],
           ),
           const SizedBox(height: 16),
-          
+
           if (isMobile) ...[
-            _buildDropdownField<OrderStatus>('Status', _selectedStatus, 
-              OrderStatus.values.map((s) => DropdownMenuItem<OrderStatus>(
-                value: s,
-                child: Text(s.toString().split('.').last),
-              )).toList(),
+            _buildDropdownField<OrderStatus>(
+              'Status',
+              _selectedStatus,
+              OrderStatus.values
+                  .map(
+                    (s) => DropdownMenuItem<OrderStatus>(
+                      value: s,
+                      child: Text(s.toString().split('.').last),
+                    ),
+                  )
+                  .toList(),
               (value) {
                 setState(() => _selectedStatus = value);
                 _applyFilters();
               },
               allowNull: true,
-              nullText: 'All Statuses'
+              nullText: 'All Statuses',
             ),
             const SizedBox(height: 12),
-            _buildDropdownField('Type', _selectedOrderType, 
+            _buildDropdownField(
+              'Type',
+              _selectedOrderType,
               const [
                 DropdownMenuItem(value: 'Single', child: Text('Single')),
                 DropdownMenuItem(value: 'Bulk', child: Text('Bulk')),
@@ -581,7 +657,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                 _applyFilters();
               },
               allowNull: true,
-              nullText: 'All Types'
+              nullText: 'All Types',
             ),
             const SizedBox(height: 12),
             _buildDateRangeField(),
@@ -589,22 +665,30 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
             Row(
               children: [
                 Expanded(
-                  child: _buildDropdownField<OrderStatus>('Status', _selectedStatus, 
-                    OrderStatus.values.map((s) => DropdownMenuItem<OrderStatus>(
-                      value: s,
-                      child: Text(s.toString().split('.').last),
-                    )).toList(),
+                  child: _buildDropdownField<OrderStatus>(
+                    'Status',
+                    _selectedStatus,
+                    OrderStatus.values
+                        .map(
+                          (s) => DropdownMenuItem<OrderStatus>(
+                            value: s,
+                            child: Text(s.toString().split('.').last),
+                          ),
+                        )
+                        .toList(),
                     (value) {
                       setState(() => _selectedStatus = value);
                       _applyFilters();
                     },
                     allowNull: true,
-                    nullText: 'All Statuses'
+                    nullText: 'All Statuses',
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildDropdownField('Type', _selectedOrderType, 
+                  child: _buildDropdownField(
+                    'Type',
+                    _selectedOrderType,
                     const [
                       DropdownMenuItem(value: 'Single', child: Text('Single')),
                       DropdownMenuItem(value: 'Bulk', child: Text('Bulk')),
@@ -614,17 +698,15 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                       _applyFilters();
                     },
                     allowNull: true,
-                    nullText: 'All Types'
+                    nullText: 'All Types',
                   ),
                 ),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: _buildDateRangeField(),
-                ),
+                Expanded(child: _buildDateRangeField()),
               ],
             ),
           ],
-          
+
           if (_hasActiveFilters()) ...[
             const SizedBox(height: 16),
             Row(
@@ -637,8 +719,13 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                     backgroundColor: Colors.grey.shade200,
                     foregroundColor: Colors.grey.shade700,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -684,7 +771,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
             value: value,
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
             ),
             items: [
               if (allowNull && nullText != null)
@@ -727,11 +817,17 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
             value: _selectedRange,
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
             ),
-            items: _ranges
-                .map((r) => DropdownMenuItem<String>(value: r, child: Text(r)))
-                .toList(),
+            items:
+                _ranges
+                    .map(
+                      (r) => DropdownMenuItem<String>(value: r, child: Text(r)),
+                    )
+                    .toList(),
             onChanged: (val) async {
               if (val == null) return;
               setState(() {
@@ -746,9 +842,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                   context: context,
                   firstDate: DateTime(2020),
                   lastDate: DateTime(2100),
-                  initialDateRange: _startDate != null && _endDate != null
-                      ? DateTimeRange(start: _startDate!, end: _endDate!)
-                      : null,
+                  initialDateRange:
+                      _startDate != null && _endDate != null
+                          ? DateTimeRange(start: _startDate!, end: _endDate!)
+                          : null,
                   builder: (context, child) {
                     return Theme(
                       data: Theme.of(context).copyWith(
@@ -776,13 +873,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
   }
 
   Widget _buildSummaryBar() {
-    if (_filteredOrders.isEmpty && !_hasActiveFilters()) return const SizedBox.shrink();
-    
+    if (_filteredOrders.isEmpty && !_hasActiveFilters())
+      return const SizedBox.shrink();
+
     final statusCounts = <OrderStatus, int>{};
     for (final order in _filteredOrders) {
       statusCounts[order.status] = (statusCounts[order.status] ?? 0) + 1;
     }
-    
+
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -790,51 +888,52 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
         children: [
           Text(
             '${_filteredOrders.length} Orders',
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: statusCounts.entries.map((entry) {
-                  return Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(entry.key).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _getStatusColor(entry.key).withOpacity(0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(entry.key),
-                            shape: BoxShape.circle,
+                children:
+                    statusCounts.entries.map((entry) {
+                      return Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(entry.key).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _getStatusColor(entry.key).withOpacity(0.3),
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${entry.key.toString().split('.').last}: ${entry.value}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _getStatusColor(entry.key),
-                            fontWeight: FontWeight.w500,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: _getStatusColor(entry.key),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${entry.key.toString().split('.').last}: ${entry.value}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _getStatusColor(entry.key),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                      );
+                    }).toList(),
               ),
             ),
           ),
@@ -857,14 +956,18 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
               shape: BoxShape.circle,
             ),
             child: Icon(
-              _hasActiveFilters() ? Icons.search_off_rounded : Icons.inventory_2_outlined,
+              _hasActiveFilters()
+                  ? Icons.search_off_rounded
+                  : Icons.inventory_2_outlined,
               size: 48,
               color: Colors.grey.shade400,
             ),
           ),
           const SizedBox(height: 24),
           Text(
-            _hasActiveFilters() ? 'No Orders Match Your Filters' : 'No Orders Found',
+            _hasActiveFilters()
+                ? 'No Orders Match Your Filters'
+                : 'No Orders Found',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
@@ -873,13 +976,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
           ),
           const SizedBox(height: 12),
           Text(
-            _hasActiveFilters() 
+            _hasActiveFilters()
                 ? 'Try adjusting your filters or search terms'
                 : 'Orders will appear here once they are created',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
             textAlign: TextAlign.center,
           ),
           if (_hasActiveFilters()) ...[
@@ -891,8 +991,13 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppConstants.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ],
@@ -903,7 +1008,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
 
   Widget _buildOrderCard(Order order) {
     final isSelected = _selectedOrderIds.contains(order.id);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -916,9 +1021,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
             offset: const Offset(0, 2),
           ),
         ],
-        border: isSelected 
-            ? Border.all(color: AppConstants.primaryColor, width: 2)
-            : null,
+        border:
+            isSelected
+                ? Border.all(color: AppConstants.primaryColor, width: 2)
+                : null,
       ),
       child: Material(
         color: Colors.transparent,
@@ -926,7 +1032,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
           borderRadius: BorderRadius.circular(16),
           onLongPress: () => _toggleSelection(order.id, !isSelected),
           child: ExpansionTile(
-            tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            tilePadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 8,
+            ),
             childrenPadding: const EdgeInsets.all(20),
             leading: Stack(
               children: [
@@ -942,28 +1051,34 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                    child: order.images.isNotEmpty
-                        ? Image.network(
-                            order.images.first,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: _getStatusColor(order.status).withOpacity(0.1),
+                    child:
+                        order.images.isNotEmpty
+                            ? Image.network(
+                              order.images.first,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (context, error, stackTrace) => Container(
+                                    color: _getStatusColor(
+                                      order.status,
+                                    ).withOpacity(0.1),
+                                    child: Icon(
+                                      Icons.image_not_supported_rounded,
+                                      color: _getStatusColor(order.status),
+                                      size: 24,
+                                    ),
+                                  ),
+                            )
+                            : Container(
+                              color: _getStatusColor(
+                                order.status,
+                              ).withOpacity(0.1),
                               child: Icon(
-                                Icons.image_not_supported_rounded,
+                                Icons.shopping_bag_outlined,
                                 color: _getStatusColor(order.status),
                                 size: 24,
                               ),
                             ),
-                          )
-                        : Container(
-                            color: _getStatusColor(order.status).withOpacity(0.1),
-                            child: Icon(
-                              Icons.shopping_bag_outlined,
-                              color: _getStatusColor(order.status),
-                              size: 24,
-                            ),
-                          ),
-                  ),  
+                  ),
                 ),
                 if (isSelected)
                   Positioned(
@@ -1003,7 +1118,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: _getStatusColor(order.status).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6),
@@ -1053,10 +1171,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                 const SizedBox(height: 8),
                 Text(
                   order.description,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1065,7 +1180,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                   children: [
                     if (order.orderType != null) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(4),
@@ -1098,7 +1216,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                     const Spacer(),
                     if (order.images.isNotEmpty)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(4),
@@ -1131,17 +1252,15 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                     children: [
                       Checkbox(
                         value: isSelected,
-                        onChanged: (val) => _toggleSelection(order.id, val ?? false),
+                        onChanged:
+                            (val) => _toggleSelection(order.id, val ?? false),
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         visualDensity: VisualDensity.compact,
                       ),
                       const SizedBox(width: 8),
                       const Text(
                         'Select for bulk action',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey,
-                        ),
+                        style: TextStyle(fontSize: 13, color: Colors.grey),
                       ),
                     ],
                   ),
@@ -1161,7 +1280,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                   color: Colors.grey,
                 ),
               ),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               onSelected: (value) {
                 if (value == 'edit') {
                   _navigateToUpdateOrder(order);
@@ -1176,55 +1297,80 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
                       builder: (context) => OrderDetailsScreen(order: order),
                     ),
                   );
+                } else if (value == 'pdf') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PDFViewerScreen(order: order),
+                    ),
+                  );
                 }
               },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit_outlined, size: 18, color: Colors.grey.shade600),
-                      const SizedBox(width: 12),
-                      const Text('Edit Order'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'status',
-                  child: Row(
-                    children: [
-                      Icon(Icons.sync_alt_rounded, size: 18, color: Colors.grey.shade600),
-                      const SizedBox(width: 12),
-                      const Text('Update Status'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'full_details',
-                  child: Row(
-                    children: [
-                      Icon(Icons.visibility_outlined, size: 18, color: Colors.grey.shade600),
-                      const SizedBox(width: 12),
-                      const Text('Full Details'),
-                    ],
-                  ),
-                ),
-                if (order.orderType == 'Single')
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red.shade600),
-                        const SizedBox(width: 12),
-                        Text('Delete Order', style: TextStyle(color: Colors.red.shade600)),
-                      ],
+              itemBuilder:
+                  (context) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.edit_outlined,
+                            size: 18,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Edit Order'),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
+                    PopupMenuItem(
+                      value: 'status',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.sync_alt_rounded,
+                            size: 18,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Update Status'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'full_details',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.visibility_outlined,
+                            size: 18,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Full Details'),
+                        ],
+                      ),
+                    ),
+                    if (order.orderType == 'Single')
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline_rounded,
+                              size: 18,
+                              color: Colors.red.shade600,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Delete Order',
+                              style: TextStyle(color: Colors.red.shade600),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
             ),
-            children: [
-              _buildExpandedContent(order),
-            ],
+            children: [_buildExpandedContent(order)],
           ),
         ),
       ),
@@ -1244,11 +1390,19 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
           // Order Details Grid
           _buildDetailSection('Order Information', [
             _buildDetailItem('Order ID', order.id, Icons.tag_rounded),
-            if (order.orderType != null) 
-              _buildDetailItem('Type', order.orderType!, Icons.category_outlined),
-            if (order.orderDate != null) 
-              _buildDetailItem('Order Date', _formatDate(order.orderDate!), Icons.calendar_today_outlined),
-            if (order.notes != null && order.notes!.isNotEmpty) 
+            if (order.orderType != null)
+              _buildDetailItem(
+                'Type',
+                order.orderType!,
+                Icons.category_outlined,
+              ),
+            if (order.orderDate != null)
+              _buildDetailItem(
+                'Order Date',
+                _formatDate(order.orderDate!),
+                Icons.calendar_today_outlined,
+              ),
+            if (order.notes != null && order.notes!.isNotEmpty)
               _buildDetailItem('Notes', order.notes!, Icons.note_outlined),
           ]),
 
@@ -1257,50 +1411,52 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
             const SizedBox(height: 20),
             _buildDetailSection('Ornament Details', []),
             const SizedBox(height: 8),
-            ...order.ornamentDetails.map((detail) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.amber,
-                      shape: BoxShape.circle,
+            ...order.ornamentDetails.map(
+              (detail) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.amber,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          detail.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            detail.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${detail.material} • ${detail.weight}g • ${detail.purity} • Qty: ${detail.quantity}',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 12,
+                          const SizedBox(height: 4),
+                          Text(
+                            '${detail.material} • ${detail.weight}g • ${detail.purity} • Qty: ${detail.quantity}',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            )),
+            ),
           ],
 
           // Images
@@ -1377,10 +1533,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
             color: Colors.black87,
           ),
         ),
-        if (children.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          ...children,
-        ],
+        if (children.isNotEmpty) ...[const SizedBox(height: 12), ...children],
       ],
     );
   }
@@ -1391,11 +1544,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 16,
-            color: Colors.grey.shade600,
-          ),
+          Icon(icon, size: 16, color: Colors.grey.shade600),
           const SizedBox(width: 8),
           SizedBox(
             width: 80,
@@ -1411,10 +1560,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 13, color: Colors.black87),
             ),
           ),
         ],
@@ -1426,10 +1572,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FullScreenImageViewer(
-          images: images,
-          initialIndex: initialIndex,
-        ),
+        builder:
+            (context) => FullScreenImageViewer(
+              images: images,
+              initialIndex: initialIndex,
+            ),
       ),
     );
   }
@@ -1439,150 +1586,180 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> with TickerProv
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: AppConstants.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.sync_alt_rounded,
-                color: AppConstants.primaryColor,
-                size: 18,
-              ),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            const SizedBox(width: 12),
-            const Text('Update Status'),
-          ],
-        ),
-        content: StatefulBuilder(
-          builder: (context, setState) => Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      'Current: ',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(order.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _getStatusColor(order.status).withOpacity(0.3),
-                        ),
-                      ),
-                      child: Text(
-                        order.status.toString().split('.').last,
-                        style: TextStyle(
-                          color: _getStatusColor(order.status),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'New Status',
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: DropdownButtonFormField<OrderStatus>(
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            title: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppConstants.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  value: selectedStatus,
-                  items: OrderStatus.values
-                      .map((status) => DropdownMenuItem(
-                            value: status,
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 12,
-                                  height: 12,
-                                  margin: const EdgeInsets.only(right: 12),
-                                  decoration: BoxDecoration(
-                                    color: _getStatusColor(status),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                Text(status.toString().split('.').last),
-                              ],
-                            ),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedStatus = value;
-                    });
-                  },
+                  child: Icon(
+                    Icons.sync_alt_rounded,
+                    color: AppConstants.primaryColor,
+                    size: 18,
+                  ),
                 ),
+                const SizedBox(width: 12),
+                const Text('Update Status'),
+              ],
+            ),
+            content: StatefulBuilder(
+              builder:
+                  (context, setState) => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              'Current: ',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getStatusColor(
+                                  order.status,
+                                ).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: _getStatusColor(
+                                    order.status,
+                                  ).withOpacity(0.3),
+                                ),
+                              ),
+                              child: Text(
+                                order.status.toString().split('.').last,
+                                style: TextStyle(
+                                  color: _getStatusColor(order.status),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'New Status',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonFormField<OrderStatus>(
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                          value: selectedStatus,
+                          items:
+                              OrderStatus.values
+                                  .map(
+                                    (status) => DropdownMenuItem(
+                                      value: status,
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 12,
+                                            height: 12,
+                                            margin: const EdgeInsets.only(
+                                              right: 12,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: _getStatusColor(status),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          Text(
+                                            status.toString().split('.').last,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedStatus = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (selectedStatus != null &&
+                      selectedStatus != order.status) {
+                    Navigator.of(context).pop();
+                    _updateOrderStatus(order, selectedStatus!);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Update'),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (selectedStatus != null && selectedStatus != order.status) {
-                Navigator.of(context).pop();
-                _updateOrderStatus(order, selectedStatus!);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Update'),
-          ),
-        ],
-      ),
     );
   }
 
   bool _hasActiveFilters() {
     return _selectedStatus != null ||
-           _selectedOrderType != null ||
-           _selectedRange != 'All time' ||
-           _searchQuery.isNotEmpty;
+        _selectedOrderType != null ||
+        _selectedRange != 'All time' ||
+        _searchQuery.isNotEmpty;
   }
 
   void _clearAllFilters() {
@@ -1662,29 +1839,46 @@ class FullScreenImageViewer extends StatelessWidget {
           );
         },
         itemCount: images.length,
-        loadingBuilder: (context, event) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: CircularProgressIndicator(
-                  value: event == null 
-                      ? 0 
-                      : event.cumulativeBytesLoaded / (event.expectedTotalBytes ?? 1),
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
+        loadingBuilder:
+            (context, event) => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: CircularProgressIndicator(
+                      value:
+                          event == null
+                              ? 0
+                              : event.cumulativeBytesLoaded /
+                                  (event.expectedTotalBytes ?? 1),
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'pdf',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.picture_as_pdf_outlined,
+                          size: 18,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 12),
+                        const Text('Generate PDF'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Loading image...',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Loading image...',
-                style: TextStyle(color: Colors.white70),
-              ),
-            ],
-          ),
-        ),
+            ),
         backgroundDecoration: const BoxDecoration(color: Colors.black),
         pageController: PageController(initialPage: initialIndex),
         onPageChanged: (index) {

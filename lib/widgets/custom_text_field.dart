@@ -3,7 +3,7 @@ import '../constants/app_constants.dart';
 
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
-  final String?labelText;
+  final String? labelText;
   final String hintText;
   final IconData? prefixIcon;
   final Widget? suffixIcon;
@@ -15,17 +15,12 @@ class CustomTextField extends StatelessWidget {
   final VoidCallback? onTap;
   final bool isRequired;
   final TextStyle? style;
-  
-  
+  final ValueChanged<String>? onChanged;
 
   const CustomTextField({
-
-    this.isRequired = false,
-    this.style,
-    
     super.key,
     required this.controller,
-     this.labelText,
+    this.labelText,
     required this.hintText,
     this.prefixIcon,
     this.suffixIcon,
@@ -35,6 +30,9 @@ class CustomTextField extends StatelessWidget {
     this.maxLines = 1,
     this.enabled = true,
     this.onTap,
+    this.isRequired = false,
+    this.style,
+    this.onChanged,
   });
 
   @override
@@ -42,13 +40,6 @@ class CustomTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Text(
-        //   labelText!,
-        //   style: AppConstants.bodyMedium.copyWith(
-        //     fontWeight: FontWeight.w500,
-        //     color: AppConstants.textPrimaryColor,
-        //   ),
-        // ),
         const SizedBox(height: AppConstants.spacingS),
         TextFormField(
           controller: controller,
@@ -58,21 +49,30 @@ class CustomTextField extends StatelessWidget {
           maxLines: maxLines,
           enabled: enabled,
           onTap: onTap,
-          style: AppConstants.bodyLarge.copyWith(
-            color: AppConstants.textPrimaryColor,
+          onChanged: onChanged,
+          style: (style ?? AppConstants.bodyLarge).copyWith(
+            color: (style?.color ?? AppConstants.textPrimaryColor),
           ),
           decoration: InputDecoration(
+            labelText:
+                labelText != null
+                    ? (isRequired ? '${labelText!} *' : labelText)
+                    : null,
+            labelStyle: AppConstants.bodyMedium.copyWith(
+              color: AppConstants.textSecondaryColor,
+            ),
             hintText: hintText,
             hintStyle: AppConstants.bodyMedium.copyWith(
               color: AppConstants.textSecondaryColor.withOpacity(0.6),
             ),
-            prefixIcon: prefixIcon != null
-                ? Icon(
-                    prefixIcon,
-                    color: AppConstants.textSecondaryColor,
-                    size: 20,
-                  )
-                : null,
+            prefixIcon:
+                prefixIcon != null
+                    ? Icon(
+                      prefixIcon,
+                      color: AppConstants.textSecondaryColor,
+                      size: 20,
+                    )
+                    : null,
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: AppConstants.surfaceColor,
@@ -97,9 +97,7 @@ class CustomTextField extends StatelessWidget {
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusM),
-              borderSide: const BorderSide(
-                color: AppConstants.errorColor,
-              ),
+              borderSide: const BorderSide(color: AppConstants.errorColor),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusM),

@@ -1,4 +1,4 @@
-  import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
@@ -20,7 +20,10 @@ class AuthService {
   static bool get isLoggedIn => _currentUser != null;
 
   // Login method using real API
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  static Future<Map<String, dynamic>> login(
+    String email,
+    String password,
+  ) async {
     try {
       final response = await ApiService.post(
         AppConstants.loginEndpoint,
@@ -35,11 +38,20 @@ class AuthService {
         _currentUser = User.fromJson(userData);
         _currentToken = userData['token'];
 
+        // Ensure unauthorized handler is always registered after login
+        ApiService.setUnauthorizedHandler(handleUnauthorized);
+
         // Save to local storage
         await _saveUserToStorage();
-        return {'success': true, 'message': response['message'] ?? 'Login successful'};
+        return {
+          'success': true,
+          'message': response['message'] ?? 'Login successful',
+        };
       } else {
-        return {'success': false, 'message': response['message'] ?? 'Login failed'};
+        return {
+          'success': false,
+          'message': response['message'] ?? 'Login failed',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Login failed: $e'};
@@ -68,6 +80,9 @@ class AuthService {
         final userData = json.decode(userJson);
         _currentUser = User.fromJson(userData);
         _currentToken = token;
+
+        // Register unauthorized handler on app start as well
+        ApiService.setUnauthorizedHandler(handleUnauthorized);
         return true;
       }
     } catch (e) {
@@ -115,23 +130,27 @@ class AuthService {
       // Clear local session
       await logout();
 
-      final context = NavigationService.navigatorKey.currentState?.overlay?.context;
+      final context =
+          NavigationService.navigatorKey.currentState?.overlay?.context;
 
       if (context != null) {
         // Show a session expired dialog
         await showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Session expired'),
-            content: const Text('Your session has expired. Please log in again.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('OK'),
+          builder:
+              (ctx) => AlertDialog(
+                title: const Text('Session expired'),
+                content: const Text(
+                  'Your session has expired. Please log in again.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
               ),
-            ],
-          ),
         );
 
         // Navigate to login screen and clear back stack

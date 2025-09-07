@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
 import '../constants/app_constants.dart';
-import '../widgets/custom_button.dart';
+import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import 'client/client_dashboard.dart';
 import 'employee/employee_dashboard.dart';
 import 'admin/admin_dashboard.dart';
@@ -13,15 +14,16 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Ensure unauthorized handler is registered when dashboard builds
+    ApiService.setUnauthorizedHandler(AuthService.handleUnauthorized);
+
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         final user = authProvider.currentUser;
-        
+
         if (user == null) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
@@ -61,7 +63,6 @@ class DashboardScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    
     return Scaffold(
       backgroundColor: AppConstants.backgroundColor,
       appBar: AppBar(
@@ -78,9 +79,7 @@ class DashboardScaffold extends StatelessWidget {
             ],
             Text(
               title,
-              style: AppConstants.headingSmall.copyWith(
-                color: Colors.white,
-              ),
+              style: AppConstants.headingSmall.copyWith(color: Colors.white),
             ),
           ],
         ),
@@ -101,40 +100,42 @@ class DashboardScaffold extends StatelessWidget {
       drawer: drawer,
       body: body,
       bottomNavigationBar: bottomNavigationBar,
-      floatingActionButton: floatingActionButtons?.isNotEmpty == true
-          ? floatingActionButtons!.length == 1
-              ? floatingActionButtons!.first
-              : FloatingActionButton.extended(
-                  onPressed: () {
-                    // Handle multiple FABs
-                  },
-                  label: const Text('Actions'),
-                  icon: const Icon(Icons.add),
-                )
-          : null,
+      floatingActionButton:
+          floatingActionButtons?.isNotEmpty == true
+              ? floatingActionButtons!.length == 1
+                  ? floatingActionButtons!.first
+                  : FloatingActionButton.extended(
+                    onPressed: () {
+                      // Handle multiple FABs
+                    },
+                    label: const Text('Actions'),
+                    icon: const Icon(Icons.add),
+                  )
+              : null,
     );
   }
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Logout'),
+            content: const Text('Are you sure you want to logout?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  context.read<AuthProvider>().logout();
+                },
+                child: const Text('Logout'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.read<AuthProvider>().logout();
-            },
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
     );
   }
 }

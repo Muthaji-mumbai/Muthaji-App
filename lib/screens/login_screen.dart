@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../constants/app_constants.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
+import 'dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,32 +26,46 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
-Future<void> _handleLogin() async {
-  if (_formKey.currentState!.validate()) {
-    final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.login(
-      _emailController.text.trim(),
-      _passwordController.text,
-    );
 
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error == 'Invalid Password' ? 'Invalid Password' : authProvider.error ?? 'An unexpected error occurred'),
-          backgroundColor: AppConstants.errorColor,
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: 'Dismiss',
-            textColor: Colors.white,
-            onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            },
-          ),
-        ),
+  Future<void> _handleLogin() async {
+    if (_formKey.currentState!.validate()) {
+      final authProvider = context.read<AuthProvider>();
+      final success = await authProvider.login(
+        _emailController.text.trim(),
+        _passwordController.text,
       );
+
+      if (success && mounted) {
+        // On successful login, navigate to Dashboard and clear back stack
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+          (route) => false,
+        );
+        return;
+      }
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              authProvider.error == 'Invalid Password'
+                  ? 'Invalid Password'
+                  : authProvider.error ?? 'An unexpected error occurred',
+            ),
+            backgroundColor: AppConstants.errorColor,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+      }
     }
   }
-}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,7 +96,7 @@ Future<void> _handleLogin() async {
                         value: AppConstants.spacingXL,
                       ),
                     ],
-                  ).value!,
+                  ).value,
                 ),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
@@ -97,7 +112,7 @@ Future<void> _handleLogin() async {
                             const Condition.equals(name: TABLET, value: 500),
                             const Condition.equals(name: DESKTOP, value: 400),
                           ],
-                        ).value!,
+                        ).value,
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -269,7 +284,6 @@ Future<void> _handleLogin() async {
                         color: AppConstants.primaryColor,
                       ),
                     ),
-                 
                   ],
                 ),
               ],
@@ -280,25 +294,5 @@ Future<void> _handleLogin() async {
     );
   }
 
-  Widget _buildDemoCredential(String role, String email) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingXS),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '$role: ',
-            style: AppConstants.bodySmall.copyWith(fontWeight: FontWeight.w500),
-          ),
-          Text(
-            email,
-            style: AppConstants.bodySmall.copyWith(
-              color: AppConstants.primaryColor,
-              fontFamily: 'monospace',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // removed unused _buildDemoCredential helper
 }

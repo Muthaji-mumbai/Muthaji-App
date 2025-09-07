@@ -9,8 +9,8 @@ import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
 import '../../services/user_service.dart';
-import '../../models/order.dart';
 import '../../models/user.dart';
+import '../../models/order.dart';
 import '../dashboard_screen.dart';
 import '../client/create_order_screen.dart';
 import 'user_management_screen.dart';
@@ -63,8 +63,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Map<String, dynamic> _orderStats = {};
   Map<String, dynamic> _userStats = {};
   Map<String, dynamic> _dashboardStats = {};
-  List<Order> _allOrders = [];
+  // Removed unused _allOrders to satisfy lints
   List<User> _recentUsers = [];
+  List<Order> _allOrders = [];
   bool _isLoading = true;
   bool _isLoadingGraphData = false;
   _AdminView _currentView = _AdminView.dashboard;
@@ -85,7 +86,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildNavigationBar() {
     return Container(
       margin: const EdgeInsets.only(bottom: AppConstants.spacingL),
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: AppConstants.surfaceColor,
         borderRadius: BorderRadius.circular(AppConstants.radiusM),
@@ -96,7 +97,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Expanded(
             child: GestureDetector(
               onTap: () => setState(() => _currentView = _AdminView.dashboard),
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
                 padding: const EdgeInsets.symmetric(
                   vertical: AppConstants.spacingM,
                   horizontal: AppConstants.spacingL,
@@ -126,7 +129,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             _currentView == _AdminView.dashboard
                                 ? Colors.white
                                 : AppConstants.textSecondaryColor,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -137,7 +140,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Expanded(
             child: GestureDetector(
               onTap: () => setState(() => _currentView = _AdminView.reports),
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
                 padding: const EdgeInsets.symmetric(
                   vertical: AppConstants.spacingM,
                   horizontal: AppConstants.spacingL,
@@ -167,7 +172,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             _currentView == _AdminView.reports
                                 ? Colors.white
                                 : AppConstants.textSecondaryColor,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -259,7 +264,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-  void _loadDashboardData() async {
+  Future<void> _loadDashboardData() async {
     setState(() {
       _isLoading = true;
     });
@@ -339,7 +344,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh),
-          onPressed: _loadDashboardData,
+          onPressed: () {
+            _loadDashboardData();
+            _loadGraphData();
+          },
         ),
       ],
       body: Stack(
@@ -356,7 +364,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
             const Center(child: CircularProgressIndicator())
           else
             RefreshIndicator(
-              onRefresh: () async => _loadDashboardData(),
+              onRefresh: () async {
+                await _loadDashboardData();
+                await _loadGraphData();
+              },
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(AppConstants.spacingM),
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -364,10 +375,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (_currentView == _AdminView.dashboard) ...[
-                      _buildWelcomeSection(currentUser!),
+                      // _buildWelcomeSection(currentUser!),
                       const SizedBox(height: AppConstants.spacingL),
                     ],
-                    // Add line chart at the top for both views
+                    // Graph at the top
                     _buildOrderTrendsChart(),
                     const SizedBox(height: AppConstants.spacingL),
                     _buildNavigationBar(),
@@ -429,7 +440,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Order Trends', style: AppConstants.headingMedium),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.show_chart,
+                    color: AppConstants.primaryColor,
+                  ),
+                  const SizedBox(width: AppConstants.spacingS),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Order Trends', style: AppConstants.headingMedium),
+                      Text(
+                        'Orders over time',
+                        style: AppConstants.bodySmall.copyWith(
+                          color: AppConstants.textSecondaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
               DropdownButtonHideUnderline(
                 child: DropdownButton<int>(
                   value: _chartDays,
@@ -454,12 +485,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ],
           ),
-          const SizedBox(height: AppConstants.spacingM),
+          const SizedBox(height: AppConstants.spacingL),
+          SizedBox(
+            height: 300,
+            child:
+                _isLoadingGraphData
+                    ? const Center(child: CircularProgressIndicator())
+                    : _buildInteractiveLineChart(),
+          ),
+          const SizedBox(height: AppConstants.spacingL),
 
-          // Chart Legend/Toggle Buttons
+          // Chart Legend/Toggle Buttons moved below the chart
           Wrap(
             spacing: AppConstants.spacingM,
             runSpacing: AppConstants.spacingS,
+            alignment: WrapAlignment.center, // Center for better UX
             children: [
               _buildLegendButton(
                 'Single Orders',
@@ -480,15 +520,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 () => setState(() => _showTotalOrders = !_showTotalOrders),
               ),
             ],
-          ),
-
-          const SizedBox(height: AppConstants.spacingL),
-          SizedBox(
-            height: 300,
-            child:
-                _isLoadingGraphData
-                    ? const Center(child: CircularProgressIndicator())
-                    : _buildInteractiveLineChart(),
           ),
         ],
       ),
@@ -560,7 +591,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             show: true,
             getDotPainter:
                 (spot, percent, barData, index) => FlDotCirclePainter(
-                  radius: 4,
+                  radius: 3.5,
                   color: AppConstants.primaryColor,
                   strokeWidth: 2,
                   strokeColor: Colors.white,
@@ -568,7 +599,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
           belowBarData: BarAreaData(
             show: true,
-            color: AppConstants.primaryColor.withOpacity(0.1),
+            gradient: LinearGradient(
+              colors: [
+                AppConstants.primaryColor.withOpacity(0.25),
+                AppConstants.primaryColor.withOpacity(0.05),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
           ),
         ),
       );
@@ -586,7 +624,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             show: true,
             getDotPainter:
                 (spot, percent, barData, index) => FlDotCirclePainter(
-                  radius: 4,
+                  radius: 3.5,
                   color: AppConstants.accentColor,
                   strokeWidth: 2,
                   strokeColor: Colors.white,
@@ -594,7 +632,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
           belowBarData: BarAreaData(
             show: true,
-            color: AppConstants.accentColor.withOpacity(0.1),
+            gradient: LinearGradient(
+              colors: [
+                AppConstants.accentColor.withOpacity(0.25),
+                AppConstants.accentColor.withOpacity(0.05),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
           ),
         ),
       );
@@ -612,7 +657,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             show: true,
             getDotPainter:
                 (spot, percent, barData, index) => FlDotCirclePainter(
-                  radius: 5,
+                  radius: 4.5,
                   color: AppConstants.secondaryColor,
                   strokeWidth: 2,
                   strokeColor: Colors.white,
@@ -646,7 +691,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Text(
               _graphData.isEmpty
                   ? 'No orders found for the selected period'
-                  : 'Toggle the legend buttons above to show data',
+                  : 'Toggle the buttons below to show data',
               style: AppConstants.bodyMedium.copyWith(color: Colors.grey),
             ),
           ],
@@ -712,10 +757,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
         gridData: FlGridData(
           show: true,
           drawHorizontalLine: true,
-          drawVerticalLine: false,
+          drawVerticalLine: true,
           horizontalInterval: _getYInterval(),
           getDrawingHorizontalLine: (value) {
             return FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1);
+          },
+          getDrawingVerticalLine: (value) {
+            return FlLine(
+              color: Colors.grey.withOpacity(0.15),
+              strokeWidth: 0.5,
+            );
           },
         ),
         borderData: FlBorderData(
@@ -728,7 +779,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         lineTouchData: LineTouchData(
           enabled: true,
           touchTooltipData: LineTouchTooltipData(
-            // tooltipBgColor: AppConstants.surfaceColor,
             tooltipBorder: BorderSide(color: Colors.grey.withOpacity(0.3)),
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((LineBarSpot touchedSpot) {
@@ -802,9 +852,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildKPICards(),
+        _buildQuickActions(), // Moved quick actions higher for better accessibility
         const SizedBox(height: AppConstants.spacingL),
-        _buildQuickActions(),
+        _buildKPICards(),
         const SizedBox(height: AppConstants.spacingL),
         _buildRecentActivity(),
       ],
@@ -871,9 +921,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               crossAxisCount: 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: AppConstants.spacingM,
-              mainAxisSpacing: AppConstants.spacingM,
-              childAspectRatio: 2.5,
+              crossAxisSpacing: AppConstants.spacingL, // Increased spacing
+              mainAxisSpacing: AppConstants.spacingL,
+              childAspectRatio: 3, // Adjusted for better fit
               children: kpiData.map((kpi) => _buildKPICard(kpi)).toList(),
             ),
       ],
@@ -950,7 +1000,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       {
         'title': 'User Management',
         'subtitle': 'View and manage users',
-        'icon': Icons.bar_chart,
+        'icon': Icons.people_alt,
         'color': AppConstants.secondaryColor,
         'onTap':
             () => Navigator.push(
@@ -1005,12 +1055,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       .toList(),
             )
             : GridView.count(
-              crossAxisCount: 2,
+              crossAxisCount: 3, // Changed to 3 for desktop to spread out
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: AppConstants.spacingM,
-              mainAxisSpacing: AppConstants.spacingM,
-              childAspectRatio: 3,
+              crossAxisSpacing: AppConstants.spacingL,
+              mainAxisSpacing: AppConstants.spacingL,
+              childAspectRatio: 2.5, // Adjusted aspect ratio
               children:
                   actions
                       .map((action) => _buildQuickActionCard(action))
@@ -1103,9 +1153,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Column(
             children:
                 _recentUsers
-                    .take(3)
+                    .take(5)
                     .map((user) => _buildRecentUserCard(user))
-                    .toList(),
+                    .toList(), // Increased to 5 for more info
           ),
       ],
     );
@@ -1212,13 +1262,222 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Analytics & Reports', style: AppConstants.headingSmall),
+        _buildDetailedStatistics(), // Moved detailed stats higher for priority
         const SizedBox(height: AppConstants.spacingL),
         _buildPieChartsSection(),
         const SizedBox(height: AppConstants.spacingL),
-        _buildDetailedStatistics(),
+        _buildTypeStatusBarCharts(),
       ],
     );
+  }
+
+  Widget _buildTypeStatusBarCharts() {
+    // Compute per type status counts from _allOrders
+    int singlePending = 0,
+        singleInProgress = 0,
+        singleCompleted = 0,
+        singleCancelled = 0,
+        singleConfirmed = 0;
+    int bulkPending = 0,
+        bulkInProgress = 0,
+        bulkCompleted = 0,
+        bulkCancelled = 0,
+        bulkConfirmed = 0;
+
+    for (final o in _allOrders) {
+      final isSingle = (o.orderType ?? '').toLowerCase().contains('single');
+      final isBulk = (o.orderType ?? '').toLowerCase().contains('bulk');
+      if (!isSingle && !isBulk) continue; // skip unknown types
+
+      void addTo(bool toSingle) {
+        switch (o.status) {
+          case OrderStatus.pending:
+            toSingle ? singlePending++ : bulkPending++;
+            break;
+          case OrderStatus.confirmed:
+            toSingle ? singleConfirmed++ : bulkConfirmed++;
+            break;
+          case OrderStatus.inProgress:
+            toSingle ? singleInProgress++ : bulkInProgress++;
+            break;
+          case OrderStatus.completed:
+            toSingle ? singleCompleted++ : bulkCompleted++;
+            break;
+          case OrderStatus.cancelled:
+            toSingle ? singleCancelled++ : bulkCancelled++;
+            break;
+        }
+      }
+
+      if (isSingle) addTo(true);
+      if (isBulk) addTo(false);
+    }
+
+    final singleData = [
+      {
+        'label': 'Pending',
+        'value': singlePending.toDouble(),
+        'color': AppConstants.warningColor,
+      },
+      {
+        'label': 'Confirmed',
+        'value': singleConfirmed.toDouble(),
+        'color': AppConstants.accentColor,
+      },
+      {
+        'label': 'In Progress',
+        'value': singleInProgress.toDouble(),
+        'color': AppConstants.secondaryColor,
+      },
+      {
+        'label': 'Completed',
+        'value': singleCompleted.toDouble(),
+        'color': AppConstants.successColor,
+      },
+      {
+        'label': 'Cancelled',
+        'value': singleCancelled.toDouble(),
+        'color': AppConstants.errorColor,
+      },
+    ];
+
+    final bulkData = [
+      {
+        'label': 'Pending',
+        'value': bulkPending.toDouble(),
+        'color': AppConstants.warningColor,
+      },
+      {
+        'label': 'Confirmed',
+        'value': bulkConfirmed.toDouble(),
+        'color': AppConstants.accentColor,
+      },
+      {
+        'label': 'In Progress',
+        'value': bulkInProgress.toDouble(),
+        'color': AppConstants.secondaryColor,
+      },
+      {
+        'label': 'Completed',
+        'value': bulkCompleted.toDouble(),
+        'color': AppConstants.successColor,
+      },
+      {
+        'label': 'Cancelled',
+        'value': bulkCancelled.toDouble(),
+        'color': AppConstants.errorColor,
+      },
+    ];
+
+    final isMobile = ResponsiveBreakpoints.of(context).isMobile;
+
+    Widget buildBar(String title, List<Map<String, dynamic>> data) {
+      final total = data.fold<double>(
+        0,
+        (sum, item) => sum + (item['value'] as double),
+      );
+      return Container(
+        padding: const EdgeInsets.all(AppConstants.spacingL),
+        decoration: BoxDecoration(
+          color: AppConstants.surfaceColor,
+          borderRadius: BorderRadius.circular(AppConstants.radiusL),
+          boxShadow: AppConstants.cardShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: AppConstants.headingSmall),
+            const SizedBox(height: AppConstants.spacingM),
+            SizedBox(
+              height: 220,
+              child: BarChart(
+                BarChartData(
+                  barGroups:
+                      data.asMap().entries.map((e) {
+                        final idx = e.key;
+                        final item = e.value;
+                        return BarChartGroupData(
+                          x: idx,
+                          barRods: [
+                            BarChartRodData(
+                              toY: (item['value'] as double),
+                              color: item['color'] as Color,
+                              width: 16,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          final idx = value.toInt();
+                          if (idx < 0 || idx >= data.length)
+                            return const SizedBox();
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              data[idx]['label'] as String,
+                              style: AppConstants.bodySmall.copyWith(
+                                color: AppConstants.textSecondaryColor,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 32,
+                      ),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                  ),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval:
+                        total <= 10
+                            ? 2
+                            : (total <= 50 ? 10 : (total / 5).ceilToDouble()),
+                  ),
+                  borderData: FlBorderData(show: false),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return isMobile
+        ? Column(
+          children: [
+            buildBar('Single Orders: Status Breakdown', singleData),
+            const SizedBox(height: AppConstants.spacingL),
+            buildBar('Bulk Orders: Status Breakdown', bulkData),
+          ],
+        )
+        : Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: buildBar('Single Orders: Status Breakdown', singleData),
+            ),
+            const SizedBox(width: AppConstants.spacingL),
+            Expanded(
+              child: buildBar('Bulk Orders: Status Breakdown', bulkData),
+            ),
+          ],
+        );
   }
 
   Widget _buildPieChartsSection() {
@@ -1341,6 +1600,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }) {
     final total = data.fold<double>(0, (sum, item) => sum + item['value']);
     final isEmpty = total == 0;
+    final isMobile = ResponsiveBreakpoints.of(context).isMobile;
 
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingL),
@@ -1354,118 +1614,233 @@ class _AdminDashboardState extends State<AdminDashboard> {
         children: [
           Text(title, style: AppConstants.headingSmall),
           const SizedBox(height: AppConstants.spacingL),
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: SizedBox(
-                  height: 200,
-                  child:
-                      isEmpty
-                          ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.pie_chart_outline,
-                                  size: 48,
-                                  color: AppConstants.textSecondaryColor
-                                      .withOpacity(0.5),
-                                ),
-                                const SizedBox(height: AppConstants.spacingM),
-                                Text(
-                                  'No data available',
-                                  style: AppConstants.bodyMedium.copyWith(
-                                    color: AppConstants.textSecondaryColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                          : PieChart(
-                            PieChartData(
-                              sections:
-                                  data
-                                      .asMap()
-                                      .entries
-                                      .where((e) => e.value['value'] > 0)
-                                      .map(
-                                        (e) => PieChartSectionData(
-                                          color: e.value['color'],
-                                          value: e.value['value'],
-                                          title:
-                                              '${((e.value['value'] / total) * 100).toStringAsFixed(1)}%',
-                                          titleStyle: AppConstants.bodySmall
-                                              .copyWith(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                          radius: 80,
-                                        ),
-                                      )
-                                      .toList(),
-                              centerSpaceRadius: 50,
-                              sectionsSpace: 2,
-                            ),
-                          ),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacingL),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children:
-                      data
-                          .map(
-                            (item) => Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: AppConstants.spacingM,
-                              ),
-                              child: Row(
+          isMobile
+              ? Column(
+                children: [
+                  SizedBox(
+                    height: 200,
+                    child:
+                        isEmpty
+                            ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Container(
-                                    width: 16,
-                                    height: 16,
-                                    decoration: BoxDecoration(
-                                      color: item['color'],
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
+                                  Icon(
+                                    Icons.pie_chart_outline,
+                                    size: 48,
+                                    color: AppConstants.textSecondaryColor
+                                        .withOpacity(0.5),
                                   ),
-                                  const SizedBox(width: AppConstants.spacingS),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item['label'],
-                                          style: AppConstants.bodyMedium
-                                              .copyWith(
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                        ),
-                                        Text(
-                                          '${item['value'].toInt()} orders',
-                                          style: AppConstants.bodySmall
-                                              .copyWith(
-                                                color:
-                                                    AppConstants
-                                                        .textSecondaryColor,
-                                              ),
-                                        ),
-                                      ],
+                                  const SizedBox(height: AppConstants.spacingM),
+                                  Text(
+                                    'No data available',
+                                    style: AppConstants.bodyMedium.copyWith(
+                                      color: AppConstants.textSecondaryColor,
                                     ),
                                   ),
                                 ],
                               ),
+                            )
+                            : PieChart(
+                              PieChartData(
+                                sections:
+                                    data
+                                        .asMap()
+                                        .entries
+                                        .where((e) => e.value['value'] > 0)
+                                        .map(
+                                          (e) => PieChartSectionData(
+                                            color: e.value['color'],
+                                            value: e.value['value'],
+                                            title:
+                                                '${((e.value['value'] / total) * 100).toStringAsFixed(1)}%',
+                                            titleStyle: AppConstants.bodySmall
+                                                .copyWith(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                            radius: 80,
+                                          ),
+                                        )
+                                        .toList(),
+                                centerSpaceRadius: 50,
+                                sectionsSpace: 2,
+                              ),
                             ),
-                          )
-                          .toList(),
-                ),
+                  ),
+                  const SizedBox(height: AppConstants.spacingL),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children:
+                        data
+                            .map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppConstants.spacingM,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 16,
+                                      height: 16,
+                                      decoration: BoxDecoration(
+                                        color: item['color'],
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    const SizedBox(
+                                      width: AppConstants.spacingS,
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item['label'],
+                                            style: AppConstants.bodyMedium
+                                                .copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                          Text(
+                                            '${item['value'].toInt()} orders',
+                                            style: AppConstants.bodySmall
+                                                .copyWith(
+                                                  color:
+                                                      AppConstants
+                                                          .textSecondaryColor,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                  ),
+                ],
+              )
+              : Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: SizedBox(
+                      height: 200,
+                      child:
+                          isEmpty
+                              ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.pie_chart_outline,
+                                      size: 48,
+                                      color: AppConstants.textSecondaryColor
+                                          .withOpacity(0.5),
+                                    ),
+                                    const SizedBox(
+                                      height: AppConstants.spacingM,
+                                    ),
+                                    Text(
+                                      'No data available',
+                                      style: AppConstants.bodyMedium.copyWith(
+                                        color: AppConstants.textSecondaryColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                              : PieChart(
+                                PieChartData(
+                                  sections:
+                                      data
+                                          .asMap()
+                                          .entries
+                                          .where((e) => e.value['value'] > 0)
+                                          .map(
+                                            (e) => PieChartSectionData(
+                                              color: e.value['color'],
+                                              value: e.value['value'],
+                                              title:
+                                                  '${((e.value['value'] / total) * 100).toStringAsFixed(1)}%',
+                                              titleStyle: AppConstants.bodySmall
+                                                  .copyWith(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                              radius: 80,
+                                            ),
+                                          )
+                                          .toList(),
+                                  centerSpaceRadius: 50,
+                                  sectionsSpace: 2,
+                                ),
+                              ),
+                    ),
+                  ),
+                  const SizedBox(width: AppConstants.spacingL),
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children:
+                          data
+                              .map(
+                                (item) => Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: AppConstants.spacingM,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 16,
+                                        height: 16,
+                                        decoration: BoxDecoration(
+                                          color: item['color'],
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        width: AppConstants.spacingS,
+                                      ),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item['label'],
+                                              style: AppConstants.bodyMedium
+                                                  .copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                            ),
+                                            Text(
+                                              '${item['value'].toInt()} orders',
+                                              style: AppConstants.bodySmall
+                                                  .copyWith(
+                                                    color:
+                                                        AppConstants
+                                                            .textSecondaryColor,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
         ],
       ),
     );
@@ -1655,7 +2030,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(stat['label']!, style: AppConstants.bodyMedium),
+                  Expanded(
+                    child: Text(stat['label']!, style: AppConstants.bodyMedium),
+                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppConstants.spacingS,
@@ -1682,112 +2059,73 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildWelcomeSection(User user) {
-    final displayName = user.email.split('@')[0];
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppConstants.radiusL),
-      child: Stack(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppConstants.spacingXL),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppConstants.primaryColor,
-                  AppConstants.secondaryColor,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: AppConstants.cardShadow,
-            ),
-          ),
-          Positioned(
-            right: -20,
-            bottom: -20,
-            child: Opacity(
-              opacity: 0.08,
-              child: Image.asset(
-                'assets/icons/logo.png',
-                width: 180,
-                height: 180,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome back, $displayName!',
-                    style: AppConstants.headingLarge.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: AppConstants.spacingS),
-                  Text(
-                    'Manage your business operations from this central dashboard',
-                    style: AppConstants.bodyLarge.copyWith(
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
-                  const SizedBox(height: AppConstants.spacingM),
-                  _WelcomeChip(
-                    icon: Icons.admin_panel_settings,
-                    label: 'Administrator Dashboard',
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildWelcomeSection(User user) {
+  //   final displayName = user.email.split('@')[0];
+  //   return ClipRRect(
+  //     borderRadius: BorderRadius.circular(AppConstants.radiusL),
+  //     child: Stack(
+  //       children: [
+  //         Container(
+  //           width: double.infinity,
+  //           padding: const EdgeInsets.all(50),
+  //           decoration: BoxDecoration(
+  //             gradient: LinearGradient(
+  //               colors: [
+  //                 AppConstants.primaryColor,
+  //                 AppConstants.secondaryColor,
+  //               ],
+  //               begin: Alignment.topLeft,
+  //               end: Alignment.bottomRight,
+  //             ),
+  //             boxShadow: AppConstants.cardShadow,
+  //           ),
+  //         ),
+  //         Positioned(
+  //           right: -20,
+  //           bottom: -20,
+  //           child: Opacity(
+  //             opacity: 0.08,
+  //             child: Image.asset(
+  //               'assets/icons/logo.png',
+  //               width: 180,
+  //               height: 180,
+  //               fit: BoxFit.contain,
+  //             ),
+  //           ),
+  //         ),
+  //         Positioned.fill(
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Text(
+  //                 'Welcome back, $displayName!',
+  //                 style: AppConstants.headingLarge.copyWith(
+  //                   color: Colors.white,
+  //                   fontWeight: FontWeight.bold,
+  //                 ),
+  //               ),
+  //               const SizedBox(height: AppConstants.spacingS),
+  //               Text(
+  //                 'Manage your business operations from this central dashboard',
+  //                 style: AppConstants.bodyLarge.copyWith(
+  //                   color: Colors.white.withOpacity(0.9),
+  //                 ),
+  //               ),
+  //               const SizedBox(height: AppConstants.spacingM),
+  //               _WelcomeChip(
+  //                 icon: Icons.admin_panel_settings,
+  //                 label: 'Administrator Dashboard',
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // Helper methods remain the same
-  String _formatDate(DateTime date) {
-    final d = date;
-    final dd = d.day.toString().padLeft(2, '0');
-    final mm = d.month.toString().padLeft(2, '0');
-    final yyyy = d.year.toString();
-    return '$dd/$mm/$yyyy';
-  }
-
-  String _getStatusText(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return 'Pending';
-      case OrderStatus.confirmed:
-        return 'Confirmed';
-      case OrderStatus.inProgress:
-        return 'In Progress';
-      case OrderStatus.completed:
-        return 'Completed';
-      case OrderStatus.cancelled:
-        return 'Cancelled';
-    }
-  }
-
-  Color _getStatusColor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return AppConstants.warningColor;
-      case OrderStatus.confirmed:
-        return AppConstants.accentColor;
-      case OrderStatus.inProgress:
-        return AppConstants.secondaryColor;
-      case OrderStatus.completed:
-        return AppConstants.successColor;
-      case OrderStatus.cancelled:
-        return AppConstants.errorColor;
-    }
-  }
+  // Removed unused helpers (_formatDate, _getStatusText, _getStatusColor) to satisfy lints
 
   String _getRoleText(UserRole role) {
     switch (role) {

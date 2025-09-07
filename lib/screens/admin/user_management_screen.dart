@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:responsive_framework/responsive_framework.dart';
@@ -15,22 +16,26 @@ class UserManagementScreen extends StatefulWidget {
   State<UserManagementScreen> createState() => _UserManagementScreenState();
 }
 
-class _UserManagementScreenState extends State<UserManagementScreen> {
+class _UserManagementScreenState extends State<UserManagementScreen> with SingleTickerProviderStateMixin {
   List<User> _users = [];
   bool _isLoading = true;
   String? _error;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  TabController? _tabController;
+  UserRole? _selectedRoleFilter; // Null means show all users
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 4, vsync: this); // 4 tabs: All, Customers, Employees, Admins
     _loadUsers();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -49,40 +54,79 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       }
 
       final users = await UserService.getAllUsers(token);
-      setState(() {
-        _users = users;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _users = users;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
   List<User> get _filteredUsers {
-    if (_searchQuery.isEmpty) return _users;
+    var filtered = _users;
+    if (_selectedRoleFilter != null) {
+      filtered = filtered.where((user) => user.role == _selectedRoleFilter).toList();
+    }
+    if (_searchQuery.isEmpty) return filtered;
 
-    return _users.where((user) {
+    return filtered.where((user) {
       final query = _searchQuery.toLowerCase();
       return user.name.toLowerCase().contains(query) ||
           user.email.toLowerCase().contains(query) ||
-          user.phone.contains(query) ||
-          user.role.toString().toLowerCase().contains(query);
+          user.phone.contains(query);
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.of(context).isMobile;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('User Management'),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadUsers),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadUsers,
+            tooltip: 'Refresh',
+          ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: isMobile, // Scrollable tabs on mobile for better fit
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white.withOpacity(0.6),
+          tabs: const [
+            Tab(text: 'All'),
+            Tab(text: 'Customers'),
+            Tab(text: 'Employees'),
+            Tab(text: 'Admins'),
+          ],
+          onTap: (index) {
+            setState(() {
+              _selectedRoleFilter = index == 0
+                  ? null
+                  : index == 1
+                      ? UserRole.client
+                      : index == 2
+                          ? UserRole.employee
+                          : UserRole.admin;
+              _searchQuery = ''; // Reset search when switching tabs
+              _searchController.clear();
+            });
+          },
+        ),
       ),
       body: Column(
         children: [
@@ -93,73 +137,64 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               color: AppConstants.surfaceColor,
               boxShadow: AppConstants.cardShadow,
             ),
-            child: Column(
-              children: [
-                // Search Bar
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
+            child: isMobile
+                ? Column(
+                    children: [
+                      CustomTextField(
                         controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search users...',
-                          prefixIcon: const Icon(Icons.search),
-                          filled: true,
-                          fillColor: AppConstants.backgroundColor,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppConstants.radiusM,
-                            ),
-                            borderSide: BorderSide(
-                              color: AppConstants.textSecondaryColor
-                                  .withOpacity(0.2),
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppConstants.radiusM,
-                            ),
-                            borderSide: BorderSide(
-                              color: AppConstants.textSecondaryColor
-                                  .withOpacity(0.2),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppConstants.radiusM,
-                            ),
-                            borderSide: const BorderSide(
-                              color: AppConstants.primaryColor,
-                              width: 2,
-                            ),
-                          ),
-                        ),
+                        labelText: 'Search Users',
+                        hintText: 'Search by name, email, or phone...',
+                        prefixIcon: Icons.search,
                         onChanged: (value) {
                           setState(() {
                             _searchQuery = value;
                           });
                         },
                       ),
-                    ),
-                    const SizedBox(width: AppConstants.spacingM),
-                    CustomButton(
-                      onPressed: () => _showAddUserDialog(context),
-                      text: 'Add User',
-                      icon: Icons.person_add,
-                      backgroundColor: AppConstants.successColor,
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                      const SizedBox(height: AppConstants.spacingM),
+                      CustomButton(
+                        onPressed: () => _showAddUserDialog(context),
+                        text: 'Add User',
+                        icon: Icons.person_add,
+                        backgroundColor: AppConstants.successColor,
+                        width: double.infinity,
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: CustomTextField(
+                          controller: _searchController,
+                          labelText: 'Search Users',
+                          hintText: 'Search by name, email, or phone...',
+                          prefixIcon: Icons.search,
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: AppConstants.spacingM),
+                      Expanded(
+                        flex: 1,
+                        child: CustomButton(
+                          onPressed: () => _showAddUserDialog(context),
+                          text: 'Add User',
+                          icon: Icons.person_add,
+                          backgroundColor: AppConstants.successColor,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
-
           // Users List
           Expanded(
-            child:
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _error != null
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
                     ? _buildErrorWidget()
                     : _buildUsersList(),
           ),
@@ -192,6 +227,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             onPressed: _loadUsers,
             text: 'Retry',
             icon: Icons.refresh,
+            backgroundColor: AppConstants.accentColor,
           ),
         ],
       ),
@@ -219,7 +255,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             if (_searchQuery.isEmpty) ...[
               const SizedBox(height: AppConstants.spacingS),
               Text(
-                'Add your first user to get started',
+                'Add a user to get started',
                 style: AppConstants.bodyMedium,
               ),
             ],
@@ -228,91 +264,233 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       );
     }
 
+    final isMobile = ResponsiveBreakpoints.of(context).isMobile;
     return ListView.builder(
       padding: const EdgeInsets.all(AppConstants.spacingM),
       itemCount: _filteredUsers.length,
       itemBuilder: (context, index) {
         final user = _filteredUsers[index];
-        return _buildUserCard(user);
+        return _buildUserCard(user, isMobile);
       },
     );
   }
 
-  Widget _buildUserCard(User user) {
+  Widget _buildUserCard(User user, bool isMobile) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
       elevation: 2,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: _getRoleColor(user.role).withOpacity(0.1),
-          child: Icon(_getRoleIcon(user.role), color: _getRoleColor(user.role)),
-        ),
-        title: Text(
-          user.name,
-          style: AppConstants.bodyLarge.copyWith(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(user.email),
-            if (user.phone.isNotEmpty) Text('Phone: ${user.phone}'),
-            if (user.address != null && user.address!.isNotEmpty)
-              Text('Address: ${user.address}'),
-            Container(
-              margin: const EdgeInsets.only(top: AppConstants.spacingXS),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingS,
-                vertical: AppConstants.spacingXS,
-              ),
-              decoration: BoxDecoration(
-                color: _getRoleColor(user.role).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppConstants.radiusS),
-              ),
-              child: Text(
-                _getRoleText(user.role),
-                style: AppConstants.bodySmall.copyWith(
-                  color: _getRoleColor(user.role),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) {
-            switch (value) {
-              case 'edit':
-                _showEditUserDialog(context, user);
-                break;
-              case 'delete':
-                _showDeleteUserDialog(context, user);
-                break;
-            }
-          },
-          itemBuilder:
-              (context) => [
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.spacingS),
+        child: isMobile
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Icon(Icons.edit, color: AppConstants.accentColor),
-                      SizedBox(width: AppConstants.spacingS),
-                      Text('Edit'),
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: _getRoleColor(user.role).withOpacity(0.1),
+                        child: Icon(
+                          _getRoleIcon(user.role),
+                          color: _getRoleColor(user.role),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: AppConstants.spacingS),
+                      Expanded(
+                        child: Text(
+                          user.name,
+                          style: AppConstants.bodyLarge.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'edit':
+                              _showEditUserDialog(context, user);
+                              break;
+                            case 'delete':
+                              _showDeleteUserDialog(context, user);
+                              break;
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit, color: AppConstants.accentColor),
+                                SizedBox(width: AppConstants.spacingS),
+                                Text('Edit'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete, color: AppConstants.errorColor),
+                                SizedBox(width: AppConstants.spacingS),
+                                Text('Delete'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, color: AppConstants.errorColor),
-                      SizedBox(width: AppConstants.spacingS),
-                      Text('Delete'),
+                  const SizedBox(height: AppConstants.spacingS),
+                  Text(
+                    user.email,
+                    style: AppConstants.bodyMedium.copyWith(
+                      color: AppConstants.textSecondaryColor,
+                    ),
+                  ),
+                  if (user.phone.isNotEmpty)
+                    Text(
+                      'Phone: ${user.phone}',
+                      style: AppConstants.bodySmall.copyWith(
+                        color: AppConstants.textSecondaryColor,
+                      ),
+                    ),
+                  if (user.address != null && user.address!.isNotEmpty)
+                    Text(
+                      'Address: ${user.address}',
+                      style: AppConstants.bodySmall.copyWith(
+                        color: AppConstants.textSecondaryColor,
+                      ),
+                    ),
+                  const SizedBox(height: AppConstants.spacingS),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingS,
+                      vertical: AppConstants.spacingXS,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getRoleColor(user.role).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                    ),
+                    child: Text(
+                      _getRoleText(user.role),
+                      style: AppConstants.bodySmall.copyWith(
+                        color: _getRoleColor(user.role),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: _getRoleColor(user.role).withOpacity(0.1),
+                    child: Icon(
+                      _getRoleIcon(user.role),
+                      color: _getRoleColor(user.role),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: AppConstants.spacingM),
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.name,
+                          style: AppConstants.bodyLarge.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          user.email,
+                          style: AppConstants.bodyMedium.copyWith(
+                            color: AppConstants.textSecondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      user.phone.isNotEmpty ? user.phone : 'N/A',
+                      style: AppConstants.bodyMedium.copyWith(
+                        color: AppConstants.textSecondaryColor,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      user.address != null && user.address!.isNotEmpty
+                          ? user.address!
+                          : 'N/A',
+                      style: AppConstants.bodyMedium.copyWith(
+                        color: AppConstants.textSecondaryColor,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingS,
+                      vertical: AppConstants.spacingXS,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getRoleColor(user.role).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                    ),
+                    child: Text(
+                      _getRoleText(user.role),
+                      style: AppConstants.bodySmall.copyWith(
+                        color: _getRoleColor(user.role),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppConstants.spacingM),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'edit':
+                          _showEditUserDialog(context, user);
+                          break;
+                        case 'delete':
+                          _showDeleteUserDialog(context, user);
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, color: AppConstants.accentColor),
+                            SizedBox(width: AppConstants.spacingS),
+                            Text('Edit'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: AppConstants.errorColor),
+                            SizedBox(width: AppConstants.spacingS),
+                            Text('Delete'),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                ),
-              ],
-        ),
+                ],
+              ),
       ),
     );
   }
@@ -334,27 +512,24 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   void _showDeleteUserDialog(BuildContext context, User user) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Delete User'),
-            content: Text('Are you sure you want to delete ${user.name}?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  await _deleteUser(user);
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: AppConstants.errorColor,
-                ),
-                child: const Text('Delete'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Delete User'),
+        content: Text('Are you sure you want to delete ${user.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
           ),
+          CustomButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _deleteUser(user);
+            },
+            text: 'Delete',
+            backgroundColor: AppConstants.errorColor,
+          ),
+        ],
+      ),
     );
   }
 
@@ -393,11 +568,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   String _getRoleText(UserRole role) {
     switch (role) {
       case UserRole.admin:
-        return 'admin';
+        return 'Admin';
       case UserRole.employee:
-        return 'employee';
+        return 'Employee';
       case UserRole.client:
-        return 'customer';
+        return 'Customer';
     }
   }
 
@@ -503,17 +678,19 @@ class _AddUserDialogState extends State<AddUserDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Add New User'),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+      ),
       content: SizedBox(
-        width:
-            ResponsiveValue<double>(
-              context,
-              defaultValue: 400,
-              conditionalValues: [
-                const Condition.equals(name: MOBILE, value: double.infinity),
-                const Condition.equals(name: TABLET, value: 500),
-                const Condition.equals(name: DESKTOP, value: 400),
-              ],
-            ).value!,
+        width: ResponsiveValue<double>(
+          context,
+          defaultValue: 400,
+          conditionalValues: [
+            const Condition.equals(name: MOBILE, value: double.infinity),
+            const Condition.equals(name: TABLET, value: 500),
+            const Condition.equals(name: DESKTOP, value: 400),
+          ],
+        ).value!,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -543,9 +720,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
                     if (value == null || value.trim().isEmpty) {
                       return 'Email is required';
                     }
-                    if (!RegExp(
-                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                    ).hasMatch(value)) {
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -598,17 +773,19 @@ class _AddUserDialogState extends State<AddUserDialog> {
                 const SizedBox(height: AppConstants.spacingM),
                 DropdownButtonFormField<UserRole>(
                   value: _selectedRole,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Role',
-                    prefixIcon: Icon(Icons.work),
+                    prefixIcon: const Icon(Icons.work),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                    ),
                   ),
-                  items:
-                      UserRole.values.map((role) {
-                        return DropdownMenuItem(
-                          value: role,
-                          child: Text(_getRoleText(role)),
-                        );
-                      }).toList(),
+                  items: UserRole.values
+                      .map((role) => DropdownMenuItem(
+                            value: role,
+                            child: Text(_getRoleText(role)),
+                          ))
+                      .toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setState(() => _selectedRole = value);
@@ -638,11 +815,11 @@ class _AddUserDialogState extends State<AddUserDialog> {
   String _getRoleText(UserRole role) {
     switch (role) {
       case UserRole.admin:
-        return 'admin';
+        return 'Admin';
       case UserRole.employee:
-        return 'employee';
+        return 'Employee';
       case UserRole.client:
-        return 'customer';
+        return 'Customer';
     }
   }
 }
@@ -752,17 +929,19 @@ class _EditUserDialogState extends State<EditUserDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text('Edit ${widget.user.name}'),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+      ),
       content: SizedBox(
-        width:
-            ResponsiveValue<double>(
-              context,
-              defaultValue: 400,
-              conditionalValues: [
-                const Condition.equals(name: MOBILE, value: double.infinity),
-                const Condition.equals(name: TABLET, value: 500),
-                const Condition.equals(name: DESKTOP, value: 400),
-              ],
-            ).value!,
+        width: ResponsiveValue<double>(
+          context,
+          defaultValue: 400,
+          conditionalValues: [
+            const Condition.equals(name: MOBILE, value: double.infinity),
+            const Condition.equals(name: TABLET, value: 500),
+            const Condition.equals(name: DESKTOP, value: 400),
+          ],
+        ).value!,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -792,9 +971,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     if (value == null || value.trim().isEmpty) {
                       return 'Email is required';
                     }
-                    if (!RegExp(
-                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                    ).hasMatch(value)) {
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -830,17 +1007,19 @@ class _EditUserDialogState extends State<EditUserDialog> {
                 const SizedBox(height: AppConstants.spacingM),
                 DropdownButtonFormField<UserRole>(
                   value: _selectedRole,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Role',
-                    prefixIcon: Icon(Icons.work),
+                    prefixIcon: const Icon(Icons.work),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                    ),
                   ),
-                  items:
-                      UserRole.values.map((role) {
-                        return DropdownMenuItem(
-                          value: role,
-                          child: Text(_getRoleText(role)),
-                        );
-                      }).toList(),
+                  items: UserRole.values
+                      .map((role) => DropdownMenuItem(
+                            value: role,
+                            child: Text(_getRoleText(role)),
+                          ))
+                      .toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setState(() => _selectedRole = value);
@@ -870,11 +1049,11 @@ class _EditUserDialogState extends State<EditUserDialog> {
   String _getRoleText(UserRole role) {
     switch (role) {
       case UserRole.admin:
-        return 'admin';
+        return 'Admin';
       case UserRole.employee:
-        return 'employee';
+        return 'Employee';
       case UserRole.client:
-        return 'customer';
+        return 'Customer';
     }
   }
 }
