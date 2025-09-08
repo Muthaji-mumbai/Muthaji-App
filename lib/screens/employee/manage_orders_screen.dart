@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/employee/order_detailed_screen.dart';
 import 'package:soloshine/screens/client/pdfview.dart';
-import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
 import '../../models/order.dart';
 import '../../services/order_service.dart';
@@ -1304,52 +1304,53 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                       builder: (context) => OrderDetailsScreen(order: order),
                     ),
                   );
-                } else if (value == 'pdf') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PDFViewerScreen(order: order),
-                    ),
-                  );
-                } else if (value == 'image') {
+                } else if (value == 'generate_image') {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => OrderImageGenerator(order: order),
                     ),
                   );
+                } else if (value == 'generate_pdf') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PDFViewerScreen(order: order),
+                    ),
+                  );
                 }
               },
+
               itemBuilder:
                   (context) => [
-                PopupMenuItem(
-                  value: 'pdf',
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.picture_as_pdf_outlined,
-                        size: 18,
-                        color: Colors.grey.shade600,
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.edit_outlined,
+                            size: 18,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Edit Order'),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      const Text('Generate PDF'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'image',
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.image_outlined,
-                        size: 18,
-                        color: Colors.grey.shade600,
+                    ),
+                    PopupMenuItem(
+                      value: 'status',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.sync_alt_rounded,
+                            size: 18,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Update Status'),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      const Text('Generate Image'),
-                    ],
-                  ),
-                ),
+                    ),
                     PopupMenuItem(
                       value: 'full_details',
                       child: Row(
@@ -1361,6 +1362,34 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           ),
                           const SizedBox(width: 12),
                           const Text('Full Details'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'generate_image',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.visibility_outlined,
+                            size: 18,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Generate Image'),
+                        ],
+                      ),
+                    ),
+                     PopupMenuItem(
+                      value: 'generate_pdf',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.picture_as_pdf_outlined,
+                            size: 18,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Generate PDF'),
                         ],
                       ),
                     ),
