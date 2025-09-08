@@ -1592,9 +1592,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final orderTypeCounts =
         _dashboardStats['orderTypeCounts'] ??
         {'single': 0, 'bulk': 0, 'total': 0};
-    final statusCounts =
-        _dashboardStats['statusCounts'] ??
-        {'pending': 0, 'inProgress': 0, 'completed': 0, 'cancelled': 0};
+    // Use real order performance data for status distribution
+    final statusCounts = {
+      'pending': (_orderStats['pendingOrders'] ?? 0),
+      'inProgress': (_orderStats['inProgressOrders'] ?? 0),
+      'completed': (_orderStats['completedOrders'] ?? 0),
+      'cancelled': (_orderStats['cancelledOrders'] ?? 0),
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
