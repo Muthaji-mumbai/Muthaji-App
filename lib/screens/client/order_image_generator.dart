@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -21,10 +22,12 @@ class OrderImageGenerator extends StatefulWidget {
 
 class _OrderImageGeneratorState extends State<OrderImageGenerator> {
   final GlobalKey _repaintBoundaryKey = GlobalKey();
+  // One key per generated page so we can export all composed images
+  final List<GlobalKey> _pageKeys = [];
   PageController? _ornamentPageController;
-  PageController? _imagePageController;
+  PageController? _imagePageController; // pager for generated pages per ornament
   int _currentOrnamentIndex = 0;
-  int _currentImageIndex = 0;
+  int _currentImageIndex = 0; // page index within generated pages
   bool _isGeneratingImage = false;
 
   @override
@@ -50,6 +53,15 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         : widget.order.images;
   }
 
+  // Partition images into pages with up to 3 images per page
+  List<List<String>> _partitionImages(List<String> images, {int pageSize = 3}) {
+    final List<List<String>> pages = [];
+    for (int i = 0; i < images.length; i += pageSize) {
+      pages.add(images.sublist(i, i + pageSize > images.length ? images.length : i + pageSize));
+    }
+    return pages.isEmpty ? [[]] : pages;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,10 +71,9 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         key: _repaintBoundaryKey,
         child: Container(
           color: const Color(0xFFF8FAFC),
-          child:
-              widget.order.ornamentDetails.isEmpty
-                  ? _buildSingleOrderView()
-                  : _buildMultiOrnamentView(),
+          child: widget.order.ornamentDetails.isEmpty
+              ? _buildSingleOrderView()
+              : _buildMultiOrnamentView(),
         ),
       ),
     );
@@ -149,15 +160,28 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
   }
 
   Widget _buildSingleOrderView() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          _buildOrderSummaryCard(),
-          const SizedBox(height: 20),
-          _buildImagesSection(widget.order.images, 'Order Images'),
-        ],
-      ),
+    final pages = _partitionImages(widget.order.images);
+    _rebuildPageKeys(pages.length);
+    return Column(
+      children: [
+        Expanded(
+          child: PageView.builder(
+            controller: _imagePageController,
+            onPageChanged: (i) => setState(() => _currentImageIndex = i),
+            itemCount: pages.length,
+            itemBuilder: (context, index) => _buildComposedPage(
+              pageKey: _pageKeys[index],
+              ornamentName: 'Order',
+              purity: '-',
+              weight: '-',
+              quantity: '-',
+              remarks: widget.order.notes ?? '',
+              images: pages[index],
+            ),
+          ),
+        ),
+        if (pages.length > 1) _buildGeneratedPageIndicators(pages.length),
+      ],
     );
   }
 
@@ -171,42 +195,232 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
               setState(() {
                 _currentOrnamentIndex = index;
                 _currentImageIndex = 0;
-                _imagePageController?.animateToPage(
-                  0,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
+                _imagePageController = PageController();
               });
             },
             itemCount: widget.order.ornamentDetails.length,
             itemBuilder: (context, index) {
-              return _buildOrnamentPage(index);
+              final ornament = widget.order.ornamentDetails[index];
+              final images = ornament.images.isNotEmpty ? ornament.images : widget.order.images;
+              final pages = _partitionImages(images);
+              _rebuildPageKeys(pages.length);
+              return Column(
+                children: [
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _imagePageController,
+                      onPageChanged: (i) => setState(() => _currentImageIndex = i),
+                      itemCount: pages.length,
+                      itemBuilder: (context, pageIdx) => _buildComposedPage(
+                        pageKey: _pageKeys[pageIdx],
+                        ornamentName: ornament.name,
+                        purity: ornament.purity,
+                        weight: '${ornament.weight}g',
+                        quantity: '${ornament.quantity}',
+                        remarks: ornament.remarks ?? '',
+                        images: pages[pageIdx],
+                      ),
+                    ),
+                  ),
+                  if (pages.length > 1) _buildGeneratedPageIndicators(pages.length),
+                ],
+              );
             },
           ),
         ),
-        if (widget.order.ornamentDetails.length > 1)
-          _buildModernPageIndicators(),
+        if (widget.order.ornamentDetails.length > 1) _buildModernPageIndicators(),
       ],
     );
   }
 
-  Widget _buildOrnamentPage(int index) {
-    final ornament = widget.order.ornamentDetails[index];
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          _buildOrderSummaryCard(),
-          const SizedBox(height: 20),
-          _buildOrnamentCard(ornament),
-          const SizedBox(height: 20),
-          _buildImagesSection(
-            ornament.images.isNotEmpty ? ornament.images : widget.order.images,
-            ornament.name,
-          ),
-        ],
+  // Build a composed single page similar to the sample: details on left, images on right
+  Widget _buildComposedPage({
+    required GlobalKey pageKey,
+    required String ornamentName,
+    required String purity,
+    required String weight,
+    required String quantity,
+    required String remarks,
+    required List<String> images,
+  }) {
+    return RepaintBoundary(
+      key: pageKey,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 700;
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  // Keep a nice readable width on desktop, narrower on mobile
+                  maxWidth: isMobile ? 640 : 1000,
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: isMobile
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Details top
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildDetailsTable(
+                                  ornamentName, purity, weight, quantity, remarks),
+                            ),
+                            // Images bottom
+                            Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: _buildImagesGridForPage(images, isMobile: true),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Left: Details table
+                            Expanded(
+                              flex: 12,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    right: BorderSide(color: const Color(0xFFE2E8F0)),
+                                  ),
+                                ),
+                                child: _buildDetailsTable(
+                                    ornamentName, purity, weight, quantity, remarks),
+                              ),
+                            ),
+                            // Right: Images box
+                            Expanded(
+                              flex: 18,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  ),
+                                  child: _buildImagesGridForPage(images),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
+  }
+
+  Widget _buildDetailsTable(String ornamentName, String purity, String weight, String quantity, String remarks) {
+    Text _cell(String text, {bool bold = false, Color? color}) => Text(
+          text,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+            color: color ?? const Color(0xFF0F172A),
+          ),
+        );
+    Widget row(String label, String value, {bool emphasize = false}) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: const Color(0xFFE2E8F0))),
+          ),
+          child: Row(
+            children: [
+              SizedBox(width: 110, child: _cell('$label :', bold: true, color: const Color(0xFF334155))),
+              const SizedBox(width: 8),
+              Expanded(child: _cell(value, bold: emphasize, color: emphasize ? const Color(0xFF111827) : null)),
+            ],
+          ),
+        );
+
+    return Column(
+      children: [
+        row('Order No.', widget.order.orderNo ?? widget.order.id.substring(0, 8).toUpperCase(), emphasize: true),
+        row('Order Date', _formatDate(widget.order.orderDate ?? widget.order.createdAt)),
+        row('Party Name', widget.order.clientName),
+        row('Items', ornamentName, emphasize: true),
+        row('Purity', purity),
+        row('Weight', weight),
+        row('Quantity', quantity),
+        row('Remarks', remarks.isNotEmpty ? remarks : '-'),
+      ],
+    );
+  }
+
+  Widget _buildImagesGridForPage(List<String> images, {bool isMobile = false}) {
+    if (images.isEmpty) {
+      return Center(child: _buildNoImagesState());
+    }
+    // Layout: if 1 => big; if 2-3 => grid that fits
+    if (images.length == 1) {
+      return _buildModernImageCard(images.first, height: isMobile ? 240 : null);
+    }
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 3 / 4,
+        ),
+        itemCount: images.length,
+        itemBuilder: (context, i) => _buildModernImageCard(
+          images[i],
+          height: isMobile ? 160 : 220,
+        ),
+      ),
+    );
+  }
+
+  // Page indicators for generated pages
+  Widget _buildGeneratedPageIndicators(int length) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(length, (i) => _dot(i == _currentImageIndex)),
+      ),
+    );
+  }
+
+  Widget _dot(bool active) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      width: active ? 18 : 8,
+      height: 8,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        color: active ? const Color(0xFF3B82F6) : const Color(0xFFE2E8F0),
+      ),
+    );
+  }
+
+  void _rebuildPageKeys(int length) {
+    _pageKeys
+      ..clear()
+      ..addAll(List.generate(length, (_) => GlobalKey()));
   }
 
   Widget _buildOrderSummaryCard() {
@@ -668,9 +882,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     );
   }
 
-  Widget _buildModernImageCard(String imageUrl) {
+  Widget _buildModernImageCard(String imageUrl, {double? height}) {
+    final double cardHeight = height ?? MediaQuery.of(context).size.height * 0.35;
     return Container(
-      height: MediaQuery.of(context).size.height * 0.35,
+      height: cardHeight,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         color: const Color(0xFFF1F5F9),
@@ -893,39 +1108,43 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
       );
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
-      // Prepare files for sharing
-      final directory = await getTemporaryDirectory();
-      List<XFile> files = [];
-
-      // Add main screen capture
-      final screenFile = File(
-        '${directory.path}/order_${widget.order.id}_${DateTime.now().millisecondsSinceEpoch}.png',
-      );
-      await screenFile.writeAsBytes(pngBytes);
-      files.add(XFile(screenFile.path));
-
-      // Add individual images
-      for (var i = 0; i < _currentOrnamentImages.length; i++) {
-        try {
-          final imageUrl = _currentOrnamentImages[i];
-          final response = await http.get(Uri.parse(imageUrl));
-          if (response.statusCode == 200) {
-            final imageFile = File(
-              '${directory.path}/order_image_${widget.order.id}_$i.png',
-            );
-            await imageFile.writeAsBytes(response.bodyBytes);
-            files.add(XFile(imageFile.path));
-          }
-        } catch (e) {
-          continue; // Skip failed image downloads
-        }
+      // Collect page images (bytes) from composed pages
+      final List<Uint8List> pagePngs = [];
+      for (int i = 0; i < _pageKeys.length; i++) {
+        final key = _pageKeys[i];
+        final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+        if (boundary == null) continue;
+        final pageImage = await boundary.toImage(pixelRatio: 3.0);
+        final pageBytes = await pageImage.toByteData(format: ui.ImageByteFormat.png);
+        if (pageBytes == null) continue;
+        pagePngs.add(pageBytes.buffer.asUint8List());
       }
 
-      // Share all files
-      await Share.shareXFiles(
-        files,
-        text: 'Order Details - ${widget.order.id}',
-      );
+      // Add the main screen capture first
+      pagePngs.insert(0, pngBytes);
+
+      if (kIsWeb) {
+        // Web: share in-memory files without path_provider
+        final files = <XFile>[];
+        for (int i = 0; i < pagePngs.length; i++) {
+          files.add(XFile.fromData(
+            pagePngs[i],
+            mimeType: 'image/png',
+            name: 'order_${widget.order.id}_$i.png',
+          ));
+        }
+        await Share.shareXFiles(files, text: 'Order Details - ${widget.order.id}');
+      } else {
+        // Mobile/Desktop: write to temp directory and share file paths
+        final directory = await getTemporaryDirectory();
+        final files = <XFile>[];
+        for (int i = 0; i < pagePngs.length; i++) {
+          final file = File('${directory.path}/generated_${widget.order.id}_${_currentOrnamentIndex}_$i.png');
+          await file.writeAsBytes(pagePngs[i]);
+          files.add(XFile(file.path));
+        }
+        await Share.shareXFiles(files, text: 'Order Details - ${widget.order.id}');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
