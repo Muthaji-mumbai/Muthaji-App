@@ -427,106 +427,213 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildOrderTrendsChart() {
+    final isMobile = ResponsiveBreakpoints.of(context).isMobile;
+    
     return Container(
-      padding: const EdgeInsets.all(AppConstants.spacingL),
+      margin: EdgeInsets.symmetric(
+        horizontal: isMobile ? AppConstants.spacingS : AppConstants.spacingM,
+      ),
       decoration: BoxDecoration(
-        color: AppConstants.surfaceColor,
-        borderRadius: BorderRadius.circular(AppConstants.radiusL),
-        boxShadow: AppConstants.cardShadow,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color.fromARGB(145, 85, 83, 77),
+            const Color.fromARGB(145, 85, 83, 77),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppConstants.radiusXL),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.show_chart,
-                    color: AppConstants.primaryColor,
-                  ),
-                  const SizedBox(width: AppConstants.spacingS),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Order Trends', style: AppConstants.headingMedium),
-                      Text(
-                        'Orders over time',
-                        style: AppConstants.bodySmall.copyWith(
-                          color: AppConstants.textSecondaryColor,
+          // Header Section
+          Container(
+            padding: EdgeInsets.all(isMobile ? AppConstants.spacingM : AppConstants.spacingL),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppConstants.primaryColor.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.trending_up,
+                                  color: AppConstants.primaryColor,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: AppConstants.spacingS),
+                              Flexible(
+                                child: Text(
+                                  'Order Analytics',
+                                  style: AppConstants.headingMedium.copyWith(
+                                    color: Colors.white,
+                                    fontSize: isMobile ? 18 : 24,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppConstants.spacingXS),
+                          Text(
+                            'Track your business performance',
+                            style: AppConstants.bodySmall.copyWith(
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacingM,
+                        vertical: AppConstants.spacingS,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                        border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: _chartDays,
+                          dropdownColor: const Color(0xFF1E293B),
+                          style: AppConstants.bodySmall.copyWith(color: Colors.white),
+                          items: const [7, 14, 30, 90]
+                              .map((d) => DropdownMenuItem<int>(
+                                    value: d,
+                                    child: Text('$d days'),
+                                  ))
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _chartDays = val);
+                              _loadGraphData();
+                            }
+                          },
                         ),
                       ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppConstants.spacingL),
+                
+                // Quick Stats Row
+                // _buildQuickStatsRow(isMobile),
+              ],
+            ),
+          ),
+          
+          // Chart Section
+          Container(
+            height: isMobile ? 280 : 320,
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? AppConstants.spacingS : AppConstants.spacingM,
+            ),
+            child: _isLoadingGraphData
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppConstants.primaryColor),
+                  )
+                : _buildInteractiveLineChart(darkStyle: true),
+          ),
+          
+          // Legend Section
+          Container(
+            padding: EdgeInsets.all(isMobile ? AppConstants.spacingM : AppConstants.spacingL),
+            child: isMobile 
+                ? Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: _buildCompactLegendButton('Single', AppConstants.primaryColor, _showSingleOrders, () => setState(() => _showSingleOrders = !_showSingleOrders))),
+                          const SizedBox(width: AppConstants.spacingS),
+                          Expanded(child: _buildCompactLegendButton('Bulk', AppConstants.accentColor, _showBulkOrders, () => setState(() => _showBulkOrders = !_showBulkOrders))),
+                        ],
+                      ),
+                      const SizedBox(height: AppConstants.spacingS),
+                      _buildCompactLegendButton('Total Orders', AppConstants.secondaryColor, _showTotalOrders, () => setState(() => _showTotalOrders = !_showTotalOrders)),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildCompactLegendButton('Single Orders', AppConstants.primaryColor, _showSingleOrders, () => setState(() => _showSingleOrders = !_showSingleOrders)),
+                      _buildCompactLegendButton('Bulk Orders', AppConstants.accentColor, _showBulkOrders, () => setState(() => _showBulkOrders = !_showBulkOrders)),
+                      _buildCompactLegendButton('Total Orders', AppConstants.secondaryColor, _showTotalOrders, () => setState(() => _showTotalOrders = !_showTotalOrders)),
                     ],
                   ),
-                ],
-              ),
-              DropdownButtonHideUnderline(
-                child: DropdownButton<int>(
-                  value: _chartDays,
-                  items:
-                      const [7, 14, 30, 90]
-                          .map(
-                            (d) => DropdownMenuItem<int>(
-                              value: d,
-                              child: Text('Last $d days'),
-                            ),
-                          )
-                          .toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() {
-                        _chartDays = val;
-                      });
-                      _loadGraphData(); // Reload real data for new period
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppConstants.spacingL),
-          SizedBox(
-            height: 300,
-            child:
-                _isLoadingGraphData
-                    ? const Center(child: CircularProgressIndicator())
-                    : _buildInteractiveLineChart(),
-          ),
-          const SizedBox(height: AppConstants.spacingL),
-
-          // Chart Legend/Toggle Buttons moved below the chart
-          Wrap(
-            spacing: AppConstants.spacingM,
-            runSpacing: AppConstants.spacingS,
-            alignment: WrapAlignment.center, // Center for better UX
-            children: [
-              _buildLegendButton(
-                'Single Orders',
-                AppConstants.primaryColor,
-                _showSingleOrders,
-                () => setState(() => _showSingleOrders = !_showSingleOrders),
-              ),
-              _buildLegendButton(
-                'Bulk Orders',
-                AppConstants.accentColor,
-                _showBulkOrders,
-                () => setState(() => _showBulkOrders = !_showBulkOrders),
-              ),
-              _buildLegendButton(
-                'Total Orders',
-                AppConstants.secondaryColor,
-                _showTotalOrders,
-                () => setState(() => _showTotalOrders = !_showTotalOrders),
-              ),
-            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLegendButton(
+  // Widget _buildQuickStatsRow(bool isMobile) {
+  //   final stats = [
+  //     {'label': 'Today', 'value': '${_graphData.isNotEmpty ? _graphData.last['totalOrders'] ?? 0 : 0}', 'color': AppConstants.primaryColor},
+  //     {'label': 'This Week', 'value': '${_graphData.fold<int>(0, (sum, item) => sum + ((item['totalOrders'] ?? 0) as int))}', 'color': AppConstants.accentColor},
+  //     {'label': 'Growth', 'value': '+12%', 'color': AppConstants.successColor},
+  //   ];
+
+  //   return Container(
+  //     padding: const EdgeInsets.all(AppConstants.spacingM),
+  //     decoration: BoxDecoration(
+  //       color: Colors.white.withOpacity(0.05),
+  //       borderRadius: BorderRadius.circular(AppConstants.radiusM),
+  //       border: Border.all(color: Colors.white.withOpacity(0.1)),
+  //     ),
+  //     child: isMobile 
+  //         ? Column(
+  //             children: stats.map((stat) => Padding(
+  //               padding: const EdgeInsets.symmetric(vertical: 4),
+  //               child: _buildStatItem(stat),
+  //             )).toList(),
+  //           )
+  //         : Row(
+  //             mainAxisAlignment: MainAxisAlignment.spaceAround,
+  //             children: stats.map((stat) => _buildStatItem(stat)).toList(),
+  //           ),
+  //   );
+  // }
+
+  Widget _buildStatItem(Map<String, dynamic> stat) {
+    return Column(
+      children: [
+        Text(
+          stat['value'],
+          style: AppConstants.headingMedium.copyWith(
+            color: stat['color'],
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          stat['label'],
+          style: AppConstants.bodySmall.copyWith(
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactLegendButton(
     String label,
     Color color,
     bool isVisible,
@@ -540,35 +647,35 @@ class _AdminDashboardState extends State<AdminDashboard> {
           vertical: AppConstants.spacingS,
         ),
         decoration: BoxDecoration(
-          color:
-              isVisible ? color.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(AppConstants.radiusS),
-          border: Border.all(color: isVisible ? color : Colors.grey, width: 2),
+          color: isVisible ? color.withOpacity(0.15) : Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(AppConstants.radiusM),
+          border: Border.all(
+            color: isVisible ? color : Colors.white.withOpacity(0.2),
+            width: 1.5,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 12,
-              height: 12,
+              width: 8,
+              height: 8,
               decoration: BoxDecoration(
-                color: isVisible ? color : Colors.grey,
+                color: isVisible ? color : Colors.white.withOpacity(0.4),
                 shape: BoxShape.circle,
               ),
             ),
             const SizedBox(width: AppConstants.spacingS),
-            Text(
-              label,
-              style: AppConstants.bodyMedium.copyWith(
-                color: isVisible ? color : Colors.grey,
-                fontWeight: FontWeight.w600,
+            Flexible(
+              child: Text(
+                label,
+                style: AppConstants.bodySmall.copyWith(
+                  color: isVisible ? Colors.white : Colors.white70,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(width: AppConstants.spacingS),
-            Icon(
-              isVisible ? Icons.visibility : Icons.visibility_off,
-              size: 16,
-              color: isVisible ? color : Colors.grey,
             ),
           ],
         ),
@@ -576,7 +683,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildInteractiveLineChart() {
+  Widget _buildInteractiveLineChart({bool darkStyle = false}) {
     List<LineChartBarData> lineBarsData = [];
 
     if (_showSingleOrders) {
@@ -716,7 +823,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 return Text(
                   value.toInt().toString(),
                   style: AppConstants.bodySmall.copyWith(
-                    color: AppConstants.textSecondaryColor,
+                    color: darkStyle ? Colors.white70 : AppConstants.textSecondaryColor,
                   ),
                 );
               },
@@ -739,7 +846,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   return Text(
                     '${date.day}/${date.month}',
                     style: AppConstants.bodySmall.copyWith(
-                      color: AppConstants.textSecondaryColor,
+                      color: darkStyle ? Colors.white70 : AppConstants.textSecondaryColor,
                     ),
                   );
                 }
@@ -760,20 +867,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
           drawVerticalLine: true,
           horizontalInterval: _getYInterval(),
           getDrawingHorizontalLine: (value) {
-            return FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1);
+            final c = darkStyle ? Colors.white.withOpacity(0.2) : Colors.grey.withOpacity(0.2);
+            return FlLine(color: c, strokeWidth: 1);
           },
           getDrawingVerticalLine: (value) {
-            return FlLine(
-              color: Colors.grey.withOpacity(0.15),
-              strokeWidth: 0.5,
-            );
+            final c = darkStyle ? Colors.white.withOpacity(0.15) : Colors.grey.withOpacity(0.15);
+            return FlLine(color: c, strokeWidth: 0.5);
           },
         ),
         borderData: FlBorderData(
           show: true,
           border: Border(
-            bottom: BorderSide(color: Colors.grey.withOpacity(0.3)),
-            left: BorderSide(color: Colors.grey.withOpacity(0.3)),
+            bottom: BorderSide(color: darkStyle ? Colors.white.withOpacity(0.3) : Colors.grey.withOpacity(0.3)),
+            left: BorderSide(color: darkStyle ? Colors.white.withOpacity(0.3) : Colors.grey.withOpacity(0.3)),
           ),
         ),
         lineTouchData: LineTouchData(
@@ -847,6 +953,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     if (dataLength <= 30) return (dataLength / 7).ceilToDouble();
     return (dataLength / 10).ceilToDouble();
   }
+
 
   Widget _buildDashboardView() {
     return Column(
