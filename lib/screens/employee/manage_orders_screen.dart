@@ -4,6 +4,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:soloshine/screens/employee/order_detailed_screen.dart';
 import 'package:soloshine/screens/client/pdfview.dart';
+import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
 import '../../models/order.dart';
 import '../../services/order_service.dart';
@@ -1310,38 +1311,45 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                       builder: (context) => PDFViewerScreen(order: order),
                     ),
                   );
+                } else if (value == 'image') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OrderImageGenerator(order: order),
+                    ),
+                  );
                 }
               },
               itemBuilder:
                   (context) => [
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.edit_outlined,
-                            size: 18,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 12),
-                          const Text('Edit Order'),
-                        ],
+                PopupMenuItem(
+                  value: 'pdf',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.picture_as_pdf_outlined,
+                        size: 18,
+                        color: Colors.grey.shade600,
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: 'status',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.sync_alt_rounded,
-                            size: 18,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 12),
-                          const Text('Update Status'),
-                        ],
+                      const SizedBox(width: 12),
+                      const Text('Generate PDF'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'image',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.image_outlined,
+                        size: 18,
+                        color: Colors.grey.shade600,
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      const Text('Generate Image'),
+                    ],
+                  ),
+                ),
                     PopupMenuItem(
                       value: 'full_details',
                       child: Row(
