@@ -62,6 +62,8 @@ class _ClientDashboardState extends State<ClientDashboard>
           token,
         );
         setState(() {
+          // Sort by newest first for a proper "Recent Orders" view
+          orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
           _orders = orders;
           _isLoading = false;
         });
@@ -572,27 +574,104 @@ class _ClientDashboardState extends State<ClientDashboard>
             Text(order.notes!, style: AppConstants.bodySmall),
           ],
 
-          // Attachments info
+          // Attachments with thumbnails (similar to Order History)
           if (order.images.isNotEmpty || order.pdfs.isNotEmpty) ...[
             const SizedBox(height: AppConstants.spacingM),
-            Wrap(
-              spacing: AppConstants.spacingM,
-              runSpacing: AppConstants.spacingS,
-              children: [
-                if (order.images.isNotEmpty)
-                  Chip(
-                    avatar: const Icon(Icons.image, size: 18),
-                    label: Text('${order.images.length} Image(s)'),
-                  ),
-                if (order.pdfs.isNotEmpty)
-                  Chip(
-                    avatar: const Icon(Icons.picture_as_pdf, size: 18),
-                    label: Text('${order.pdfs.length} PDF(s)'),
-                  ),
-              ],
-            ),
+            if (order.images.isNotEmpty) ...[
+              Text('Images',
+                  style:
+                      AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: AppConstants.spacingS),
+              _buildImageThumbnails(order.images),
+            ],
+            if (order.pdfs.isNotEmpty) ...[
+              const SizedBox(height: AppConstants.spacingM),
+              Chip(
+                avatar: const Icon(Icons.picture_as_pdf, size: 18),
+                label: Text('${order.pdfs.length} PDF(s)'),
+              ),
+            ],
           ],
         ],
+      ),
+    );
+  }
+
+  // Thumbnails like in Order History
+  Widget _buildImageThumbnails(List<String> images) {
+    // Show a horizontal list of thumbnails
+    return SizedBox(
+      height: 90,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: images.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final url = images[index];
+          return GestureDetector(
+            onTap: () => _showImagePreview(url),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppConstants.radiusS),
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stack) => Container(
+                    color: AppConstants.backgroundColor,
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.broken_image),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showImagePreview(String url) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4,
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stack) => SizedBox(
+                    height: 300,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.broken_image, size: 40),
+                          SizedBox(height: 8),
+                          Text('Failed to load image'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 8,
+              top: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
