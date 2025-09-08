@@ -22,8 +22,8 @@ class OrderImageGenerator extends StatefulWidget {
 
 class _OrderImageGeneratorState extends State<OrderImageGenerator> {
   final GlobalKey _repaintBoundaryKey = GlobalKey();
-  // One key per generated page so we can export all composed images
-  final List<GlobalKey> _pageKeys = [];
+  // Keep page keys per ornament index; use -1 for single-order mode
+  final Map<int, List<GlobalKey>> _ornamentPageKeys = {};
   PageController? _ornamentPageController;
   PageController? _imagePageController; // pager for generated pages per ornament
   int _currentOrnamentIndex = 0;
@@ -60,6 +60,15 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
       pages.add(images.sublist(i, i + pageSize > images.length ? images.length : i + pageSize));
     }
     return pages.isEmpty ? [[]] : pages;
+  }
+
+  // Ensure we have a list of keys for a given ornament index
+  List<GlobalKey> _ensurePageKeys(int ornamentIndex, int pageCount) {
+    final existing = _ornamentPageKeys[ornamentIndex] ?? [];
+    if (existing.length != pageCount) {
+      _ornamentPageKeys[ornamentIndex] = List.generate(pageCount, (_) => GlobalKey());
+    }
+    return _ornamentPageKeys[ornamentIndex]!;
   }
 
   @override
@@ -161,7 +170,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
 
   Widget _buildSingleOrderView() {
     final pages = _partitionImages(widget.order.images);
-    _rebuildPageKeys(pages.length);
+    final keys = _ensurePageKeys(-1, pages.length);
     return Column(
       children: [
         Expanded(
@@ -170,7 +179,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             onPageChanged: (i) => setState(() => _currentImageIndex = i),
             itemCount: pages.length,
             itemBuilder: (context, index) => _buildComposedPage(
-              pageKey: _pageKeys[index],
+              pageKey: keys[index],
               ornamentName: 'Order',
               purity: '-',
               weight: '-',
@@ -203,7 +212,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
               final ornament = widget.order.ornamentDetails[index];
               final images = ornament.images.isNotEmpty ? ornament.images : widget.order.images;
               final pages = _partitionImages(images);
-              _rebuildPageKeys(pages.length);
+              final keys = _ensurePageKeys(index, pages.length);
               return Column(
                 children: [
                   Expanded(
@@ -212,7 +221,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                       onPageChanged: (i) => setState(() => _currentImageIndex = i),
                       itemCount: pages.length,
                       itemBuilder: (context, pageIdx) => _buildComposedPage(
-                        pageKey: _pageKeys[pageIdx],
+                        pageKey: keys[pageIdx],
                         ornamentName: ornament.name,
                         purity: ornament.purity,
                         weight: '${ornament.weight}g',
@@ -417,11 +426,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     );
   }
 
-  void _rebuildPageKeys(int length) {
-    _pageKeys
-      ..clear()
-      ..addAll(List.generate(length, (_) => GlobalKey()));
-  }
+  // Removed: keys are maintained per ornament via _ensurePageKeys
 
   Widget _buildOrderSummaryCard() {
     return Container(
@@ -1108,16 +1113,21 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
       );
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
-      // Collect page images (bytes) from composed pages
+      // Collect page images (bytes) from ALL ornaments' composed pages
       final List<Uint8List> pagePngs = [];
-      for (int i = 0; i < _pageKeys.length; i++) {
-        final key = _pageKeys[i];
-        final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-        if (boundary == null) continue;
-        final pageImage = await boundary.toImage(pixelRatio: 3.0);
-        final pageBytes = await pageImage.toByteData(format: ui.ImageByteFormat.png);
-        if (pageBytes == null) continue;
-        pagePngs.add(pageBytes.buffer.asUint8List());
+      // Visit keys in order: single-order (-1) first if present, then ornaments 0..N-1
+      final sortedKeys = _ornamentPageKeys.keys.toList()..sort();
+      for (final ornamentIndex in sortedKeys) {
+        final keys = _ornamentPageKeys[ornamentIndex] ?? [];
+        for (int i = 0; i < keys.length; i++) {
+          final key = keys[i];
+          final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+          if (boundary == null) continue;
+          final pageImage = await boundary.toImage(pixelRatio: 3.0);
+          final pageBytes = await pageImage.toByteData(format: ui.ImageByteFormat.png);
+          if (pageBytes == null) continue;
+          pagePngs.add(pageBytes.buffer.asUint8List());
+        }
       }
 
       // Add the main screen capture first
@@ -1139,7 +1149,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         final directory = await getTemporaryDirectory();
         final files = <XFile>[];
         for (int i = 0; i < pagePngs.length; i++) {
-          final file = File('${directory.path}/generated_${widget.order.id}_${_currentOrnamentIndex}_$i.png');
+          final file = File('${directory.path}/generated_${widget.order.id}_$i.png');
           await file.writeAsBytes(pagePngs[i]);
           files.add(XFile(file.path));
         }
