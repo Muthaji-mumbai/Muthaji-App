@@ -192,6 +192,28 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
     );
   }
 
+  // Status chip used in the ExpansionTile trailing when expanded
+  Widget _buildStatusChip(Order order) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingS,
+        vertical: AppConstants.spacingXS,
+      ),
+      decoration: BoxDecoration(
+        color: order.statusColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+        border: Border.all(color: order.statusColor.withOpacity(0.3)),
+      ),
+      child: Text(
+        order.statusText,
+        style: AppConstants.bodySmall.copyWith(
+          color: order.statusColor,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   Widget _buildSearchAndFilterSection() {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingM),
@@ -477,6 +499,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
               horizontal: AppConstants.spacingM,
               vertical: AppConstants.spacingS,
             ),
+            trailing: isOpen
+                ? _buildStatusChip(order)
+                : _buildStatusChip(order),
             title: _buildOrderSummary(index, order),
             childrenPadding: const EdgeInsets.all(AppConstants.spacingM),
             children: [
@@ -640,31 +665,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Status badge in details
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingS,
-                vertical: AppConstants.spacingXS,
-              ),
-              decoration: BoxDecoration(
-                color: order.statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                border: Border.all(color: order.statusColor.withOpacity(0.3)),
-              ),
-              child: Text(
-                order.statusText,
-                style: AppConstants.bodySmall.copyWith(
-                  color: order.statusColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: AppConstants.spacingM),
+        // Space for top separation
+        const SizedBox(height: AppConstants.spacingS),
 
         // Created/Updated detailed
         Row(
