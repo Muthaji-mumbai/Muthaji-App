@@ -85,7 +85,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           'ordertype': _selectedOrderType,
           'ornamentDetails': detailsPayload,
         };
-        if (_selectedStatus != null) {
+        // Include status in update only for admin/employee users
+        if (_selectedStatus != null && _shouldShowOrderTypeSelection()) {
           updateData['status'] = _selectedStatus!.toString().split('.').last;
         }
 
@@ -614,7 +615,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 }).toList(),
               ),
             ],
-            if (_isEditMode) ...[
+            // Show status only for admin/employee in edit mode (hide for customers)
+            if (_isEditMode && _shouldShowOrderTypeSelection()) ...[
               const SizedBox(height: AppConstants.spacingM),
               Text('Status', style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: AppConstants.spacingS),
@@ -731,7 +733,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               const SizedBox(width: AppConstants.spacingM),
               Expanded(
                 flex: 1,
-                child: DropdownButtonFormField(
+                child: DropdownButtonFormField<String>(
                   decoration: InputDecoration(
                     labelText: 'Purity',
                     border: OutlineInputBorder(
@@ -742,14 +744,17 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       vertical: AppConstants.spacingS,
                     ),
                   ),
-                  items: _purityOptions.map((option) => DropdownMenuItem(
-                    child: Text(option),
-                    value: option,
-                  )).toList(),
+                  value: (detail['purity'] as String?)?.isNotEmpty == true ? detail['purity'] as String : null,
+                  items: _purityOptions
+                      .map((option) => DropdownMenuItem<String>(
+                            value: option,
+                            child: Text(option),
+                          ))
+                      .toList(),
                   onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['purity'] = value;
+                    _ornamentDetails[index]['purity'] = value ?? '';
                   }),
-                  validator: (value) => value == null ? 'Please select purity' : null,
+                  validator: (value) => (value == null || value.isEmpty) ? 'Please select purity' : null,
                 ),
               ),
               const SizedBox(width: AppConstants.spacingM),

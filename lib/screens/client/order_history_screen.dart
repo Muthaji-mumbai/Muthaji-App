@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart'; // For loading asset images
 import 'package:soloshine/screens/client/pdfview.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
+import 'package:soloshine/screens/client/create_order_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
@@ -32,6 +32,23 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
     _loadOrders();
+  }
+
+  // Helper to build a Tab with an icon and a small text label underneath
+  Widget _buildIconTextTab(IconData icon, String label) {
+    return Tab(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppConstants.bodySmall.copyWith(fontSize: 7),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -268,12 +285,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
             labelColor: AppConstants.primaryColor,
             unselectedLabelColor: AppConstants.textSecondaryColor,
             indicatorColor: AppConstants.primaryColor,
-            tabs: const [
-              Tab(text: 'All'),
-              Tab(icon: Icon(Icons.hourglass_empty)),
-              Tab(icon: Icon(Icons.autorenew)),
-              Tab(icon: Icon(Icons.check_circle)),
-              Tab(icon: Icon(Icons.cancel)),
+            tabs: [
+              const Tab(text: 'All'),
+              _buildIconTextTab(Icons.hourglass_empty, 'Pending'),
+              _buildIconTextTab(Icons.autorenew, 'In Progress'),
+              _buildIconTextTab(Icons.check_circle, 'Completed'),
+              _buildIconTextTab(Icons.cancel, 'Cancelled'),
             ],
             onTap: (index) {
               setState(() {
@@ -392,61 +409,70 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
     return Dismissible(
       key: Key(order.id),
       direction: DismissDirection.horizontal,
+      // Right swipe (startToEnd) => Edit
       background: Container(
-        color: AppConstants.secondaryColor,
+        color: AppConstants.primaryColor,
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: AppConstants.spacingM),
-        child: const Icon(Icons.cancel, color: Colors.white),
-      ),
-      secondaryBackground: Container(
-        color: Colors.red,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: AppConstants.spacingM),
         child: const Icon(Icons.edit, color: Colors.white),
       ),
+      // Left swipe (endToStart) => Cancel
+      secondaryBackground: Container(
+        color: AppConstants.errorColor,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: AppConstants.spacingM),
+        child: const Icon(Icons.cancel, color: Colors.white),
+      ),
       confirmDismiss: (direction) async {
-        if (direction == DismissDirection.endToStart) { // Right swipe for edit
+        // Right swipe to Edit
+        if (direction == DismissDirection.startToEnd) {
           if (order.status != OrderStatus.pending) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Can only edit pending orders'),
+                  content: const Text('Only pending orders can be edited'),
                   backgroundColor: AppConstants.errorColor,
                 ),
               );
             }
-            return false;
+            return false; // Do not dismiss
           }
-          return await _showEditOrderDialog(order);
-        } else if (direction == DismissDirection.startToEnd) { // Left swipe for cancel
-          return await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Cancel Order?'),
-              content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('No'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Yes'),
-                ),
-              ],
+          // Navigate to CreateOrderScreen in edit mode; reload on success
+          final updated = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CreateOrderScreen(orderToEdit: order),
             ),
-          ) ?? false;
+          );
+          if (updated == true) {
+            _loadOrders();
+          }
+          return false; // Never dismiss; we handle refresh ourselves
         }
-        return false;
-      },
-      onDismissed: (direction) async {
-        final token = AuthService.currentToken;
-        if (token == null) return;
+        // Left swipe to Cancel
+        else if (direction == DismissDirection.endToStart) {
+          final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Cancel Order?'),
+                  content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('No'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Yes'),
+                    ),
+                  ],
+                ),
+              ) ??
+              false;
+          if (!confirm) return false;
 
-        if (direction == DismissDirection.endToStart) { // Right swipe (edit)
-          // Handle edit logic if needed after dialog (already handled in _showEditOrderDialog)
-          _loadOrders();
-        } else if (direction == DismissDirection.startToEnd) { // Left swipe (cancel)
+          final token = AuthService.currentToken;
+          if (token == null) return false;
           try {
             await OrderService.updateOrderStatus(
               orderId: order.id,
@@ -456,7 +482,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Order cancelled successfully'),
+                  content: const Text('Order cancelled successfully'),
                   backgroundColor: AppConstants.successColor,
                 ),
               );
@@ -471,10 +497,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
                 ),
               );
             }
-            _loadOrders();
           }
+          return false; // Do not dismiss; keep list stable
         }
+        return false; // Default: never dismiss via swipe
       },
+      // onDismissed no longer used since we don't actually dismiss items
       child: Container(
         margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
         decoration: BoxDecoration(
@@ -513,111 +541,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
     );
   }
 
-  Future<bool?> _showEditOrderDialog(Order order) async {
-    String description = order.description ?? '';
-    String notes = order.notes ?? '';
-    DateTime orderDate = order.orderDate ?? order.createdAt;
-    List<Map<String, dynamic>> ornamentDetails = List.from(order.ornamentDetails);
-
-    return showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Order'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Description'),
-                  controller: TextEditingController(text: description),
-                  onChanged: (value) => description = value,
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Notes'),
-                  controller: TextEditingController(text: notes),
-                  onChanged: (value) => notes = value,
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Order Date'),
-                  controller: TextEditingController(text: _formatDate(orderDate)),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: orderDate,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) {
-                      setState(() {
-                        orderDate = picked;
-                      });
-                    }
-                  },
-                ),
-                // Ornament Details (Simplified for demo, enhance as needed)
-                if (ornamentDetails.isNotEmpty) ...[
-                  const Text('Ornament Details', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ...ornamentDetails.map((detail) => ListTile(
-                    title: Text('${detail['name']} - ${detail['purity']} - ${detail['weight']}g x ${detail['quantity']}'),
-                    subtitle: (detail['remarks'] != null && (detail['remarks'] as String).isNotEmpty)
-                        ? Text('Remarks: ${detail['remarks']}')
-                        : null,
-                  )),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final token = AuthService.currentToken;
-                if (token == null) return;
-
-                try {
-                  final updateData = {
-                    'description': description,
-                    'notes': notes,
-                    'orderdate': orderDate.toIso8601String(),
-                    'ornamentDetails': jsonEncode(ornamentDetails),
-                  };
-                  await OrderService.updateOrder(
-                    orderId: order.id,
-                    updateData: updateData,
-                    token: token,
-                  );
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Order updated successfully'),
-                        backgroundColor: AppConstants.successColor,
-                      ),
-                    );
-                  }
-                  Navigator.pop(context, true);
-                  _loadOrders();
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to update order: $e'),
-                        backgroundColor: AppConstants.errorColor,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  
 
   Widget _buildOrderSummary(int index, Order order) {
     return Column(
@@ -667,6 +591,84 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
       children: [
         // Space for top separation
         const SizedBox(height: AppConstants.spacingS),
+
+        // Actions row (Edit / Cancel)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Tooltip(
+              message: order.status == OrderStatus.pending
+                  ? 'Edit order'
+                  : 'Only pending orders can be edited',
+              child: IconButton(
+                icon: Icon(Icons.edit,
+                    color: order.status == OrderStatus.pending
+                        ? AppConstants.primaryColor
+                        : AppConstants.textSecondaryColor.withOpacity(0.5)),
+                onPressed: order.status == OrderStatus.pending
+                    ? () async {
+                        final updated = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CreateOrderScreen(orderToEdit: order),
+                          ),
+                        );
+                        if (updated == true) _loadOrders();
+                      }
+                    : null,
+              ),
+            ),
+            const SizedBox(width: AppConstants.spacingXS),
+            Tooltip(
+              message: 'Cancel order',
+              child: IconButton(
+                icon: Icon(Icons.cancel, color: AppConstants.errorColor),
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Cancel Order?'),
+                          content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+                            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes')),
+                          ],
+                        ),
+                      ) ??
+                      false;
+                  if (!confirm) return;
+                  final token = AuthService.currentToken;
+                  if (token == null) return;
+                  try {
+                    await OrderService.updateOrderStatus(
+                      orderId: order.id,
+                      newStatus: OrderStatus.cancelled,
+                      token: token,
+                    );
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Order cancelled successfully'),
+                          backgroundColor: AppConstants.successColor,
+                        ),
+                      );
+                    }
+                    _loadOrders();
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to cancel order: $e'),
+                          backgroundColor: AppConstants.errorColor,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
 
         // Created/Updated detailed
         Row(
