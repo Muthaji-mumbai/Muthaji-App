@@ -300,13 +300,26 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         final token = AuthService.currentToken;
         if (currentUser != null && token != null) {
           // Format the payload to match the required structure
-          final detailsPayload = _ornamentDetails.map((d) => {
-                'name': d['categoryId'], // Send category ID as name
-                'weight': d['weight'],
-                'purity': d['purity'],
-                'quantity': d['quantity'],
-                if ((d['remarks'] as String).isNotEmpty) 'remarks': d['remarks'],
-              }).toList();
+          final detailsPayload = <Map<String, dynamic>>[];
+          for (int i = 0; i < _ornamentDetails.length; i++) {
+            final d = _ornamentDetails[i];
+            final map = <String, dynamic>{
+              'name': d['categoryId'], // Send category ID as name
+              'weight': d['weight'],
+              'purity': d['purity'],
+              'quantity': d['quantity'],
+            };
+            if ((d['remarks'] as String).isNotEmpty) {
+              map['remarks'] = d['remarks'];
+            }
+            // If cloning, include existing image URLs per item so backend saves them without multipart
+            if (widget.cloneFromOrder) {
+              if (_existingOrnamentImageUrls.length > i && _existingOrnamentImageUrls[i].isNotEmpty) {
+                map['image'] = List<String>.from(_existingOrnamentImageUrls[i]);
+              }
+            }
+            detailsPayload.add(map);
+          }
 
           // For customers, always use 'Single' order type regardless of selection
           final orderType = currentUser.role == UserRole.client ? 'Single' : _selectedOrderType;
@@ -317,7 +330,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             orderDate: _selectedOrderDate,
             orderType: orderType,
             ornamentDetails: detailsPayload,
-            ornamentImages: _ornamentImages,
+            // In clone mode, do not send files; backend should use provided URL arrays
+            ornamentImages: widget.cloneFromOrder ? null : _ornamentImages,
             token: token,
           );
 
