@@ -545,7 +545,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                     context,
                     MaterialPageRoute(
                       builder:
-                          (context) => UpdateOrderScreen(orderId: order.id),
+                          (context) => CreateOrderScreen(orderToEdit: order),
                     ),
                   ).then((_) => _loadOrders());
                 } else if (value == 'status') {

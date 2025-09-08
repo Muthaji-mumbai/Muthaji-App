@@ -40,25 +40,12 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
     final logoBytes = await rootBundle.load('assets/icons/logo.png');
     final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
 
-    // Load order images
-    final List<pw.MemoryImage> images = [];
-    for (final url in widget.order.images) {
-      try {
-        final response = await http.get(Uri.parse(url));
-        if (response.statusCode == 200) {
-          images.add(pw.MemoryImage(response.bodyBytes));
-        }
-      } catch (e) {
-        print('Failed to load image: $e');
-      }
-    }
-
     // Add main invoice page
     pdf.addPage(_buildMainInvoicePage(logoImage));
 
-    // Add images pages if there are images
-    if (images.isNotEmpty) {
-      _addImagePages(pdf, images);
+    // Add per-ornament sections: details followed by images for each ornament
+    if (widget.order.ornamentDetails.isNotEmpty) {
+      await _addOrnamentSections(pdf);
     }
 
     // Save and display PDF
@@ -401,144 +388,144 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
     );
   }
 
-  void _addImagePages(pw.Document pdf, List<pw.MemoryImage> images) {
-    // Add images, 2 per page
-    for (int i = 0; i < images.length; i += 2) {
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(30),
-          build: (pw.Context context) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                // Page header
-                pw.Container(
-                  padding: const pw.EdgeInsets.only(bottom: 20),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border(
-                      bottom: pw.BorderSide(color: PdfColors.grey300),
-                    ),
-                  ),
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text(
-                        'Order Images - Page ${(i ~/ 2) + 1}',
-                        style: pw.TextStyle(
-                          fontSize: 18,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.grey800,
-                        ),
-                      ),
-                      pw.Text(
-                        'Order #${widget.order.orderNo}',
-                        style: pw.TextStyle(
-                          fontSize: 12,
-                          color: PdfColors.grey600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 30),
-
-                // First image
-                pw.Container(
-                  alignment: pw.Alignment.center,
-                  child: pw.Column(
-                    children: [
-                      pw.Text(
-                        'Image ${i + 1}',
-                        style: pw.TextStyle(
-                          fontSize: 14,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.grey700,
-                        ),
-                      ),
-                      pw.SizedBox(height: 10),
-                      pw.Container(
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(color: PdfColors.grey300),
-                          borderRadius: pw.BorderRadius.circular(5),
-                        ),
-                        child: pw.ClipRRect(
-                          horizontalRadius: 5,
-                          verticalRadius: 5,
-                          child: pw.Image(
-                            images[i],
-                            width: 300,
-                            height: 250,
-                            fit: pw.BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Second image if exists
-                if (i + 1 < images.length) ...[
-                  pw.SizedBox(height: 40),
-                  pw.Container(
-                    alignment: pw.Alignment.center,
-                    child: pw.Column(
-                      children: [
-                        pw.Text(
-                          'Image ${i + 2}',
-                          style: pw.TextStyle(
-                            fontSize: 14,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.grey700,
-                          ),
-                        ),
-                        pw.SizedBox(height: 10),
-                        pw.Container(
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(color: PdfColors.grey300),
-                            borderRadius: pw.BorderRadius.circular(5),
-                          ),
-                          child: pw.ClipRRect(
-                            horizontalRadius: 5,
-                            verticalRadius: 5,
-                            child: pw.Image(
-                              images[i + 1],
-                              width: 300,
-                              height: 250,
-                              fit: pw.BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                // Page footer
-                pw.Spacer(),
-                pw.Container(
-                  padding: const pw.EdgeInsets.only(top: 20),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border(
-                      top: pw.BorderSide(color: PdfColors.grey300),
-                    ),
-                  ),
-                  child: pw.Center(
-                    child: pw.Text(
-                      'Page ${(i ~/ 2) + 2} - Images ${i + 1}${i + 1 < images.length ? ' & ${i + 2}' : ''}',
-                      style: pw.TextStyle(
-                        fontSize: 10,
-                        color: PdfColors.grey500,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
+  Future<void> _addOrnamentSections(pw.Document pdf) async {
+    // Build sections per ornament: heading (category name), details box, then images grid
+    // We will flow content across as many pages as needed.
+    final sections = <pw.Widget>[];
+    int itemIndex = 1;
+    for (final d in widget.order.ornamentDetails) {
+      // Heading with category name
+      sections.add(
+        pw.Text(
+          'Ornament $itemIndex: ${d.name}',
+          style: pw.TextStyle(
+            fontSize: 16,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.grey800,
+          ),
         ),
       );
+      sections.add(pw.SizedBox(height: 8));
+
+      // Details box (without images)
+      sections.add(
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey50,
+            border: pw.Border.all(color: PdfColors.grey300),
+            borderRadius: pw.BorderRadius.circular(5),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildInfoRow('Material:', d.material.isNotEmpty ? d.material : '-'),
+              pw.SizedBox(height: 4),
+              _buildInfoRow('Purity:', d.purity),
+              pw.SizedBox(height: 4),
+              _buildInfoRow('Weight:', '${d.weight} g'),
+              pw.SizedBox(height: 4),
+              _buildInfoRow('Quantity:', d.quantity.toString()),
+              if (d.remarks != null && d.remarks!.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                _buildInfoRow('Remarks:', d.remarks!),
+              ],
+            ],
+          ),
+        ),
+      );
+
+      // Images header
+      sections.add(pw.SizedBox(height: 8));
+      sections.add(
+        pw.Text(
+          'Images',
+          style: pw.TextStyle(
+            fontSize: 14,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.grey700,
+          ),
+        ),
+      );
+      sections.add(pw.SizedBox(height: 6));
+
+      // Download and display images for this ornament in a grid (2 per row)
+      final itemImages = <pw.MemoryImage>[];
+      for (final url in d.images) {
+        try {
+          final response = await http.get(Uri.parse(url));
+          if (response.statusCode == 200) {
+            itemImages.add(pw.MemoryImage(response.bodyBytes));
+          }
+        } catch (_) {}
+      }
+
+      if (itemImages.isEmpty) {
+        sections.add(
+          pw.Text(
+            'No images available',
+            style: pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
+          ),
+        );
+      } else {
+        // Grid 2 per row
+        final rows = <pw.Widget>[];
+        for (int i = 0; i < itemImages.length; i += 2) {
+          rows.add(
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.start,
+              children: [
+                pw.Container(
+                  margin: const pw.EdgeInsets.only(bottom: 10, right: 10),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey300),
+                    borderRadius: pw.BorderRadius.circular(5),
+                  ),
+                  child: pw.ClipRRect(
+                    horizontalRadius: 5,
+                    verticalRadius: 5,
+                    child: pw.Image(itemImages[i], width: 230, height: 180, fit: pw.BoxFit.contain),
+                  ),
+                ),
+                if (i + 1 < itemImages.length)
+                  pw.Container(
+                    margin: const pw.EdgeInsets.only(bottom: 10),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey300),
+                      borderRadius: pw.BorderRadius.circular(5),
+                    ),
+                    child: pw.ClipRRect(
+                      horizontalRadius: 5,
+                      verticalRadius: 5,
+                      child: pw.Image(itemImages[i + 1], width: 230, height: 180, fit: pw.BoxFit.contain),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }
+        sections.addAll(rows);
+      }
+
+      // Separator between ornaments
+      sections.add(pw.SizedBox(height: 18));
+      sections.add(
+        pw.Container(height: 1, color: PdfColors.grey300),
+      );
+      sections.add(pw.SizedBox(height: 18));
+
+      itemIndex++;
     }
+
+    // Lay out sections across multiple pages gracefully
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(30),
+        build: (context) => sections,
+      ),
+    );
   }
 
   Future<void> _displayPDF(File file) async {
