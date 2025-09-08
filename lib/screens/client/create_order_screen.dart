@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import '../../providers/auth_provider.dart';
+import '../../models/order.dart';
 import '../../constants/app_constants.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
@@ -16,7 +17,8 @@ import '../../services/category_service.dart';
 import '../../models/user.dart';
 
 class CreateOrderScreen extends StatefulWidget {
-  const CreateOrderScreen({super.key});
+  final Order? orderToEdit;
+  const CreateOrderScreen({super.key, this.orderToEdit});
 
   @override
   State<CreateOrderScreen> createState() => _CreateOrderScreenState();
@@ -30,6 +32,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   bool _isPickingImage = false;
   DateTime? _selectedOrderDate;
   String _selectedOrderType = 'Single';
+  bool get _isEditMode => widget.orderToEdit != null;
+  Order? get _existingOrder => widget.orderToEdit;
+  OrderStatus? _selectedStatus;
   List<Map<String, dynamic>> _ornamentDetails = [
     {
       'name': '',
@@ -41,6 +46,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     }
   ];
   List<List<PlatformFile>> _ornamentImages = [[]];
+  // For edit mode: store existing image URLs per ornament item (display only)
+  List<List<String>> _existingOrnamentImageUrls = [[]];
   File? _currentEditingImage;
   final ImagePicker _picker = ImagePicker();
   List<Datum> _categories = []; 
@@ -58,12 +65,124 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     'Bulk'
   ];
 
+  Future<void> _updateOrder() async {
+    if (_formKey.currentState!.validate() && !_isLoading && _existingOrder != null) {
+      setState(() => _isLoading = true);
+      try {
+        final token = AuthService.currentToken;
+        if (token == null) throw Exception('User not authenticated');
+
+        final detailsPayload = _ornamentDetails.map((d) => {
+              'name': d['categoryId'],
+              'weight': d['weight'],
+              'purity': d['purity'],
+              'quantity': d['quantity'],
+              if ((d['remarks'] as String).isNotEmpty) 'remarks': d['remarks'],
+            }).toList();
+
+        final updateData = <String, dynamic>{
+          'orderdate': (_selectedOrderDate ?? DateTime.now()).toIso8601String().split('T').first,
+          'ordertype': _selectedOrderType,
+          'ornamentDetails': detailsPayload,
+        };
+        if (_selectedStatus != null) {
+          updateData['status'] = _selectedStatus!.toString().split('.').last;
+        }
+
+        final updated = await OrderService.updateOrder(
+          orderId: _existingOrder!.id,
+          updateData: updateData,
+          token: token,
+        );
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Order updated successfully! Order ID: ${updated.id}'),
+            backgroundColor: AppConstants.successColor,
+          ),
+        );
+        Navigator.pop(context, true);
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update order: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // List<List<PlatformFile>> _ornamentImages = [[]];
+  // // For edit mode: store existing image URLs per ornament item (display only)
+  // List<List<String>> _existingOrnamentImageUrls = [[]];
+  // File? _currentEditingImage;
+  // final ImagePicker _picker = ImagePicker();
+  // List<Datum> _categories = []; 
+  // bool _loadingCategories = true; 
+  // String? _categoriesError; 
+  // static const List<String> _purityOptions = [
+  //   '18K Yellow gold',
+  //   '18K Rose gold', 
+  //   '18K White gold',
+  //   'Other'
+  // ];
+  
+  // static const List<String> _orderTypeOptions = [
+  //   'Single',
+  //   'Bulk'
+  // ];
+
   @override
   void initState() {
     super.initState();
-    _orderDateController.text = DateTime.now().toIso8601String().split('T')[0];
-    _selectedOrderDate = DateTime.now();
+    if (_isEditMode) {
+      _prefillFromExistingOrder();
+    } else {
+      _selectedOrderDate = DateTime.now();
+      _orderDateController.text = _formatDateDDMMYYYY(_selectedOrderDate!);
+    }
     _fetchCategories(); 
+  }
+
+  String _formatDateDDMMYYYY(DateTime d) {
+    final dd = d.day.toString().padLeft(2, '0');
+    final mm = d.month.toString().padLeft(2, '0');
+    final yyyy = d.year.toString();
+    return '$dd/$mm/$yyyy';
+  }
+
+  void _prefillFromExistingOrder() {
+    final order = _existingOrder!;
+    _selectedOrderDate = order.orderDate ?? order.createdAt;
+    _orderDateController.text = _formatDateDDMMYYYY(_selectedOrderDate!);
+    _selectedOrderType = order.orderType ?? 'Single';
+    _selectedStatus = order.status;
+
+    // Map ornament details
+    if (order.ornamentDetails.isNotEmpty) {
+      _ornamentDetails = order.ornamentDetails.map((d) => {
+            'name': d.name, // display name for the dropdown field
+            'categoryId': d.nameId, // id to send to API
+            'weight': d.weight,
+            'purity': d.purity,
+            'quantity': d.quantity,
+            'remarks': d.remarks ?? '',
+          }).toList();
+      // Setup image lists: existing URLs and empty new files
+      _existingOrnamentImageUrls = order.ornamentDetails
+          .map((d) => List<String>.from(d.images))
+          .toList();
+      _ornamentImages = List.generate(_ornamentDetails.length, (_) => []);
+    } else {
+      // Fallback to order-level images if any
+      _existingOrnamentImageUrls = [List<String>.from(order.images)];
+      _ornamentImages = [[]];
+    }
   }
 
   Future<void> _fetchCategories() async {
@@ -264,7 +383,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     if (picked != null && picked != _selectedOrderDate) {
       setState(() {
         _selectedOrderDate = picked;
-        _orderDateController.text = picked.toIso8601String().split('T')[0];
+        _orderDateController.text = _formatDateDDMMYYYY(picked);
       });
     }
   }
@@ -384,7 +503,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     return Scaffold(
       backgroundColor: AppConstants.backgroundColor,
       appBar: AppBar(
-        title: const Text('Create Order'),
+        title: Text(_isEditMode ? 'Update Order' : 'Create Order'),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -403,8 +522,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 _buildOrnamentDetailsSection(),
                 const SizedBox(height: AppConstants.spacingXL),
                 CustomButton(
-                  onPressed: _isLoading ? null : _createOrder,
-                  text: _isLoading ? 'Creating...' : 'Create Order',
+                  onPressed: _isLoading
+                      ? null
+                      : (_isEditMode ? _updateOrder : _createOrder),
+                  text: _isLoading
+                      ? (_isEditMode ? 'Updating...' : 'Creating...')
+                      : (_isEditMode ? 'Update Order' : 'Create Order'),
                   isLoading: _isLoading,
                   backgroundColor: AppConstants.successColor,
                 ),
@@ -434,7 +557,24 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Order Details', style: AppConstants.headingSmall),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Order Details', style: AppConstants.headingSmall),
+                if (_isEditMode && _existingOrder?.orderNo != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppConstants.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Order No: ${_existingOrder!.orderNo}',
+                      style: TextStyle(color: AppConstants.primaryColor, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: AppConstants.spacingM),
             GestureDetector(
               onTap: _selectDate,
@@ -472,6 +612,30 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     ),
                   );
                 }).toList(),
+              ),
+            ],
+            if (_isEditMode) ...[
+              const SizedBox(height: AppConstants.spacingM),
+              Text('Status', style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: AppConstants.spacingS),
+              DropdownButtonFormField<OrderStatus>(
+                value: _selectedStatus,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingS,
+                    vertical: AppConstants.spacingS,
+                  ),
+                ),
+                items: OrderStatus.values
+                    .map((s) => DropdownMenuItem(
+                          value: s,
+                          child: Text(s.toString().split('.').last),
+                        ))
+                    .toList(),
+                onChanged: (val) => setState(() => _selectedStatus = val),
               ),
             ],
           ],
@@ -656,6 +820,29 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             ),
           ),
           const SizedBox(height: AppConstants.spacingS),
+          if (_existingOrnamentImageUrls.length > index &&
+              _existingOrnamentImageUrls[index].isNotEmpty)
+            SizedBox(
+              height: 100,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _existingOrnamentImageUrls[index].length,
+                separatorBuilder: (_, __) => const SizedBox(width: AppConstants.spacingS),
+                itemBuilder: (context, imgIdx) {
+                  final url = _existingOrnamentImageUrls[index][imgIdx];
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                    child: Image.network(url, width: 90, height: 90, fit: BoxFit.cover,
+                        errorBuilder: (c, e, s) => Container(
+                              width: 90,
+                              height: 90,
+                              color: Colors.grey.shade100,
+                              child: Icon(Icons.broken_image, color: Colors.grey.shade400),
+                            )),
+                  );
+                },
+              ),
+            ),
           if (_ornamentImages[index].isNotEmpty)
             SizedBox(
               height: 100,

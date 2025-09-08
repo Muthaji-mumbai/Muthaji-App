@@ -4,6 +4,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:soloshine/screens/employee/order_detailed_screen.dart';
 import 'package:soloshine/screens/client/pdfview.dart';
+import 'package:soloshine/screens/client/create_order_screen.dart';
 import '../../models/order.dart';
 import '../../services/order_service.dart';
 import '../../services/auth_service.dart';
@@ -1285,7 +1286,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               ),
               onSelected: (value) {
                 if (value == 'edit') {
-                  _navigateToUpdateOrder(order);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CreateOrderScreen(orderToEdit: order),
+                    ),
+                  ).then((_) => _loadData());
                 } else if (value == 'status') {
                   _showStatusUpdateDialog(order);
                 } else if (value == 'delete') {
@@ -1406,35 +1412,50 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               _buildDetailItem('Notes', order.notes!, Icons.note_outlined),
           ]),
 
-          // Ornament Details
+          // Ornament Details (with images under each detail)
           if (order.ornamentDetails.isNotEmpty) ...[
             const SizedBox(height: 20),
             _buildDetailSection('Ornament Details', []),
             const SizedBox(height: 8),
-            ...order.ornamentDetails.map(
-              (detail) => Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.amber,
-                        shape: BoxShape.circle,
+            ...order.ornamentDetails
+                .asMap()
+                .entries
+                .map(
+                  (entry) {
+                    final idx = entry.key;
+                    final detail = entry.value;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade200),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.amber,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Ornament Detail ${idx + 1}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
                           Text(
                             detail.name,
                             style: const TextStyle(
@@ -1450,71 +1471,91 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                               fontSize: 12,
                             ),
                           ),
+                          if ((detail.remarks ?? '').isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Remarks: ${detail.remarks}',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                          if (detail.images.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              'Images (${detail.images.length})',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 100,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: detail.images.length,
+                                itemBuilder: (context, index) {
+                                  final imageUrl = detail.images[index];
+                                  return GestureDetector(
+                                    onTap: () => _showFullScreenImage(detail.images, index),
+                                    child: Container(
+                                      margin: const EdgeInsets.only(right: 12),
+                                      width: 100,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.grey.shade300),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(11),
+                                        child: Image.network(
+                                          imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Container(
+                                              color: Colors.grey.shade100,
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.broken_image_outlined,
+                                                    color: Colors.grey.shade400,
+                                                    size: 32,
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    'Error',
+                                                    style: TextStyle(
+                                                      color: Colors.grey.shade400,
+                                                      fontSize: 10,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         ],
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              ),
-            ),
           ],
 
           // Images
           if (order.images.isNotEmpty) ...[
             const SizedBox(height: 20),
-            _buildDetailSection('Images (${order.images.length})', []),
+            _buildDetailSection('Total Images (${order.images.length})', []),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 100,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: order.images.length,
-                itemBuilder: (context, index) {
-                  final imageUrl = order.images[index];
-                  return GestureDetector(
-                    onTap: () => _showFullScreenImage(order.images, index),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 12),
-                      width: 100,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(11),
-                        child: Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey.shade100,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.broken_image_outlined,
-                                    color: Colors.grey.shade400,
-                                    size: 32,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Error',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade400,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+            
           ],
         ],
       ),
