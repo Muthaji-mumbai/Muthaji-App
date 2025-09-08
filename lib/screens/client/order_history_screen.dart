@@ -620,6 +620,28 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
             ),
             const SizedBox(width: AppConstants.spacingXS),
             Tooltip(
+              message: 'Create new from this order',
+              child: IconButton(
+                icon: Icon(Icons.copy_all, color: AppConstants.accentColor),
+                onPressed: () async {
+                  // Open create screen prefilled with this order's data, but as a new order
+                  final created = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CreateOrderScreen(
+                        orderToEdit: order,
+                        cloneFromOrder: true,
+                      ),
+                    ),
+                  );
+                  if (created == true) {
+                    _loadOrders();
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: AppConstants.spacingXS),
+            Tooltip(
               message: 'Cancel order',
               child: IconButton(
                 icon: Icon(Icons.cancel, color: AppConstants.errorColor),

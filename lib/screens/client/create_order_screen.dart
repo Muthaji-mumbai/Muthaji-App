@@ -18,7 +18,8 @@ import '../../models/user.dart';
 
 class CreateOrderScreen extends StatefulWidget {
   final Order? orderToEdit;
-  const CreateOrderScreen({super.key, this.orderToEdit});
+  final bool cloneFromOrder;
+  const CreateOrderScreen({super.key, this.orderToEdit, this.cloneFromOrder = false});
 
   @override
   State<CreateOrderScreen> createState() => _CreateOrderScreenState();
@@ -32,7 +33,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   bool _isPickingImage = false;
   DateTime? _selectedOrderDate;
   String _selectedOrderType = 'Single';
-  bool get _isEditMode => widget.orderToEdit != null;
+  // In clone mode, we prefill but treat as create (not edit)
+  bool get _isEditMode => widget.orderToEdit != null && widget.cloneFromOrder != true;
   Order? get _existingOrder => widget.orderToEdit;
   OrderStatus? _selectedStatus;
   List<Map<String, dynamic>> _ornamentDetails = [
@@ -141,8 +143,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   @override
   void initState() {
     super.initState();
-    if (_isEditMode) {
+    if (widget.orderToEdit != null) {
+      // Prefill for both real edit and clone-from-order flows
       _prefillFromExistingOrder();
+      // If cloning, ensure we display as Create (isEditMode=false via getter)
     } else {
       _selectedOrderDate = DateTime.now();
       _orderDateController.text = _formatDateDDMMYYYY(_selectedOrderDate!);
