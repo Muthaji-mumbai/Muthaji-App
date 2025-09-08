@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:responsive_framework/responsive_framework.dart';
@@ -1008,31 +1009,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Key Metrics', style: AppConstants.headingSmall),
-        const SizedBox(height: AppConstants.spacingM),
-        isMobile
-            ? Column(
-              children:
-                  kpiData
-                      .map(
-                        (kpi) => Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: AppConstants.spacingM,
-                          ),
-                          child: _buildKPICard(kpi),
-                        ),
-                      )
-                      .toList(),
-            )
-            : GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: AppConstants.spacingL, // Increased spacing
-              mainAxisSpacing: AppConstants.spacingL,
-              childAspectRatio: 3, // Adjusted for better fit
-              children: kpiData.map((kpi) => _buildKPICard(kpi)).toList(),
-            ),
+        // Text('Key Metrics', style: AppConstants.headingSmall),
+        // const SizedBox(height: AppConstants.spacingM),
+        // isMobile
+        //     ? Column(
+        //       children:
+        //           kpiData
+        //               .map(
+        //                 (kpi) => Padding(
+        //                   padding: const EdgeInsets.only(
+        //                     bottom: AppConstants.spacingM,
+        //                   ),
+        //                   child: _buildKPICard(kpi),
+        //                 ),
+        //               )
+        //               .toList(),
+        //     )
+        //     : GridView.count(
+        //       crossAxisCount: 2,
+        //       shrinkWrap: true,
+        //       physics: const NeverScrollableScrollPhysics(),
+        //       crossAxisSpacing: AppConstants.spacingL, // Increased spacing
+        //       mainAxisSpacing: AppConstants.spacingL,
+        //       childAspectRatio: 3, // Adjusted for better fit
+        //       children: kpiData.map((kpi) => _buildKPICard(kpi)).toList(),
+        //     ),
       ],
     );
   }
@@ -1519,16 +1520,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
+                        reservedSize: 44,
                         getTitlesWidget: (value, meta) {
                           final idx = value.toInt();
-                          if (idx < 0 || idx >= data.length)
-                            return const SizedBox();
+                          if (idx < 0 || idx >= data.length) return const SizedBox();
+                          final label = data[idx]['label'] as String;
                           return Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              data[idx]['label'] as String,
-                              style: AppConstants.bodySmall.copyWith(
-                                color: AppConstants.textSecondaryColor,
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Transform.rotate(
+                              angle: -math.pi / 6, // ~ -30 degrees
+                              child: Text(
+                                label,
+                                textAlign: TextAlign.center,
+                                style: AppConstants.bodySmall.copyWith(
+                                  color: AppConstants.textSecondaryColor,
+                                ),
+                                overflow: TextOverflow.visible,
+                                softWrap: false,
                               ),
                             ),
                           );
