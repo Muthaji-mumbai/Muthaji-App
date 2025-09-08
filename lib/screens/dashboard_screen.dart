@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import 'client/client_dashboard.dart';
 import 'employee/employee_dashboard.dart';
 import 'admin/admin_dashboard.dart';
+import 'login_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -128,9 +129,16 @@ class DashboardScaffold extends StatelessWidget {
                 child: const Text('Cancel'),
               ),
               TextButton(
-                onPressed: () {
+                onPressed: () async {
                   Navigator.of(context).pop();
-                  context.read<AuthProvider>().logout();
+                  // Ensure logout completes, then navigate to Login and clear stack
+                  await context.read<AuthProvider>().logout();
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  }
                 },
                 child: const Text('Logout'),
               ),

@@ -681,60 +681,140 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
             if (order.notes != null && order.notes!.isNotEmpty)
               _buildDetailItem('Notes', order.notes!, Icons.note_outlined),
           ]),
-          // Ornament Details
+          // Ornament details + images (alternating per ornament)
           if (order.ornamentDetails.isNotEmpty) ...[
             const SizedBox(height: 20),
             _buildDetailSection('Ornament Details', []),
             const SizedBox(height: 8),
-            ...order.ornamentDetails.map(
-              (detail) => Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.amber,
-                        shape: BoxShape.circle,
+            ...order.ornamentDetails.map((detail) {
+              final images = detail.images.isNotEmpty ? detail.images : order.images;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Details card
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.amber,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                detail.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${detail.material} • ${detail.weight}g • ${detail.purity} • Qty: ${detail.quantity}',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              if (detail.remarks != null && detail.remarks!.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Remarks: ${detail.remarks!}',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Images for this ornament
+                  if (images.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      height: 100,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: images.length,
+                        itemBuilder: (context, index) {
+                          final imageUrl = images[index];
+                          return GestureDetector(
+                            onTap: () => _showFullScreenImage(images, index),
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 12),
+                              width: 100,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(11),
+                                child: Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey.shade100,
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.broken_image_outlined,
+                                            color: Colors.grey.shade400,
+                                            size: 32,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Error',
+                                            style: TextStyle(
+                                              color: Colors.grey.shade400,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            detail.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${detail.material} • ${detail.weight}g • ${detail.purity} • Qty: ${detail.quantity}',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
+                  ] else ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'No images for this ornament',
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                     ),
                   ],
-                ),
-              ),
-            ),
-          ],
-          // Images
-          if (order.images.isNotEmpty) ...[
+
+                  const SizedBox(height: 12),
+                ],
+              );
+            }),
+          ] else if (order.images.isNotEmpty) ...[
+            // Fallback: no ornament details, show order-level images
             const SizedBox(height: 20),
             _buildDetailSection('Images (${order.images.length})', []),
             const SizedBox(height: 12),
