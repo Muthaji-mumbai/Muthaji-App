@@ -194,9 +194,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             'weight': d.weight,
             'purity': d.purity,
             'quantity': d.quantity,
-            'colorstone': 'Same as image',
-            'rhodium': 'Same as image',
-            'dull': 'Same as image',
+            'colorstone': d.colorstone ?? 'Same as image',
+            'rhodium': d.rhodium ?? 'Same as image',
+            'dull': d.dull ?? 'Same as image',
             'remarks': d.remarks ?? '',
           }).toList();
       // Setup image lists: existing URLs and empty new files
