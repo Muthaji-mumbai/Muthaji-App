@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:responsive_framework/responsive_framework.dart';
+import 'package:soloshine/screens/client/order_image_generator.dart';
+import 'package:soloshine/screens/client/pdfview.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../widgets/custom_button.dart';
@@ -477,121 +479,358 @@ class _ClientDashboardState extends State<ClientDashboard>
               ),
             ],
           ),
+Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Space for top separation
+        const SizedBox(height: AppConstants.spacingS),
 
-          const SizedBox(height: AppConstants.spacingS),
-
-          // Description (full)
-          Text(
-            order.description,
-            style: AppConstants.bodyLarge.copyWith(
-              color: AppConstants.textPrimaryColor,
-              fontWeight: FontWeight.w600,
+        // Actions row (Edit / Cancel)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Tooltip(
+              message: order.status == OrderStatus.pending
+                  ? 'Edit order'
+                  : 'Only pending orders can be edited',
+              child: IconButton(
+                icon: Icon(Icons.edit,
+                    color: order.status == OrderStatus.pending
+                        ? AppConstants.primaryColor
+                        : AppConstants.textSecondaryColor.withOpacity(0.5)),
+                onPressed: order.status == OrderStatus.pending
+                    ? () async {
+                        final updated = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CreateOrderScreen(orderToEdit: order),
+                          ),
+                        );
+                        if (updated == true) _loadOrders();
+                      }
+                    : null,
+              ),
             ),
-          ),
-
-          const SizedBox(height: AppConstants.spacingM),
-
-          // Amount and Dates
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-             
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Created: ${_formatDate(order.createdAt)}',
-                    style: AppConstants.bodySmall.copyWith(
-                      color: AppConstants.textSecondaryColor,
-                    ),
-                  ),
-                  if (order.updatedAt != null)
-                    Text(
-                      'Updated: ${_formatDate(order.updatedAt!)}',
-                      style: AppConstants.bodySmall.copyWith(
-                        color: AppConstants.textSecondaryColor,
+            const SizedBox(width: AppConstants.spacingXS),
+            Tooltip(
+              message: 'Create new from this order',
+              child: IconButton(
+                icon: Icon(Icons.copy_all, color: AppConstants.accentColor),
+                onPressed: () async {
+                  // Open create screen prefilled with this order's data, but as a new order
+                  final created = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CreateOrderScreen(
+                        orderToEdit: order,
+                        cloneFromOrder: true,
                       ),
                     ),
-                ],
+                  );
+                  if (created == true) {
+                    _loadOrders();
+                  }
+                },
               ),
-            ],
-          ),
-
-          const SizedBox(height: AppConstants.spacingM),
-
-          // Order type/date
-          if (order.orderType != null || order.orderDate != null)
-            Row(
-              children: [
-                if (order.orderType != null)
-                  Text('Type: ${order.orderType!}', style: AppConstants.bodySmall),
-                if (order.orderType != null && order.orderDate != null)
-                  const SizedBox(width: AppConstants.spacingL),
-                if (order.orderDate != null)
-                  Text('Order Date: ${_formatDate(order.orderDate!)}',
-                      style: AppConstants.bodySmall),
-              ],
             ),
-
-          // Ornament details
-          if (order.ornamentDetails.isNotEmpty) ...[
-            const SizedBox(height: AppConstants.spacingM),
-            Text('Ornament Details',
-                style: AppConstants.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w700,
-                )),
-            const SizedBox(height: AppConstants.spacingS),
-            ...order.ornamentDetails.map((d) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppConstants.spacingS),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          d.name,
-                          style: AppConstants.bodyMedium,
+            const SizedBox(width: AppConstants.spacingXS),
+            Tooltip(
+              message: 'Cancel order',
+              child: IconButton(
+                icon: Icon(Icons.cancel, color: AppConstants.errorColor),
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Cancel Order?'),
+                          content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+                            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes')),
+                          ],
                         ),
-                      ),
-                      Text('${d.material} • ${d.purity}',
-                          style: AppConstants.bodySmall
-                              .copyWith(color: AppConstants.textSecondaryColor)),
-                      const SizedBox(width: AppConstants.spacingM),
-                      Text('${d.weight}g x ${d.quantity}',
-                          style: AppConstants.bodySmall
-                              .copyWith(color: AppConstants.textSecondaryColor)),
-                    ],
-                  ),
-                )),
-          ],
-
-          // Notes
-          if (order.notes != null && order.notes!.isNotEmpty) ...[
-            const SizedBox(height: AppConstants.spacingM),
-            Text('Notes',
-                style: AppConstants.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w700,
-                )),
-            const SizedBox(height: AppConstants.spacingXS),
-            Text(order.notes!, style: AppConstants.bodySmall),
-          ],
-
-          // Attachments with thumbnails (similar to Order History)
-          if (order.images.isNotEmpty || order.pdfs.isNotEmpty) ...[
-            const SizedBox(height: AppConstants.spacingM),
-            if (order.images.isNotEmpty) ...[
-              Text('Images',
-                  style:
-                      AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: AppConstants.spacingS),
-              _buildImageThumbnails(order.images),
-            ],
-            if (order.pdfs.isNotEmpty) ...[
-              const SizedBox(height: AppConstants.spacingM),
-              Chip(
-                avatar: const Icon(Icons.picture_as_pdf, size: 18),
-                label: Text('${order.pdfs.length} PDF(s)'),
+                      ) ??
+                      false;
+                  if (!confirm) return;
+                  final token = AuthService.currentToken;
+                  if (token == null) return;
+                  try {
+                    await OrderService.updateOrderStatus(
+                      orderId: order.id,
+                      newStatus: OrderStatus.cancelled,
+                      token: token,
+                    );
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Order cancelled successfully'),
+                          backgroundColor: AppConstants.successColor,
+                        ),
+                      );
+                    }
+                    _loadOrders();
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to cancel order: $e'),
+                          backgroundColor: AppConstants.errorColor,
+                        ),
+                      );
+                    }
+                  }
+                },
               ),
-            ],
+            ),
           ],
+        ),
+
+        // Created/Updated detailed
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Created: ${_formatDate(order.createdAt)}',
+                style: AppConstants.bodySmall.copyWith(
+                    color: AppConstants.textSecondaryColor)),
+            if (order.updatedAt != null)
+              Text('Updated: ${_formatDate(order.updatedAt!)}',
+                  style: AppConstants.bodySmall
+                      .copyWith(color: AppConstants.textSecondaryColor)),
+          ],
+        ),
+
+        // Order date
+        if (order.orderDate != null)
+          Padding(
+            padding: const EdgeInsets.only(top: AppConstants.spacingXS),
+            child: Text('Order Date: ${_formatDate(order.orderDate!)}',
+                style: AppConstants.bodySmall),
+          ),
+
+        // Ornament details
+        if (order.ornamentDetails.isNotEmpty) ...[
+          const SizedBox(height: AppConstants.spacingM),
+          Text('Ornament Details',
+              style: AppConstants.bodyMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              )),
+          const SizedBox(height: AppConstants.spacingS),
+          ...order.ornamentDetails.map((d) => Padding(
+                padding: const EdgeInsets.only(bottom: AppConstants.spacingS),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(d.name, style: AppConstants.bodyMedium),
+                        ),
+                        Text('${d.purity}',
+                            style: AppConstants.bodySmall.copyWith(
+                                color: AppConstants.textSecondaryColor)),
+                        const SizedBox(width: AppConstants.spacingM),
+                        Text('${d.weight}g x ${d.quantity}',
+                            style: AppConstants.bodySmall.copyWith(
+                                color: AppConstants.textSecondaryColor)),
+                      ],
+                    ),
+                    if (d.remarks != null && d.remarks!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppConstants.spacingXS),
+                        child: Text('Remarks: ${d.remarks!}', style: AppConstants.bodySmall),
+                      ),
+                    if (d.images.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppConstants.spacingXS),
+                        child: _buildImageThumbnails(d.images),
+                      ),
+                  ],
+                ),
+              )),
+        ],
+
+        // Notes
+        if (order.notes != null && order.notes!.isNotEmpty) ...[
+          const SizedBox(height: AppConstants.spacingM),
+          Text('Notes',
+              style: AppConstants.bodyMedium.copyWith(
+                fontWeight: FontWeight.w700,
+              )),
+          const SizedBox(height: AppConstants.spacingXS),
+          Text(order.notes!, style: AppConstants.bodySmall),
+        ],
+
+        // Attachments info
+        // if (order.images.isNotEmpty || order.pdfs.isNotEmpty) ...[
+        //   const SizedBox(height: AppConstants.spacingM),
+        //   if (order.images.isNotEmpty) ...[
+        //     Text('Imagess',
+        //         style: AppConstants.bodyMedium
+        //             .copyWith(fontWeight: FontWeight.w700)),
+        //     const SizedBox(height: AppConstants.spacingS),
+        //     _buildImageThumbnails(order.images),
+        //     const SizedBox(height: AppConstants.spacingM),
+        //   ],
+        //   if (order.pdfs.isNotEmpty)
+        //     Chip(
+        //       avatar: const Icon(Icons.picture_as_pdf, size: 18),
+        //       label: Text('${order.pdfs.length} PDF(s)'),
+        //     ),
+        // ],
+
+        // Generate PDF Button
+        Padding(
+          padding: const EdgeInsets.only(top: AppConstants.spacingM),
+          child: ElevatedButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PDFViewerScreen(order: order),
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppConstants.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Generate PDF'),
+          ),
+        ),
+
+        // Generate Image Button
+        Padding(
+          padding: const EdgeInsets.only(top: AppConstants.spacingM),
+          child: ElevatedButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OrderImageGenerator(order: order),
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppConstants.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Generate Image'),
+          ),
+        ),
+      ],
+       
+    
+          // const SizedBox(height: AppConstants.spacingS),
+
+          // // Description (full)
+          // Text(
+          //   order.description,
+          //   style: AppConstants.bodyLarge.copyWith(
+          //     color: AppConstants.textPrimaryColor,
+          //     fontWeight: FontWeight.w600,
+          //   ),
+          // ),
+
+          // const SizedBox(height: AppConstants.spacingM),
+
+          // // Amount and Dates
+          // Row(
+          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //   children: [
+             
+          //     Column(
+          //       crossAxisAlignment: CrossAxisAlignment.end,
+          //       children: [
+          //         Text(
+          //           'Created: ${_formatDate(order.createdAt)}',
+          //           style: AppConstants.bodySmall.copyWith(
+          //             color: AppConstants.textSecondaryColor,
+          //           ),
+          //         ),
+          //         if (order.updatedAt != null)
+          //           Text(
+          //             'Updated: ${_formatDate(order.updatedAt!)}',
+          //             style: AppConstants.bodySmall.copyWith(
+          //               color: AppConstants.textSecondaryColor,
+          //             ),
+          //           ),
+          //       ],
+          //     ),
+          //   ],
+          // ),
+
+          // const SizedBox(height: AppConstants.spacingM),
+
+          // // Order type/date
+          // if (order.orderType != null || order.orderDate != null)
+          //   Row(
+          //     children: [
+          //       if (order.orderType != null)
+          //         Text('Type: ${order.orderType!}', style: AppConstants.bodySmall),
+          //       if (order.orderType != null && order.orderDate != null)
+          //         const SizedBox(width: AppConstants.spacingL),
+          //       if (order.orderDate != null)
+          //         Text('Order Date: ${_formatDate(order.orderDate!)}',
+          //             style: AppConstants.bodySmall),
+          //     ],
+          //   ),
+
+          // // Ornament details
+          // if (order.ornamentDetails.isNotEmpty) ...[
+          //   const SizedBox(height: AppConstants.spacingM),
+          //   Text('Ornament Details',
+          //       style: AppConstants.bodyMedium.copyWith(
+          //         fontWeight: FontWeight.w700,
+          //       )),
+          //   const SizedBox(height: AppConstants.spacingS),
+          //   ...order.ornamentDetails.map((d) => Padding(
+          //         padding: const EdgeInsets.only(bottom: AppConstants.spacingS),
+          //         child: Row(
+          //           children: [
+          //             Expanded(
+          //               child: Text(
+          //                 d.name,
+          //                 style: AppConstants.bodyMedium,
+          //               ),
+          //             ),
+          //             Text('${d.material} • ${d.purity}',
+          //                 style: AppConstants.bodySmall
+          //                     .copyWith(color: AppConstants.textSecondaryColor)),
+          //             const SizedBox(width: AppConstants.spacingM),
+          //             Text('${d.weight}g x ${d.quantity}',
+          //                 style: AppConstants.bodySmall
+          //                     .copyWith(color: AppConstants.textSecondaryColor)),
+          //           ],
+          //         ),
+          //       )),
+          // ],
+
+          // // Notes
+          // if (order.notes != null && order.notes!.isNotEmpty) ...[
+          //   const SizedBox(height: AppConstants.spacingM),
+          //   Text('Notes',
+          //       style: AppConstants.bodyMedium.copyWith(
+          //         fontWeight: FontWeight.w700,
+          //       )),
+          //   const SizedBox(height: AppConstants.spacingXS),
+          //   Text(order.notes!, style: AppConstants.bodySmall),
+          // ],
+
+          // // Attachments with thumbnails (similar to Order History)
+          // if (order.images.isNotEmpty || order.pdfs.isNotEmpty) ...[
+          //   const SizedBox(height: AppConstants.spacingM),
+          //   if (order.images.isNotEmpty) ...[
+          //     Text('Images',
+          //         style:
+          //             AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w700)),
+          //     const SizedBox(height: AppConstants.spacingS),
+          //     _buildImageThumbnails(order.images),
+          //   ],
+          //   if (order.pdfs.isNotEmpty) ...[
+          //     const SizedBox(height: AppConstants.spacingM),
+          //     Chip(
+          //       avatar: const Icon(Icons.picture_as_pdf, size: 18),
+          //       label: Text('${order.pdfs.length} PDF(s)'),
+          //     ),
+          //   ],
+          // ],
+)
         ],
       ),
     );

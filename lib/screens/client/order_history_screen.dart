@@ -768,22 +768,22 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
         ],
 
         // Attachments info
-        if (order.images.isNotEmpty || order.pdfs.isNotEmpty) ...[
-          const SizedBox(height: AppConstants.spacingM),
-          if (order.images.isNotEmpty) ...[
-            Text('Images',
-                style: AppConstants.bodyMedium
-                    .copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: AppConstants.spacingS),
-            _buildImageThumbnails(order.images),
-            const SizedBox(height: AppConstants.spacingM),
-          ],
-          if (order.pdfs.isNotEmpty)
-            Chip(
-              avatar: const Icon(Icons.picture_as_pdf, size: 18),
-              label: Text('${order.pdfs.length} PDF(s)'),
-            ),
-        ],
+        // if (order.images.isNotEmpty || order.pdfs.isNotEmpty) ...[
+        //   const SizedBox(height: AppConstants.spacingM),
+        //   if (order.images.isNotEmpty) ...[
+        //     Text('Imagess',
+        //         style: AppConstants.bodyMedium
+        //             .copyWith(fontWeight: FontWeight.w700)),
+        //     const SizedBox(height: AppConstants.spacingS),
+        //     _buildImageThumbnails(order.images),
+        //     const SizedBox(height: AppConstants.spacingM),
+        //   ],
+        //   if (order.pdfs.isNotEmpty)
+        //     Chip(
+        //       avatar: const Icon(Icons.picture_as_pdf, size: 18),
+        //       label: Text('${order.pdfs.length} PDF(s)'),
+        //     ),
+        // ],
 
         // Generate PDF Button
         Padding(
