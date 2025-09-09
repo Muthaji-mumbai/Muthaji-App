@@ -736,11 +736,24 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
                             style: AppConstants.bodySmall.copyWith(
                                 color: AppConstants.textSecondaryColor)),
                         const SizedBox(width: AppConstants.spacingM),
-                        Text('${d.weight}g x ${d.quantity}',
+                        Text('${d.weight}${d.unit ?? 'g'} x ${d.quantity}${d.size != null ? ' (${d.size})' : ''}',
                             style: AppConstants.bodySmall.copyWith(
                                 color: AppConstants.textSecondaryColor)),
                       ],
                     ),
+                    if (d.colorstone != null || d.rhodium != null || d.dull != null) ...[
+                      const SizedBox(height: AppConstants.spacingXS),
+                      Text(
+                        [
+                          if (d.colorstone != null) 'Colorstone: ${d.colorstone}',
+                          if (d.rhodium != null) 'Rhodium: ${d.rhodium}',
+                          if (d.dull != null) 'Dull: ${d.dull}',
+                        ].join(' • '),
+                        style: AppConstants.bodySmall.copyWith(
+                          color: AppConstants.textSecondaryColor,
+                        ),
+                      ),
+                    ],
                     if (d.remarks != null && d.remarks!.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: AppConstants.spacingXS),

@@ -13,6 +13,11 @@ class OrnamentDetail {
   final int quantity;
   final String? remarks; // new
   final List<String> images; // per-ornament images (new API)
+  final String? size; // size from category
+  final String? unit; // unit from category
+  final String? colorstone; // colorstone option
+  final String? rhodium; // rhodium option
+  final String? dull; // dull option
 
   OrnamentDetail({
     required this.id,
@@ -24,6 +29,11 @@ class OrnamentDetail {
     required this.quantity,
     this.remarks,
     this.images = const [],
+    this.size,
+    this.unit,
+    this.colorstone,
+    this.rhodium,
+    this.dull,
   });
 
   factory OrnamentDetail.fromJson(Map<String, dynamic> json) {
@@ -57,6 +67,11 @@ class OrnamentDetail {
           : int.tryParse((json['quantity'] ?? '0').toString()) ?? 0,
       remarks: json['remarks'],
       images: itemImages,
+      size: json['size']?.toString(),
+      unit: json['unit']?.toString(),
+      colorstone: json['colorstone']?.toString(),
+      rhodium: json['rhodium']?.toString(),
+      dull: json['dull']?.toString(),
     );
   }
 
@@ -70,6 +85,11 @@ class OrnamentDetail {
       'quantity': quantity,
       if (remarks != null) 'remarks': remarks,
       if (images.isNotEmpty) 'image': images,
+      if (size != null) 'size': size,
+      if (unit != null) 'unit': unit,
+      if (colorstone != null) 'colorstone': colorstone,
+      if (rhodium != null) 'rhodium': rhodium,
+      if (dull != null) 'dull': dull,
     };
   }
 }

@@ -1502,12 +1502,26 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${detail.material} • ${detail.weight}g • ${detail.purity} • Qty: ${detail.quantity}',
+                            '${detail.weight}${detail.unit ?? 'g'} • ${detail.purity} • Qty: ${detail.quantity}${detail.size != null ? ' • Size: ${detail.size}' : ''}',
                             style: TextStyle(
                               color: Colors.grey.shade600,
                               fontSize: 12,
                             ),
                           ),
+                          if (detail.colorstone != null || detail.rhodium != null || detail.dull != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              [
+                                if (detail.colorstone != null) 'Colorstone: ${detail.colorstone}',
+                                if (detail.rhodium != null) 'Rhodium: ${detail.rhodium}',
+                                if (detail.dull != null) 'Dull: ${detail.dull}',
+                              ].join(' • '),
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                           if ((detail.remarks ?? '').isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Text(

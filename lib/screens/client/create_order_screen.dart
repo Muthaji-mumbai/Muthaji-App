@@ -45,6 +45,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       'weight': 0.0,
       'purity': '',
       'quantity': 1,
+      'colorstone': 'Same as image',
+      'rhodium': 'Same as image',
+      'dull': 'Same as image',
       'remarks': '',
     }
   ];
@@ -62,11 +65,28 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     '18K White gold',
     'Other'
   ];
+  static const List<String> _colorstoneOptions = [
+    'Red', 'Blue', 'Green', 'Black', 'White', 'Same as image'
+  ];
+  static const List<String> _rhodiumOptions = [
+    'Setting Rhodium', 'Ganga Jamuna', 'No Rhodium', 'Same as image'
+  ];
+  static const List<String> _dullOptions = [
+    'Dull', 'No Dull', 'Same as image'
+  ];
   
   static const List<String> _orderTypeOptions = [
     'Single',
     'Bulk'
   ];
+
+  List<String> get _availableOrderTypes {
+    final currentUser = context.read<AuthProvider>().currentUser;
+    if (currentUser?.role == UserRole.employee) {
+      return ['Bulk']; // Employee can only see bulk orders
+    }
+    return _orderTypeOptions; // Admin sees all options
+  }
 
   Future<void> _updateOrder() async {
     if (_formKey.currentState!.validate() && !_isLoading && _existingOrder != null) {
@@ -78,9 +98,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         final detailsPayload = _ornamentDetails.map((d) => {
               'name': d['categoryId'],
               if ((d['size'] as String?) != null && (d['size'] as String).isNotEmpty) 'size': d['size'],
+              'unit': _getUnitForDetail(d),
               'weight': d['weight'],
               'purity': d['purity'],
               'quantity': d['quantity'],
+              'colorstone': d['colorstone'] ?? 'Same as image',
+              'rhodium': d['rhodium'] ?? 'Same as image',
+              'dull': d['dull'] ?? 'Same as image',
               if ((d['remarks'] as String).isNotEmpty) 'remarks': d['remarks'],
             }).toList();
 
@@ -122,25 +146,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     }
   }
 
-  // List<List<PlatformFile>> _ornamentImages = [[]];
-  // // For edit mode: store existing image URLs per ornament item (display only)
-  // List<List<String>> _existingOrnamentImageUrls = [[]];
-  // File? _currentEditingImage;
-  // final ImagePicker _picker = ImagePicker();
-  // List<Datum> _categories = []; 
-  // bool _loadingCategories = true; 
-  // String? _categoriesError; 
-  // static const List<String> _purityOptions = [
-  //   '18K Yellow gold',
-  //   '18K Rose gold', 
-  //   '18K White gold',
-  //   'Other'
-  // ];
-  
-  // static const List<String> _orderTypeOptions = [
-  //   'Single',
-  //   'Bulk'
-  // ];
 
   @override
   void initState() {
@@ -153,7 +158,17 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       _selectedOrderDate = DateTime.now();
       _orderDateController.text = _formatDateDDMMYYYY(_selectedOrderDate!);
     }
-    _fetchCategories(); 
+    _fetchCategories();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Set default order type based on user role
+    final currentUser = context.read<AuthProvider>().currentUser;
+    if (currentUser?.role == UserRole.employee && _selectedOrderType == 'Single') {
+      _selectedOrderType = 'Bulk';
+    }
   }
 
   String _formatDateDDMMYYYY(DateTime d) {
@@ -175,10 +190,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       _ornamentDetails = order.ornamentDetails.map((d) => {
             'name': d.name, // display name for the dropdown field
             'categoryId': d.nameId, // id to send to API
-            'size': '', // not present in existing order model
+            'size': d.size ?? '', // from existing order if available
             'weight': d.weight,
             'purity': d.purity,
             'quantity': d.quantity,
+            'colorstone': 'Same as image',
+            'rhodium': 'Same as image',
+            'dull': 'Same as image',
             'remarks': d.remarks ?? '',
           }).toList();
       // Setup image lists: existing URLs and empty new files
@@ -227,6 +245,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         'weight': 0.0,
         'purity': '',
         'quantity': 1,
+        'colorstone': 'Same as image',
+        'rhodium': 'Same as image',
+        'dull': 'Same as image',
         'remarks': '',
       });
       _ornamentImages.add([]);
@@ -310,9 +331,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             final map = <String, dynamic>{
               'name': d['categoryId'], // Send category ID as name
               if ((d['size'] as String?) != null && (d['size'] as String).isNotEmpty) 'size': d['size'],
+              'unit': _getUnitForDetail(d),
               'weight': d['weight'],
               'purity': d['purity'],
               'quantity': d['quantity'],
+              'colorstone': d['colorstone'] ?? 'Same as image',
+              'rhodium': d['rhodium'] ?? 'Same as image',
+              'dull': d['dull'] ?? 'Same as image',
             };
             if ((d['remarks'] as String).isNotEmpty) {
               map['remarks'] = d['remarks'];
@@ -585,15 +610,35 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   Widget _buildUnitChip(Map<String, dynamic> detail) {
     final unit = _getUnitForDetail(detail);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      height: 56, // Match TextFormField height
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppConstants.surfaceColor,
+        color: AppConstants.primaryColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(AppConstants.radiusS),
-        border: Border.all(color: AppConstants.primaryColor.withOpacity(0.2)),
+        border: Border.all(color: AppConstants.primaryColor.withOpacity(0.3)),
       ),
-      child: Text(
-        unit.isNotEmpty ? 'Unit: ' + unit : 'Unit',
-        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Unit',
+            style: TextStyle(
+              fontSize: 10,
+              color: AppConstants.primaryColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            unit.isNotEmpty ? unit : 'g',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppConstants.primaryColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -700,7 +745,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               const SizedBox(height: AppConstants.spacingS),
               Wrap(
                 spacing: AppConstants.spacingS,
-                children: _orderTypeOptions.map((type) {
+                children: _availableOrderTypes.map((type) {
                   final isSelected = _selectedOrderType == type;
                   return FilterChip(
                     label: Text(type),
@@ -790,40 +835,72 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
   Widget _buildOrnamentDetailCard(int index, Map<String, dynamic> detail) {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
-      padding: const EdgeInsets.all(AppConstants.spacingS),
+      margin: const EdgeInsets.only(bottom: AppConstants.spacingL),
+      padding: const EdgeInsets.all(AppConstants.spacingM),
       decoration: BoxDecoration(
-        border: Border.all(color: AppConstants.primaryColor.withOpacity(0.2)),
-        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header with item number and delete button
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                flex: 2,
-                child: _buildCategoryDropdown(index, detail),
+              Text(
+                'Item ${index + 1}',
+                style: AppConstants.headingSmall.copyWith(
+                  color: AppConstants.primaryColor,
+                ),
               ),
-              const SizedBox(width: AppConstants.spacingM),
-              Expanded(
-                flex: 1,
-                child: _buildSizeDropdown(index, detail),
-              ),
-              const SizedBox(width: AppConstants.spacingS),
-              _buildUnitChip(detail),
+              if (_ornamentDetails.length > 1)
+                IconButton(
+                  onPressed: () => _removeOrnamentDetail(index),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  iconSize: 20,
+                ),
             ],
           ),
           const SizedBox(height: AppConstants.spacingM),
+          
+          // Category Selection
+          _buildCategoryDropdown(index, detail),
+          const SizedBox(height: AppConstants.spacingM),
+          
+          // Size and Unit Row
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 1,
+                flex: 3,
+                child: _buildSizeDropdown(index, detail),
+              ),
+              const SizedBox(width: AppConstants.spacingM),
+              Expanded(
+                flex: 2,
+                child: _buildUnitChip(detail),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.spacingM),
+          
+          // Weight, Purity, Quantity Row
+          Row(
+            children: [
+              Expanded(
                 child: TextFormField(
+                  key: ValueKey('weight_$index'),
                   initialValue: detail['weight'].toString(),
                   decoration: InputDecoration(
-                    labelText: 'Weight (' + _getUnitForDetail(detail) + ')',
+                    labelText: 'Weight (${_getUnitForDetail(detail)})',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppConstants.radiusS),
                     ),
@@ -833,19 +910,25 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     ),
                   ),
                   keyboardType: TextInputType.number,
+                  onTap: () {
+                    // Auto-select all text when tapped for easy editing
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      final controller = TextEditingController(text: detail['weight'].toString());
+                      controller.selection = TextSelection(baseOffset: 0, extentOffset: controller.text.length);
+                    });
+                  },
                   onChanged: (value) => setState(() {
                     _ornamentDetails[index]['weight'] = double.tryParse(value) ?? 0.0;
                   }),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter weight';
-                    if (double.tryParse(value) == null) return 'Invalid weight';
+                    if (value == null || value.isEmpty) return 'Enter weight';
+                    if (double.tryParse(value) == null) return 'Invalid';
                     return null;
                   },
                 ),
               ),
-              const SizedBox(width: AppConstants.spacingM),
+              const SizedBox(width: AppConstants.spacingS),
               Expanded(
-                flex: 1,
                 child: DropdownButtonFormField<String>(
                   decoration: InputDecoration(
                     labelText: 'Purity',
@@ -861,22 +944,21 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   items: _purityOptions
                       .map((option) => DropdownMenuItem<String>(
                             value: option,
-                            child: Text(option),
+                            child: Text(option, style: const TextStyle(fontSize: 12)),
                           ))
                       .toList(),
                   onChanged: (value) => setState(() {
                     _ornamentDetails[index]['purity'] = value ?? '';
                   }),
-                  validator: (value) => (value == null || value.isEmpty) ? 'Please select purity' : null,
+                  validator: (value) => (value == null || value.isEmpty) ? 'Select' : null,
                 ),
               ),
-              const SizedBox(width: AppConstants.spacingM),
+              const SizedBox(width: AppConstants.spacingS),
               Expanded(
-                flex: 1,
                 child: TextFormField(
                   initialValue: detail['quantity'].toString(),
                   decoration: InputDecoration(
-                    labelText: 'Quantity',
+                    labelText: 'Qty',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppConstants.radiusS),
                     ),
@@ -890,13 +972,94 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     _ornamentDetails[index]['quantity'] = int.tryParse(value) ?? 1;
                   }),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter quantity';
-                    if (int.tryParse(value) == null) return 'Invalid quantity';
+                    if (value == null || value.isEmpty) return 'Enter qty';
+                    if (int.tryParse(value) == null) return 'Invalid';
                     return null;
                   },
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: AppConstants.spacingM),
+          
+          // Colorstone and Rhodium Row
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: 'Colorstone',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingS,
+                      vertical: AppConstants.spacingS,
+                    ),
+                  ),
+                  value: (detail['colorstone'] as String?)?.isNotEmpty == true ? detail['colorstone'] as String : 'Same as image',
+                  items: _colorstoneOptions
+                      .map((option) => DropdownMenuItem<String>(
+                            value: option,
+                            child: Text(option, style: const TextStyle(fontSize: 12)),
+                          ))
+                      .toList(),
+                  onChanged: (value) => setState(() {
+                    _ornamentDetails[index]['colorstone'] = value ?? 'Same as image';
+                  }),
+                ),
+              ),
+              const SizedBox(width: AppConstants.spacingS),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: 'Rhodium',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingS,
+                      vertical: AppConstants.spacingS,
+                    ),
+                  ),
+                  value: (detail['rhodium'] as String?)?.isNotEmpty == true ? detail['rhodium'] as String : 'Same as image',
+                  items: _rhodiumOptions
+                      .map((option) => DropdownMenuItem<String>(
+                            value: option,
+                            child: Text(option, style: const TextStyle(fontSize: 12)),
+                          ))
+                      .toList(),
+                  onChanged: (value) => setState(() {
+                    _ornamentDetails[index]['rhodium'] = value ?? 'Same as image';
+                  }),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.spacingM),
+          
+          // Dull Row
+          DropdownButtonFormField<String>(
+            decoration: InputDecoration(
+              labelText: 'Dull',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusS),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingS,
+                vertical: AppConstants.spacingS,
+              ),
+            ),
+            value: (detail['dull'] as String?)?.isNotEmpty == true ? detail['dull'] as String : 'Same as image',
+            items: _dullOptions
+                .map((option) => DropdownMenuItem<String>(
+                      value: option,
+                      child: Text(option),
+                    ))
+                .toList(),
+            onChanged: (value) => setState(() {
+              _ornamentDetails[index]['dull'] = value ?? 'Same as image';
+            }),
           ),
           const SizedBox(height: AppConstants.spacingM),
           TextFormField(
