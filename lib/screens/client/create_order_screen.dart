@@ -41,6 +41,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     {
       'name': '',
       'categoryId': '', 
+      'size': '',
       'weight': 0.0,
       'purity': '',
       'quantity': 1,
@@ -76,6 +77,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
         final detailsPayload = _ornamentDetails.map((d) => {
               'name': d['categoryId'],
+              if ((d['size'] as String?) != null && (d['size'] as String).isNotEmpty) 'size': d['size'],
               'weight': d['weight'],
               'purity': d['purity'],
               'quantity': d['quantity'],
@@ -173,6 +175,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       _ornamentDetails = order.ornamentDetails.map((d) => {
             'name': d.name, // display name for the dropdown field
             'categoryId': d.nameId, // id to send to API
+            'size': '', // not present in existing order model
             'weight': d.weight,
             'purity': d.purity,
             'quantity': d.quantity,
@@ -220,6 +223,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       _ornamentDetails.add({
         'name': '',
         'categoryId': '', 
+        'size': '',
         'weight': 0.0,
         'purity': '',
         'quantity': 1,
@@ -305,6 +309,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             final d = _ornamentDetails[i];
             final map = <String, dynamic>{
               'name': d['categoryId'], // Send category ID as name
+              if ((d['size'] as String?) != null && (d['size'] as String).isNotEmpty) 'size': d['size'],
               'weight': d['weight'],
               'purity': d['purity'],
               'quantity': d['quantity'],
@@ -470,10 +475,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Search',
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.search),
                       ),
                       onChanged: (value) {
                         setDialogState(() {
@@ -493,7 +498,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                             onTap: () {
                               setState(() {
                                 _ornamentDetails[index]['name'] = category.categoryname;
-                                _ornamentDetails[index]['categoryId'] = category.id; 
+                                _ornamentDetails[index]['categoryId'] = category.id;
+                                _ornamentDetails[index]['size'] = '';
                               });
                               Navigator.pop(context);
                             },
@@ -515,6 +521,88 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         );
       },
     );
+  }
+
+  Datum? _findCategoryById(String id) {
+    try {
+      return _categories.firstWhere((c) => c.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Build Size dropdown based on selected category's sizes
+  Widget _buildSizeDropdown(int index, Map<String, dynamic> detail) {
+    final String categoryId = (detail['categoryId'] as String?) ?? '';
+    final Datum? cat = _findCategoryById(categoryId);
+    final List<String> sizes = cat?.size ?? [];
+
+    if (categoryId.isEmpty || sizes.isEmpty) {
+      return DropdownButtonFormField<String>(
+        value: null,
+        decoration: InputDecoration(
+          labelText: 'Size',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppConstants.radiusS),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.spacingS,
+            vertical: AppConstants.spacingS,
+          ),
+        ),
+        items: const [],
+        onChanged: null,
+        hint: const Text('No sizes'),
+      );
+    }
+
+    final String? current = (detail['size'] as String?)?.isNotEmpty == true ? detail['size'] as String : null;
+    return DropdownButtonFormField<String>(
+      value: current,
+      decoration: InputDecoration(
+        labelText: 'Size',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusS),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.spacingS,
+          vertical: AppConstants.spacingS,
+        ),
+      ),
+      items: sizes
+          .map((s) => DropdownMenuItem<String>(value: s, child: Text(s)))
+          .toList(),
+      onChanged: (val) {
+        setState(() {
+          _ornamentDetails[index]['size'] = val ?? '';
+        });
+      },
+      validator: (val) => (sizes.isNotEmpty && (val == null || val.isEmpty)) ? 'Select size' : null,
+    );
+  }
+
+  // Show unit next to size as a compact chip/label
+  Widget _buildUnitChip(Map<String, dynamic> detail) {
+    final unit = _getUnitForDetail(detail);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+        border: Border.all(color: AppConstants.primaryColor.withOpacity(0.2)),
+      ),
+      child: Text(
+        unit.isNotEmpty ? 'Unit: ' + unit : 'Unit',
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      ),
+    );
+  }
+
+  String _getUnitForDetail(Map<String, dynamic> detail) {
+    final String categoryId = (detail['categoryId'] as String?) ?? '';
+    if (categoryId.isEmpty) return 'g';
+    final Datum? cat = _findCategoryById(categoryId);
+    return (cat?.unit.isNotEmpty == true) ? cat!.unit : 'g';
   }
 
   @override
@@ -717,6 +805,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 flex: 2,
                 child: _buildCategoryDropdown(index, detail),
               ),
+              const SizedBox(width: AppConstants.spacingM),
+              Expanded(
+                flex: 1,
+                child: _buildSizeDropdown(index, detail),
+              ),
+              const SizedBox(width: AppConstants.spacingS),
+              _buildUnitChip(detail),
             ],
           ),
           const SizedBox(height: AppConstants.spacingM),
@@ -728,7 +823,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 child: TextFormField(
                   initialValue: detail['weight'].toString(),
                   decoration: InputDecoration(
-                    labelText: 'Weight (g)',
+                    labelText: 'Weight (' + _getUnitForDetail(detail) + ')',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppConstants.radiusS),
                     ),

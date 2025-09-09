@@ -34,23 +34,33 @@ class CategoryResponse {
 
 class Data {
     String categoryname;
+    List<String> size;
+    String unit;
     String id;
     int v;
 
     Data({
         required this.categoryname,
+        required this.size,
+        required this.unit,
         required this.id,
         required this.v,
     });
 
     factory Data.fromJson(Map<String, dynamic> json) => Data(
         categoryname: json["categoryname"],
+        size: json["size"] == null
+            ? <String>[]
+            : List<String>.from((json["size"] as List).map((x) => x.toString())),
+        unit: (json["unit"] ?? '').toString(),
         id: json["_id"],
-        v: json["__v"],
+        v: json["__v"] ?? 0,
     );
 
     Map<String, dynamic> toJson() => {
         "categoryname": categoryname,
+        "size": List<dynamic>.from(size.map((x) => x)),
+        "unit": unit,
         "_id": id,
         "__v": v,
     };

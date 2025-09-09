@@ -26,12 +26,18 @@ class CategoryService {
   // Create a new category
   static Future<CategoryResponse> createCategory(
     String categoryName,
+    List<String> size,
+    String unit,
     String token,
   ) async {
     try {
       final response = await ApiService.post(
         AppConstants.categoriesEndpoint,
-        body: {'categoryname': categoryName},
+        body: {
+          'categoryname': categoryName,
+          'size': size,
+          'unit': unit,
+        },
         token: token,
       );
 
@@ -49,12 +55,18 @@ class CategoryService {
   static Future<CategoryResponse> updateCategory(
     String categoryId,
     String categoryName,
+    List<String> size,
+    String unit,
     String token,
   ) async {
     try {
       final response = await ApiService.patch(
         '${AppConstants.categoriesEndpoint}/$categoryId',
-        body: {'categoryname': categoryName},
+        body: {
+          'categoryname': categoryName,
+          'size': size,
+          'unit': unit,
+        },
         token: token,
       );
 

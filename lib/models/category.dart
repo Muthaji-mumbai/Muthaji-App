@@ -35,23 +35,33 @@
   class Datum {
       String id;
       String categoryname;
+      List<String> size;
+      String unit;
       int v;
 
       Datum({
           required this.id,
           required this.categoryname,
+          required this.size,
+          required this.unit,
           required this.v,
       });
 
       factory Datum.fromJson(Map<String, dynamic> json) => Datum(
           id: json["_id"],
           categoryname: json["categoryname"],
-          v: json["__v"],
+          size: json["size"] == null
+              ? <String>[]
+              : List<String>.from((json["size"] as List).map((x) => x.toString())),
+          unit: (json["unit"] ?? '').toString(),
+          v: json["__v"] ?? 0,
       );
 
       Map<String, dynamic> toJson() => {
           "_id": id,
           "categoryname": categoryname,
+          "size": List<dynamic>.from(size.map((x) => x)),
+          "unit": unit,
           "__v": v,
       };
   }

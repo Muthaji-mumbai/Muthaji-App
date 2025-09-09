@@ -439,7 +439,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color.fromARGB(145, 85, 83, 77),
+            const Color.fromARGB(202, 255, 254, 249),
             const Color.fromARGB(145, 85, 83, 77),
           ],
         ),

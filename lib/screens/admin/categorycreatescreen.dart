@@ -16,6 +16,8 @@ class CreateCategoryScreen extends StatefulWidget {
 class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _categoryNameController = TextEditingController();
+  final _sizeController = TextEditingController(); // comma-separated, e.g. 2.4,2.5
+  final _unitController = TextEditingController(); // e.g. anai
   bool _isLoading = false;
   bool _isLoadingCategories = false;
   List<Datum> _categories = [];
@@ -29,6 +31,8 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
   @override
   void dispose() {
     _categoryNameController.dispose();
+    _sizeController.dispose();
+    _unitController.dispose();
     super.dispose();
   }
 
@@ -87,6 +91,8 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
 
       await CategoryService.createCategory(
         _categoryNameController.text.trim(),
+        _parseSizes(_sizeController.text),
+        _unitController.text.trim(),
         token,
       );
 
@@ -94,6 +100,8 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
 
       // Clear the form and refresh categories list
       _categoryNameController.clear();
+      _sizeController.clear();
+      _unitController.clear();
       await _loadCategories();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -118,6 +126,14 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
         });
       }
     }
+  }
+
+  List<String> _parseSizes(String sizes) {
+    return sizes
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
   }
 
   @override
@@ -169,6 +185,49 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Please enter a category name';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: AppConstants.spacingM),
+                      TextFormField(
+                        controller: _sizeController,
+                        decoration: InputDecoration(
+                          labelText: 'Sizes (comma-separated)',
+                          hintText: 'e.g. 2.4, 2.5',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppConstants.radiusM,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: AppConstants.surfaceColor,
+                        ),
+                        validator: (value) {
+                          final sizes = _parseSizes(value ?? '');
+                          if (sizes.isEmpty) {
+                            return 'Enter at least one size';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: AppConstants.spacingM),
+                      TextFormField(
+                        controller: _unitController,
+                        decoration: InputDecoration(
+                          labelText: 'Unit',
+                          hintText: 'e.g. anai',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppConstants.radiusM,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: AppConstants.surfaceColor,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter a unit';
                           }
                           return null;
                         },
@@ -262,6 +321,10 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
                         category.categoryname,
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
+                      subtitle: Text(
+                        'Unit: ${category.unit}  •  Sizes: ${category.size.join(', ')}',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
                       trailing: PopupMenuButton<String>(
                         onSelected: (value) async {
                           if (value == 'update') {
@@ -293,9 +356,9 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
   }
 
   Future<void> _showUpdateDialog(Datum category) async {
-    final TextEditingController updateController = TextEditingController(
-      text: category.categoryname,
-    );
+    final TextEditingController nameController = TextEditingController(text: category.categoryname);
+    final TextEditingController sizeController = TextEditingController(text: category.size.join(', '));
+    final TextEditingController unitController = TextEditingController(text: category.unit);
 
     return showDialog<void>(
       context: context,
@@ -303,13 +366,34 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Update Category'),
-          content: TextField(
-            controller: updateController,
-            decoration: const InputDecoration(
-              labelText: 'Category Name',
-              border: OutlineInputBorder(),
-            ),
-            autofocus: true,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Category Name',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: sizeController,
+                decoration: const InputDecoration(
+                  labelText: 'Sizes (comma-separated)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: unitController,
+                decoration: const InputDecoration(
+                  labelText: 'Unit',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
           ),
           actions: <Widget>[
             TextButton(
@@ -321,11 +405,13 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
             TextButton(
               child: const Text('Update'),
               onPressed: () async {
-                if (updateController.text.trim().isNotEmpty) {
+                if (nameController.text.trim().isNotEmpty && unitController.text.trim().isNotEmpty) {
                   Navigator.of(context).pop();
                   await _updateCategory(
                     category.id,
-                    updateController.text.trim(),
+                    nameController.text.trim(),
+                    _parseSizes(sizeController.text),
+                    unitController.text.trim(),
                   );
                 }
               },
@@ -336,7 +422,7 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
     );
   }
 
-  Future<void> _updateCategory(String categoryId, String newName) async {
+  Future<void> _updateCategory(String categoryId, String newName, List<String> sizes, String unit) async {
     try {
       final authProvider = context.read<AuthProvider>();
       final token = authProvider.currentUser?.token;
@@ -345,7 +431,7 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
         throw Exception('User not authenticated');
       }
 
-      await CategoryService.updateCategory(categoryId, newName, token);
+      await CategoryService.updateCategory(categoryId, newName, sizes, unit, token);
 
       if (!mounted) return;
 
