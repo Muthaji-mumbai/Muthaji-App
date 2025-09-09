@@ -439,8 +439,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color.fromARGB(202, 255, 254, 249),
-            const Color.fromARGB(145, 85, 83, 77),
+            const Color.fromARGB(160, 255, 236, 140),
+            const Color.fromARGB(255, 209, 180, 91),
           ],
         ),
         borderRadius: BorderRadius.circular(AppConstants.radiusXL),
@@ -485,7 +485,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 child: Text(
                                   'Order Analytics',
                                   style: AppConstants.headingMedium.copyWith(
-                                    color: Colors.white,
+                                    color: Colors.black,
                                     fontSize: isMobile ? 18 : 24,
                                   ),
                                 ),
@@ -496,7 +496,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           Text(
                             'Track your business performance',
                             style: AppConstants.bodySmall.copyWith(
-                              color: Colors.white70,
+                              color: Colors.black,
                             ),
                           ),
                         ],
