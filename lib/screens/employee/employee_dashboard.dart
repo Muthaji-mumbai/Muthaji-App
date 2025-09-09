@@ -27,6 +27,33 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   List<Order> _pendingOrders = [];
   bool _isLoading = true;
 
+  bool _isUrgent(Order order) {
+    final p = (order.orderPriority ?? '').toLowerCase().trim();
+    return p == 'urgent' || p.contains('urgent');
+  }
+
+  Widget _buildUrgentRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppConstants.errorColor,
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+      ),
+      child: const Text('URGENT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+    );
+  }
+
+  Widget _buildPendingRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppConstants.warningColor,
+        borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomLeft: Radius.circular(8)),
+      ),
+      child: const Text('PENDING', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -305,33 +332,34 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   }
 
   Widget _buildOrderCard(Order order) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            // Optional: Add tap functionality if needed
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => OrderDetailsScreen(order: order),
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.shade200,
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-            );
-          },
-          child: ExpansionTile(
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OrderDetailsScreen(order: order),
+                  ),
+                );
+              },
+              child: ExpansionTile(
             tilePadding: const EdgeInsets.symmetric(
               horizontal: 20,
               vertical: 8,
@@ -648,8 +676,12 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
             ),
             children: [_buildExpandedContent(order)],
           ),
-        ),
-      ),
+        ),),),
+        if (order.status == OrderStatus.pending)
+          Positioned(top: 0, right: 0, child: _buildPendingRibbon()),
+        if (_isUrgent(order))
+          Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
+      ],
     );
   }
 

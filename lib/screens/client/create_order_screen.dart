@@ -19,7 +19,11 @@ import '../../models/user.dart';
 class CreateOrderScreen extends StatefulWidget {
   final Order? orderToEdit;
   final bool cloneFromOrder;
-  const CreateOrderScreen({super.key, this.orderToEdit, this.cloneFromOrder = false});
+  const CreateOrderScreen({
+    super.key,
+    this.orderToEdit,
+    this.cloneFromOrder = false,
+  });
 
   @override
   State<CreateOrderScreen> createState() => _CreateOrderScreenState();
@@ -34,13 +38,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   DateTime? _selectedOrderDate;
   String _selectedOrderType = 'Single';
   // In clone mode, we prefill but treat as create (not edit)
-  bool get _isEditMode => widget.orderToEdit != null && widget.cloneFromOrder != true;
+  bool get _isEditMode =>
+      widget.orderToEdit != null && widget.cloneFromOrder != true;
   Order? get _existingOrder => widget.orderToEdit;
   OrderStatus? _selectedStatus;
   List<Map<String, dynamic>> _ornamentDetails = [
     {
       'name': '',
-      'categoryId': '', 
+      'categoryId': '',
       'size': '',
       'weight': 0.0,
       'purity': '',
@@ -49,36 +54,41 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       'rhodium': 'Same as image',
       'dull': 'Same as image',
       'remarks': '',
-    }
+    },
   ];
   List<List<PlatformFile>> _ornamentImages = [[]];
   // For edit mode: store existing image URLs per ornament item (display only)
   List<List<String>> _existingOrnamentImageUrls = [[]];
   File? _currentEditingImage;
   final ImagePicker _picker = ImagePicker();
-  List<Datum> _categories = []; 
-  bool _loadingCategories = true; 
-  String? _categoriesError; 
+  List<Datum> _categories = [];
+  bool _loadingCategories = true;
+  String? _categoriesError;
   static const List<String> _purityOptions = [
     '18K Yellow gold',
-    '18K Rose gold', 
+    '18K Rose gold',
     '18K White gold',
-    'Other'
+    'Other',
   ];
   static const List<String> _colorstoneOptions = [
-    'Red', 'Blue', 'Green', 'Black', 'White', 'Same as image'
+    'Red',
+    'Blue',
+    'Green',
+    'Black',
+    'White',
+    'Same as image',
   ];
   static const List<String> _rhodiumOptions = [
-    'Setting Rhodium', 'Ganga Jamuna', 'No Rhodium', 'Same as image'
+    'Setting Rhodium',
+    'Ganga Jamuna',
+    'No Rhodium',
+    'Same as image',
   ];
-  static const List<String> _dullOptions = [
-    'Dull', 'No Dull', 'Same as image'
-  ];
-  
-  static const List<String> _orderTypeOptions = [
-    'Single',
-    'Bulk'
-  ];
+  static const List<String> _dullOptions = ['Dull', 'No Dull', 'Same as image'];
+
+  static const List<String> _orderTypeOptions = ['Single', 'Bulk'];
+  static const List<String> _priorityOptions = ['Regular', 'Urgent'];
+  String _selectedPriority = 'Regular';
 
   List<String> get _availableOrderTypes {
     final currentUser = context.read<AuthProvider>().currentUser;
@@ -89,35 +99,50 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   }
 
   Future<void> _updateOrder() async {
-    if (_formKey.currentState!.validate() && !_isLoading && _existingOrder != null) {
+    if (_formKey.currentState!.validate() &&
+        !_isLoading &&
+        _existingOrder != null) {
       setState(() => _isLoading = true);
       try {
         final token = AuthService.currentToken;
         if (token == null) throw Exception('User not authenticated');
 
-        final detailsPayload = _ornamentDetails.map((d) => {
-              'name': d['categoryId'],
-              if ((d['size'] as String?) != null && (d['size'] as String).isNotEmpty) 'size': d['size'],
-              'unit': _getUnitForDetail(d),
-              'weight': d['weight'],
-              'purity': d['purity'],
-              'quantity': d['quantity'],
-              'colorstone': d['colorstone'] ?? 'Same as image',
-              'rhodium': d['rhodium'] ?? 'Same as image',
-              'dull': d['dull'] ?? 'Same as image',
-              if ((d['remarks'] as String).isNotEmpty) 'remarks': d['remarks'],
-            }).toList();
+        final detailsPayload =
+            _ornamentDetails
+                .map(
+                  (d) => {
+                    'name': d['categoryId'],
+                    if ((d['size'] as String?) != null &&
+                        (d['size'] as String).isNotEmpty)
+                      'size': d['size'],
+                    'unit': _getUnitForDetail(d),
+                    'weight': d['weight'],
+                    'purity': d['purity'],
+                    'quantity': d['quantity'],
+                    'colorstone': d['colorstone'] ?? 'Same as image',
+                    'rhodium': d['rhodium'] ?? 'Same as image',
+                    'dull': d['dull'] ?? 'Same as image',
+                    if ((d['remarks'] as String).isNotEmpty)
+                      'remarks': d['remarks'],
+                  },
+                )
+                .toList();
 
         final updateData = <String, dynamic>{
-          'orderdate': (_selectedOrderDate ?? DateTime.now()).toIso8601String().split('T').first,
+          'orderdate':
+              (_selectedOrderDate ?? DateTime.now())
+                  .toIso8601String()
+                  .split('T')
+                  .first,
           'ordertype': _selectedOrderType,
           'ornamentDetails': detailsPayload,
+          'orderpriority': _selectedPriority,
         };
         // Include status in update only for admin/employee users
         if (_selectedStatus != null && _shouldShowOrderTypeSelection()) {
           updateData['status'] = _selectedStatus!.toString().split('.').last;
         }
-
+        print("ORDER PRIORTY=========>$_selectedPriority");
         final updated = await OrderService.updateOrder(
           orderId: _existingOrder!.id,
           updateData: updateData,
@@ -127,7 +152,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Order updated successfully! Order ID: ${updated.id}'),
+            content: Text(
+              'Order updated successfully! Order ID: ${updated.id}',
+            ),
             backgroundColor: AppConstants.successColor,
           ),
         );
@@ -145,7 +172,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       }
     }
   }
-
 
   @override
   void initState() {
@@ -166,7 +192,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     super.didChangeDependencies();
     // Set default order type based on user role
     final currentUser = context.read<AuthProvider>().currentUser;
-    if (currentUser?.role == UserRole.employee && _selectedOrderType == 'Single') {
+    if (currentUser?.role == UserRole.employee &&
+        _selectedOrderType == 'Single') {
       _selectedOrderType = 'Bulk';
     }
   }
@@ -184,25 +211,32 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     _orderDateController.text = _formatDateDDMMYYYY(_selectedOrderDate!);
     _selectedOrderType = order.orderType ?? 'Single';
     _selectedStatus = order.status;
+    _selectedPriority = order.orderPriority ?? 'Regular';
 
     // Map ornament details
     if (order.ornamentDetails.isNotEmpty) {
-      _ornamentDetails = order.ornamentDetails.map((d) => {
-            'name': d.name, // display name for the dropdown field
-            'categoryId': d.nameId, // id to send to API
-            'size': d.size ?? '', // from existing order if available
-            'weight': d.weight,
-            'purity': d.purity,
-            'quantity': d.quantity,
-            'colorstone': d.colorstone ?? 'Same as image',
-            'rhodium': d.rhodium ?? 'Same as image',
-            'dull': d.dull ?? 'Same as image',
-            'remarks': d.remarks ?? '',
-          }).toList();
+      _ornamentDetails =
+          order.ornamentDetails
+              .map(
+                (d) => {
+                  'name': d.name, // display name for the dropdown field
+                  'categoryId': d.nameId, // id to send to API
+                  'size': d.size ?? '', // from existing order if available
+                  'weight': d.weight,
+                  'purity': d.purity,
+                  'quantity': d.quantity,
+                  'colorstone': d.colorstone ?? 'Same as image',
+                  'rhodium': d.rhodium ?? 'Same as image',
+                  'dull': d.dull ?? 'Same as image',
+                  'remarks': d.remarks ?? '',
+                },
+              )
+              .toList();
       // Setup image lists: existing URLs and empty new files
-      _existingOrnamentImageUrls = order.ornamentDetails
-          .map((d) => List<String>.from(d.images))
-          .toList();
+      _existingOrnamentImageUrls =
+          order.ornamentDetails
+              .map((d) => List<String>.from(d.images))
+              .toList();
       _ornamentImages = List.generate(_ornamentDetails.length, (_) => []);
     } else {
       // Fallback to order-level images if any
@@ -217,10 +251,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       if (token == null) {
         throw Exception('User not authenticated');
       }
-      
+
       final response = await CategoryService.getAllCategories(token);
       setState(() {
-        _categories = response.data; 
+        _categories = response.data;
         _loadingCategories = false;
       });
     } catch (e) {
@@ -229,9 +263,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         _categoriesError = 'Failed to load categories: $e. Enter manually.';
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading categories: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading categories: $e')));
       }
     }
   }
@@ -240,7 +274,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     setState(() {
       _ornamentDetails.add({
         'name': '',
-        'categoryId': '', 
+        'categoryId': '',
         'size': '',
         'weight': 0.0,
         'purity': '',
@@ -272,14 +306,16 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       );
       if (result != null) {
         setState(() {
-          _ornamentImages[index].addAll(result.files.where((f) => f.bytes != null));
+          _ornamentImages[index].addAll(
+            result.files.where((f) => f.bytes != null),
+          );
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking files: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking files: $e')));
       }
     } finally {
       if (mounted) setState(() => _isPickingImage = false);
@@ -293,14 +329,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     final edited = await Navigator.push<Uint8List?>(
       context,
       MaterialPageRoute(
-        builder: (editorContext) => ProImageEditor.memory(
-          bytes,
-          callbacks: ProImageEditorCallbacks(
-            onImageEditingComplete: (Uint8List bytes) async {
-              Navigator.of(editorContext).pop(bytes);
-            },
-          ),
-        ),
+        builder:
+            (editorContext) => ProImageEditor.memory(
+              bytes,
+              callbacks: ProImageEditorCallbacks(
+                onImageEditingComplete: (Uint8List bytes) async {
+                  Navigator.of(editorContext).pop(bytes);
+                },
+              ),
+            ),
       ),
     );
     if (!mounted) return;
@@ -330,7 +367,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             final d = _ornamentDetails[i];
             final map = <String, dynamic>{
               'name': d['categoryId'], // Send category ID as name
-              if ((d['size'] as String?) != null && (d['size'] as String).isNotEmpty) 'size': d['size'],
+              if ((d['size'] as String?) != null &&
+                  (d['size'] as String).isNotEmpty)
+                'size': d['size'],
               'unit': _getUnitForDetail(d),
               'weight': d['weight'],
               'purity': d['purity'],
@@ -344,7 +383,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             }
             // If cloning, include existing image URLs per item so backend saves them without multipart
             if (widget.cloneFromOrder) {
-              if (_existingOrnamentImageUrls.length > i && _existingOrnamentImageUrls[i].isNotEmpty) {
+              if (_existingOrnamentImageUrls.length > i &&
+                  _existingOrnamentImageUrls[i].isNotEmpty) {
                 map['image'] = List<String>.from(_existingOrnamentImageUrls[i]);
               }
             }
@@ -352,13 +392,17 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           }
 
           // For customers, always use 'Single' order type regardless of selection
-          final orderType = currentUser.role == UserRole.client ? 'Single' : _selectedOrderType;
-          
+          final orderType =
+              currentUser.role == UserRole.client
+                  ? 'Single'
+                  : _selectedOrderType;
+
           final order = await OrderService.createOrder(
             clientId: currentUser.id,
             clientName: currentUser.name,
             orderDate: _selectedOrderDate,
             orderType: orderType,
+            orderpriority: _selectedPriority,
             ornamentDetails: detailsPayload,
             // In clone mode, do not send files; backend should use provided URL arrays
             ornamentImages: widget.cloneFromOrder ? null : _ornamentImages,
@@ -368,7 +412,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Order created successfully! Order ID: ${order.id}'),
+                content: Text(
+                  'Order created successfully! Order ID: ${order.id}',
+                ),
                 backgroundColor: AppConstants.successColor,
               ),
             );
@@ -405,8 +451,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
   bool _shouldShowOrderTypeSelection() {
     final currentUser = context.read<AuthProvider>().currentUser;
-    return currentUser != null && 
-           (currentUser.role == UserRole.admin || currentUser.role == UserRole.employee);
+    return currentUser != null &&
+        (currentUser.role == UserRole.admin ||
+            currentUser.role == UserRole.employee);
   }
 
   Future<void> _selectDate() async {
@@ -442,56 +489,68 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     return _loadingCategories
         ? const Center(child: CircularProgressIndicator())
         : _categoriesError != null
-            ? TextFormField(
-                initialValue: detail['name'],
-                decoration: InputDecoration(
-                  labelText: 'Category ID / Name ($_categoriesError)',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacingS,
-                    vertical: AppConstants.spacingS,
-                  ),
+        ? TextFormField(
+          initialValue: detail['name'],
+          decoration: InputDecoration(
+            labelText: 'Category ID / Name ($_categoriesError)',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.radiusS),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.spacingS,
+              vertical: AppConstants.spacingS,
+            ),
+          ),
+          onChanged:
+              (value) => setState(() {
+                _ornamentDetails[index]['name'] = value;
+              }),
+          validator:
+              (value) =>
+                  value!.isEmpty ? 'Please enter category id/name' : null,
+        )
+        : GestureDetector(
+          onTap: () => _showCategoryDialog(index, detail),
+          child: AbsorbPointer(
+            child: TextFormField(
+              decoration: InputDecoration(
+                labelText: 'Category ID / Name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
                 ),
-                onChanged: (value) => setState(() {
-                  _ornamentDetails[index]['name'] = value;
-                }),
-                validator: (value) => value!.isEmpty ? 'Please enter category id/name' : null,
-              )
-            : GestureDetector(
-                onTap: () => _showCategoryDialog(index, detail),
-                child: AbsorbPointer(
-                  child: TextFormField(
-                    decoration: InputDecoration(
-                      labelText: 'Category ID / Name',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppConstants.spacingS,
-                        vertical: AppConstants.spacingS,
-                      ),
-                      suffixIcon: const Icon(Icons.arrow_drop_down),
-                    ),
-                    controller: TextEditingController(text: detail['name']),
-                    validator: (value) => value!.isEmpty ? 'Please select a category' : null,
-                    enabled: false,
-                  ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingS,
+                  vertical: AppConstants.spacingS,
                 ),
-              );
+                suffixIcon: const Icon(Icons.arrow_drop_down),
+              ),
+              controller: TextEditingController(text: detail['name']),
+              validator:
+                  (value) => value!.isEmpty ? 'Please select a category' : null,
+              enabled: false,
+            ),
+          ),
+        );
   }
 
-  Future<void> _showCategoryDialog(int index, Map<String, dynamic> detail) async {
+  Future<void> _showCategoryDialog(
+    int index,
+    Map<String, dynamic> detail,
+  ) async {
     String searchQuery = '';
     await showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final filteredCategories = _categories
-                .where((category) => category.categoryname.toLowerCase().contains(searchQuery.toLowerCase()))
-                .toList();
+            final filteredCategories =
+                _categories
+                    .where(
+                      (category) => category.categoryname
+                          .toLowerCase()
+                          .contains(searchQuery.toLowerCase()),
+                    )
+                    .toList();
             return AlertDialog(
               title: const Text('Select Category'),
               content: SizedBox(
@@ -522,8 +581,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                             title: Text(category.categoryname),
                             onTap: () {
                               setState(() {
-                                _ornamentDetails[index]['name'] = category.categoryname;
-                                _ornamentDetails[index]['categoryId'] = category.id;
+                                _ornamentDetails[index]['name'] =
+                                    category.categoryname;
+                                _ornamentDetails[index]['categoryId'] =
+                                    category.id;
                                 _ornamentDetails[index]['size'] = '';
                               });
                               Navigator.pop(context);
@@ -581,7 +642,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       );
     }
 
-    final String? current = (detail['size'] as String?)?.isNotEmpty == true ? detail['size'] as String : null;
+    final String? current =
+        (detail['size'] as String?)?.isNotEmpty == true
+            ? detail['size'] as String
+            : null;
     return DropdownButtonFormField<String>(
       value: current,
       decoration: InputDecoration(
@@ -594,15 +658,20 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           vertical: AppConstants.spacingS,
         ),
       ),
-      items: sizes
-          .map((s) => DropdownMenuItem<String>(value: s, child: Text(s)))
-          .toList(),
+      items:
+          sizes
+              .map((s) => DropdownMenuItem<String>(value: s, child: Text(s)))
+              .toList(),
       onChanged: (val) {
         setState(() {
           _ornamentDetails[index]['size'] = val ?? '';
         });
       },
-      validator: (val) => (sizes.isNotEmpty && (val == null || val.isEmpty)) ? 'Select size' : null,
+      validator:
+          (val) =>
+              (sizes.isNotEmpty && (val == null || val.isEmpty))
+                  ? 'Select size'
+                  : null,
     );
   }
 
@@ -674,12 +743,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 _buildOrnamentDetailsSection(),
                 const SizedBox(height: AppConstants.spacingXL),
                 CustomButton(
-                  onPressed: _isLoading
-                      ? null
-                      : (_isEditMode ? _updateOrder : _createOrder),
-                  text: _isLoading
-                      ? (_isEditMode ? 'Updating...' : 'Creating...')
-                      : (_isEditMode ? 'Update Order' : 'Create Order'),
+                  onPressed:
+                      _isLoading
+                          ? null
+                          : (_isEditMode ? _updateOrder : _createOrder),
+                  text:
+                      _isLoading
+                          ? (_isEditMode ? 'Updating...' : 'Creating...')
+                          : (_isEditMode ? 'Update Order' : 'Create Order'),
                   isLoading: _isLoading,
                   backgroundColor: AppConstants.successColor,
                 ),
@@ -715,14 +786,20 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 Text('Order Details', style: AppConstants.headingSmall),
                 if (_isEditMode && _existingOrder?.orderNo != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppConstants.primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       'Order No: ${_existingOrder!.orderNo}',
-                      style: TextStyle(color: AppConstants.primaryColor, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: AppConstants.primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
               ],
@@ -735,41 +812,88 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 labelText: 'Order Date',
                 hintText: 'Select date',
                 enabled: false,
-                validator: (value) => value!.isEmpty ? 'Please select a date' : null,
+                validator:
+                    (value) => value!.isEmpty ? 'Please select a date' : null,
               ),
+            ),
+            const SizedBox(height: AppConstants.spacingM),
+            Text(
+              'Priority',
+              style: AppConstants.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppConstants.spacingS),
+            DropdownButtonFormField<String>(
+              value: _selectedPriority,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingS,
+                  vertical: AppConstants.spacingS,
+                ),
+              ),
+              items:
+                  _priorityOptions
+                      .map(
+                        (p) =>
+                            DropdownMenuItem<String>(value: p, child: Text(p)),
+                      )
+                      .toList(),
+              onChanged:
+                  (val) => setState(() => _selectedPriority = val ?? 'Regular'),
             ),
             // Show order type selection only for admin and employee users
             if (_shouldShowOrderTypeSelection()) ...[
               const SizedBox(height: AppConstants.spacingM),
-              Text('Order Type', style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+              Text(
+                'Order Type',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: AppConstants.spacingS),
               Wrap(
                 spacing: AppConstants.spacingS,
-                children: _availableOrderTypes.map((type) {
-                  final isSelected = _selectedOrderType == type;
-                  return FilterChip(
-                    label: Text(type),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedOrderType = type;
-                      });
-                    },
-                    backgroundColor: AppConstants.surfaceColor,
-                    selectedColor: AppConstants.primaryColor.withOpacity(0.2),
-                    checkmarkColor: AppConstants.primaryColor,
-                    labelStyle: TextStyle(
-                      color: isSelected ? AppConstants.primaryColor : AppConstants.textPrimaryColor,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  );
-                }).toList(),
+                children:
+                    _availableOrderTypes.map((type) {
+                      final isSelected = _selectedOrderType == type;
+                      return FilterChip(
+                        label: Text(type),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedOrderType = type;
+                          });
+                        },
+                        backgroundColor: AppConstants.surfaceColor,
+                        selectedColor: AppConstants.primaryColor.withOpacity(
+                          0.2,
+                        ),
+                        checkmarkColor: AppConstants.primaryColor,
+                        labelStyle: TextStyle(
+                          color:
+                              isSelected
+                                  ? AppConstants.primaryColor
+                                  : AppConstants.textPrimaryColor,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      );
+                    }).toList(),
               ),
             ],
             // Show status only for admin/employee in edit mode (hide for customers)
             if (_isEditMode && _shouldShowOrderTypeSelection()) ...[
               const SizedBox(height: AppConstants.spacingM),
-              Text('Status', style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+              Text(
+                'Status',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: AppConstants.spacingS),
               DropdownButtonFormField<OrderStatus>(
                 value: _selectedStatus,
@@ -782,12 +906,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     vertical: AppConstants.spacingS,
                   ),
                 ),
-                items: OrderStatus.values
-                    .map((s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(s.toString().split('.').last),
-                        ))
-                    .toList(),
+                items:
+                    OrderStatus.values
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(s.toString().split('.').last),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (val) => setState(() => _selectedStatus = val),
               ),
             ],
@@ -814,7 +941,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 Text('Ornament Details', style: AppConstants.headingSmall),
                 IconButton(
                   onPressed: _addOrnamentDetail,
-                  icon: Icon(Icons.add_circle, color: AppConstants.primaryColor),
+                  icon: Icon(
+                    Icons.add_circle,
+                    color: AppConstants.primaryColor,
+                  ),
                 ),
               ],
             ),
@@ -871,27 +1001,21 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             ],
           ),
           const SizedBox(height: AppConstants.spacingM),
-          
+
           // Category Selection
           _buildCategoryDropdown(index, detail),
           const SizedBox(height: AppConstants.spacingM),
-          
+
           // Size and Unit Row
           Row(
             children: [
-              Expanded(
-                flex: 3,
-                child: _buildSizeDropdown(index, detail),
-              ),
+              Expanded(flex: 3, child: _buildSizeDropdown(index, detail)),
               const SizedBox(width: AppConstants.spacingM),
-              Expanded(
-                flex: 2,
-                child: _buildUnitChip(detail),
-              ),
+              Expanded(flex: 2, child: _buildUnitChip(detail)),
             ],
           ),
           const SizedBox(height: AppConstants.spacingM),
-          
+
           // Weight, Purity, Quantity Row
           Row(
             children: [
@@ -913,13 +1037,20 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   onTap: () {
                     // Auto-select all text when tapped for easy editing
                     Future.delayed(const Duration(milliseconds: 100), () {
-                      final controller = TextEditingController(text: detail['weight'].toString());
-                      controller.selection = TextSelection(baseOffset: 0, extentOffset: controller.text.length);
+                      final controller = TextEditingController(
+                        text: detail['weight'].toString(),
+                      );
+                      controller.selection = TextSelection(
+                        baseOffset: 0,
+                        extentOffset: controller.text.length,
+                      );
                     });
                   },
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['weight'] = double.tryParse(value) ?? 0.0;
-                  }),
+                  onChanged:
+                      (value) => setState(() {
+                        _ornamentDetails[index]['weight'] =
+                            double.tryParse(value) ?? 0.0;
+                      }),
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'Enter weight';
                     if (double.tryParse(value) == null) return 'Invalid';
@@ -940,17 +1071,29 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       vertical: AppConstants.spacingS,
                     ),
                   ),
-                  value: (detail['purity'] as String?)?.isNotEmpty == true ? detail['purity'] as String : null,
-                  items: _purityOptions
-                      .map((option) => DropdownMenuItem<String>(
-                            value: option,
-                            child: Text(option, style: const TextStyle(fontSize: 12)),
-                          ))
-                      .toList(),
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['purity'] = value ?? '';
-                  }),
-                  validator: (value) => (value == null || value.isEmpty) ? 'Select' : null,
+                  value:
+                      (detail['purity'] as String?)?.isNotEmpty == true
+                          ? detail['purity'] as String
+                          : null,
+                  items:
+                      _purityOptions
+                          .map(
+                            (option) => DropdownMenuItem<String>(
+                              value: option,
+                              child: Text(
+                                option,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                  onChanged:
+                      (value) => setState(() {
+                        _ornamentDetails[index]['purity'] = value ?? '';
+                      }),
+                  validator:
+                      (value) =>
+                          (value == null || value.isEmpty) ? 'Select' : null,
                 ),
               ),
               const SizedBox(width: AppConstants.spacingS),
@@ -968,9 +1111,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     ),
                   ),
                   keyboardType: TextInputType.number,
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['quantity'] = int.tryParse(value) ?? 1;
-                  }),
+                  onChanged:
+                      (value) => setState(() {
+                        _ornamentDetails[index]['quantity'] =
+                            int.tryParse(value) ?? 1;
+                      }),
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'Enter qty';
                     if (int.tryParse(value) == null) return 'Invalid';
@@ -981,7 +1126,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             ],
           ),
           const SizedBox(height: AppConstants.spacingM),
-          
+
           // Colorstone and Rhodium Row
           Row(
             children: [
@@ -997,16 +1142,27 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       vertical: AppConstants.spacingS,
                     ),
                   ),
-                  value: (detail['colorstone'] as String?)?.isNotEmpty == true ? detail['colorstone'] as String : 'Same as image',
-                  items: _colorstoneOptions
-                      .map((option) => DropdownMenuItem<String>(
-                            value: option,
-                            child: Text(option, style: const TextStyle(fontSize: 12)),
-                          ))
-                      .toList(),
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['colorstone'] = value ?? 'Same as image';
-                  }),
+                  value:
+                      (detail['colorstone'] as String?)?.isNotEmpty == true
+                          ? detail['colorstone'] as String
+                          : 'Same as image',
+                  items:
+                      _colorstoneOptions
+                          .map(
+                            (option) => DropdownMenuItem<String>(
+                              value: option,
+                              child: Text(
+                                option,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                  onChanged:
+                      (value) => setState(() {
+                        _ornamentDetails[index]['colorstone'] =
+                            value ?? 'Same as image';
+                      }),
                 ),
               ),
               const SizedBox(width: AppConstants.spacingS),
@@ -1022,22 +1178,33 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       vertical: AppConstants.spacingS,
                     ),
                   ),
-                  value: (detail['rhodium'] as String?)?.isNotEmpty == true ? detail['rhodium'] as String : 'Same as image',
-                  items: _rhodiumOptions
-                      .map((option) => DropdownMenuItem<String>(
-                            value: option,
-                            child: Text(option, style: const TextStyle(fontSize: 12)),
-                          ))
-                      .toList(),
-                  onChanged: (value) => setState(() {
-                    _ornamentDetails[index]['rhodium'] = value ?? 'Same as image';
-                  }),
+                  value:
+                      (detail['rhodium'] as String?)?.isNotEmpty == true
+                          ? detail['rhodium'] as String
+                          : 'Same as image',
+                  items:
+                      _rhodiumOptions
+                          .map(
+                            (option) => DropdownMenuItem<String>(
+                              value: option,
+                              child: Text(
+                                option,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                  onChanged:
+                      (value) => setState(() {
+                        _ornamentDetails[index]['rhodium'] =
+                            value ?? 'Same as image';
+                      }),
                 ),
               ),
             ],
           ),
           const SizedBox(height: AppConstants.spacingM),
-          
+
           // Dull Row
           DropdownButtonFormField<String>(
             decoration: InputDecoration(
@@ -1050,16 +1217,23 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 vertical: AppConstants.spacingS,
               ),
             ),
-            value: (detail['dull'] as String?)?.isNotEmpty == true ? detail['dull'] as String : 'Same as image',
-            items: _dullOptions
-                .map((option) => DropdownMenuItem<String>(
-                      value: option,
-                      child: Text(option),
-                    ))
-                .toList(),
-            onChanged: (value) => setState(() {
-              _ornamentDetails[index]['dull'] = value ?? 'Same as image';
-            }),
+            value:
+                (detail['dull'] as String?)?.isNotEmpty == true
+                    ? detail['dull'] as String
+                    : 'Same as image',
+            items:
+                _dullOptions
+                    .map(
+                      (option) => DropdownMenuItem<String>(
+                        value: option,
+                        child: Text(option),
+                      ),
+                    )
+                    .toList(),
+            onChanged:
+                (value) => setState(() {
+                  _ornamentDetails[index]['dull'] = value ?? 'Same as image';
+                }),
           ),
           const SizedBox(height: AppConstants.spacingM),
           TextFormField(
@@ -1074,9 +1248,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 vertical: AppConstants.spacingS,
               ),
             ),
-            onChanged: (value) => setState(() {
-              _ornamentDetails[index]['remarks'] = value;
-            }),
+            onChanged:
+                (value) => setState(() {
+                  _ornamentDetails[index]['remarks'] = value;
+                }),
           ),
           const SizedBox(height: AppConstants.spacingM),
           Align(
@@ -1085,12 +1260,18 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: AppConstants.spacingS,
               children: [
-                Text('Images for item ${index + 1}', style: AppConstants.bodyMedium),
+                Text(
+                  'Images for item ${index + 1}',
+                  style: AppConstants.bodyMedium,
+                ),
                 if (_isPickingImage)
                   const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppConstants.primaryColor),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppConstants.primaryColor,
+                    ),
                   ),
                 OutlinedButton.icon(
                   onPressed: () => _pickImagesForItem(index),
@@ -1108,18 +1289,28 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _existingOrnamentImageUrls[index].length,
-                separatorBuilder: (_, __) => const SizedBox(width: AppConstants.spacingS),
+                separatorBuilder:
+                    (_, __) => const SizedBox(width: AppConstants.spacingS),
                 itemBuilder: (context, imgIdx) {
                   final url = _existingOrnamentImageUrls[index][imgIdx];
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    child: Image.network(url, width: 90, height: 90, fit: BoxFit.cover,
-                        errorBuilder: (c, e, s) => Container(
-                              width: 90,
-                              height: 90,
-                              color: Colors.grey.shade100,
-                              child: Icon(Icons.broken_image, color: Colors.grey.shade400),
-                            )),
+                    child: Image.network(
+                      url,
+                      width: 90,
+                      height: 90,
+                      fit: BoxFit.cover,
+                      errorBuilder:
+                          (c, e, s) => Container(
+                            width: 90,
+                            height: 90,
+                            color: Colors.grey.shade100,
+                            child: Icon(
+                              Icons.broken_image,
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
+                    ),
                   );
                 },
               ),
@@ -1130,7 +1321,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _ornamentImages[index].length,
-                separatorBuilder: (_, __) => const SizedBox(width: AppConstants.spacingS),
+                separatorBuilder:
+                    (_, __) => const SizedBox(width: AppConstants.spacingS),
                 itemBuilder: (context, imgIdx) {
                   final file = _ornamentImages[index][imgIdx];
                   final bytes = file.bytes;
@@ -1138,18 +1330,38 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     clipBehavior: Clip.none,
                     children: [
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                        child: bytes != null ? Image.memory(bytes, width: 90, height: 90, fit: BoxFit.cover) : const SizedBox(width: 90, height: 90),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusS,
+                        ),
+                        child:
+                            bytes != null
+                                ? Image.memory(
+                                  bytes,
+                                  width: 90,
+                                  height: 90,
+                                  fit: BoxFit.cover,
+                                )
+                                : const SizedBox(width: 90, height: 90),
                       ),
                       Positioned(
                         right: -6,
                         top: -6,
                         child: InkWell(
-                          onTap: () => setState(() => _ornamentImages[index].removeAt(imgIdx)),
+                          onTap:
+                              () => setState(
+                                () => _ornamentImages[index].removeAt(imgIdx),
+                              ),
                           child: Container(
-                            decoration: BoxDecoration(color: AppConstants.errorColor, shape: BoxShape.circle),
+                            decoration: BoxDecoration(
+                              color: AppConstants.errorColor,
+                              shape: BoxShape.circle,
+                            ),
                             padding: const EdgeInsets.all(2),
-                            child: const Icon(Icons.close, size: 14, color: Colors.white),
+                            child: const Icon(
+                              Icons.close,
+                              size: 14,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -1159,9 +1371,16 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         child: GestureDetector(
                           onTap: () => _showImageEditorForItem(index, imgIdx),
                           child: Container(
-                            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                            decoration: const BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                            ),
                             padding: const EdgeInsets.all(2),
-                            child: const Icon(Icons.edit, size: 14, color: Colors.white),
+                            child: const Icon(
+                              Icons.edit,
+                              size: 14,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),

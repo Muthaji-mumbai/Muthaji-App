@@ -106,6 +106,39 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     }
   }
 
+  bool _isUrgent(Order order) {
+    final p = (order.orderPriority ?? '').toLowerCase().trim();
+    return p == 'urgent' || p.contains('urgent');
+  }
+
+  Widget _buildUrgentRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppConstants.errorColor,
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+      ),
+      child: const Text(
+        'URGENT',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8),
+      ),
+    );
+  }
+
+  Widget _buildPendingRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppConstants.warningColor,
+        borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomLeft: Radius.circular(8)),
+      ),
+      child: const Text(
+        'PENDING',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8),
+      ),
+    );
+  }
+
   void _applyFilters() {
     setState(() {
       _filteredOrders =
@@ -1011,97 +1044,77 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   Widget _buildOrderCard(Order order) {
     final isSelected = _selectedOrderIds.contains(order.id);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.shade200,
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-        border:
-            isSelected
-                ? Border.all(color: AppConstants.primaryColor, width: 2)
-                : null,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onLongPress: () => _toggleSelection(order.id, !isSelected),
-          child: ExpansionTile(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OrderDetailsScreen(order: order),
+                  ),
+                );
+              },
+              child: ExpansionTile(
             tilePadding: const EdgeInsets.symmetric(
               horizontal: 20,
               vertical: 8,
             ),
             childrenPadding: const EdgeInsets.all(20),
-            leading: Stack(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _getStatusColor(order.status).withOpacity(0.3),
-                      width: 2,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child:
-                        order.images.isNotEmpty
-                            ? Image.network(
-                              order.images.first,
-                              fit: BoxFit.cover,
-                              errorBuilder:
-                                  (context, error, stackTrace) => Container(
-                                    color: _getStatusColor(
-                                      order.status,
-                                    ).withOpacity(0.1),
-                                    child: Icon(
-                                      Icons.image_not_supported_rounded,
-                                      color: _getStatusColor(order.status),
-                                      size: 24,
-                                    ),
-                                  ),
-                            )
-                            : Container(
-                              color: _getStatusColor(
-                                order.status,
-                              ).withOpacity(0.1),
-                              child: Icon(
-                                Icons.shopping_bag_outlined,
-                                color: _getStatusColor(order.status),
-                                size: 24,
-                              ),
-                            ),
-                  ),
+            leading: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _getStatusColor(order.status).withOpacity(0.3),
+                  width: 2,
                 ),
-                if (isSelected)
-                  Positioned(
-                    top: -2,
-                    right: -2,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: AppConstants.primaryColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 12,
-                      ),
-                    ),
-                  ),
-              ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child:
+                    order.images.isNotEmpty
+                        ? Image.network(
+                          order.images.first,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (context, error, stackTrace) => Container(
+                                color: _getStatusColor(
+                                  order.status,
+                                ).withOpacity(0.1),
+                                child: Icon(
+                                  Icons.image_not_supported_rounded,
+                                  color: _getStatusColor(order.status),
+                                  size: 24,
+                                ),
+                              ),
+                        )
+                        : Container(
+                          color: _getStatusColor(order.status).withOpacity(0.1),
+                          child: Icon(
+                            Icons.shopping_bag_outlined,
+                            color: _getStatusColor(order.status),
+                            size: 24,
+                          ),
+                        ),
+              ),
             ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1415,8 +1428,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             ),
             children: [_buildExpandedContent(order)],
           ),
-        ),
-      ),
+        ),),),
+        if (order.status == OrderStatus.pending)
+          Positioned(top: 0, right: 0, child: _buildPendingRibbon()),
+        if (_isUrgent(order))
+          Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
+      ],
     );
   }
 

@@ -43,7 +43,8 @@ class OrnamentDetail {
     final rawName = json['name'];
     if (rawName is Map<String, dynamic>) {
       nameId = (rawName['_id'] ?? rawName['id'] ?? '').toString();
-      displayName = (rawName['categoryname'] ?? rawName['name'] ?? '').toString();
+      displayName =
+          (rawName['categoryname'] ?? rawName['name'] ?? '').toString();
     } else if (rawName != null) {
       nameId = rawName.toString();
       displayName = rawName.toString();
@@ -62,9 +63,10 @@ class OrnamentDetail {
       material: json['material'] ?? '',
       weight: (json['weight'] ?? 0).toDouble(),
       purity: json['purity'] ?? '',
-      quantity: (json['quantity'] ?? 0) is int
-          ? (json['quantity'] ?? 0)
-          : int.tryParse((json['quantity'] ?? '0').toString()) ?? 0,
+      quantity:
+          (json['quantity'] ?? 0) is int
+              ? (json['quantity'] ?? 0)
+              : int.tryParse((json['quantity'] ?? '0').toString()) ?? 0,
       remarks: json['remarks'],
       images: itemImages,
       size: json['size']?.toString(),
@@ -110,8 +112,10 @@ class Order {
   final String? orderType; // server may set it to "Single"
   final String? orderNo; // orderno (new)
   final DateTime? orderDate;
+  final String? orderPriority; // "Regular" | "Urgent"
   final List<OrnamentDetail> ornamentDetails;
-  final List<String> images; // kept for backward compatibility if order-level images exist
+  final List<String>
+  images; // kept for backward compatibility if order-level images exist
   final List<String> pdfs;
 
   Order({
@@ -128,6 +132,7 @@ class Order {
     this.orderType,
     this.orderNo,
     this.orderDate,
+    this.orderPriority,
     this.ornamentDetails = const [],
     this.images = const [],
     this.pdfs = const [],
@@ -155,9 +160,10 @@ class Order {
     // Parse ornament details
     List<OrnamentDetail> ornamentDetails = [];
     if (json['ornamentdetails'] != null) {
-      ornamentDetails = (json['ornamentdetails'] as List)
-          .map((detail) => OrnamentDetail.fromJson(detail))
-          .toList();
+      ornamentDetails =
+          (json['ornamentdetails'] as List)
+              .map((detail) => OrnamentDetail.fromJson(detail))
+              .toList();
     }
 
     // Parse images and PDFs (older responses may have order-level images)
@@ -188,15 +194,19 @@ class Order {
       description: json['description'] ?? 'Order',
       amount: (json['amount'] ?? 0).toDouble(),
       status: _parseStatus(json['status']),
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      createdAt:
+          json['createdAt'] != null
+              ? DateTime.parse(json['createdAt'])
+              : DateTime.now(),
+      updatedAt:
+          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
       notes: json['notes'],
       assignedEmployeeId: json['assignedEmployeeId'],
       orderType: json['ordertype'],
       orderNo: json['orderno']?.toString(),
-      orderDate: json['orderdate'] != null ? DateTime.parse(json['orderdate']) : null,
+      orderDate:
+          json['orderdate'] != null ? DateTime.parse(json['orderdate']) : null,
+      orderPriority: (json['orderpriority'] ?? json['priority'])?.toString(),
       ornamentDetails: ornamentDetails,
       images: images,
       pdfs: pdfs,
@@ -242,6 +252,7 @@ class Order {
       'orderType': orderType,
       'orderNo': orderNo,
       'orderDate': orderDate?.toIso8601String(),
+      if (orderPriority != null) 'orderpriority': orderPriority,
       'ornamentDetails': ornamentDetails.map((d) => d.toJson()).toList(),
       'images': images,
       'pdfs': pdfs,
@@ -262,6 +273,7 @@ class Order {
     String? orderType,
     String? orderNo,
     DateTime? orderDate,
+    String? orderPriority,
     List<OrnamentDetail>? ornamentDetails,
     List<String>? images,
     List<String>? pdfs,
@@ -280,6 +292,7 @@ class Order {
       orderType: orderType ?? this.orderType,
       orderNo: orderNo ?? this.orderNo,
       orderDate: orderDate ?? this.orderDate,
+      orderPriority: orderPriority ?? this.orderPriority,
       ornamentDetails: ornamentDetails ?? this.ornamentDetails,
       images: images ?? this.images,
       pdfs: pdfs ?? this.pdfs,

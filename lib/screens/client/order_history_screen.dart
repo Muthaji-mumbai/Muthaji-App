@@ -17,7 +17,8 @@ class OrderHistoryScreen extends StatefulWidget {
   State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
 }
 
-class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTickerProviderStateMixin {
+class _OrderHistoryScreenState extends State<OrderHistoryScreen>
+    with SingleTickerProviderStateMixin {
   List<Order> _allOrders = [];
   List<Order> _filteredOrders = [];
   bool _isLoading = true;
@@ -26,6 +27,35 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
   DateTime? _toDate;
   final Set<int> _expanded = <int>{};
   late TabController _tabController;
+
+  bool _isUrgent(Order order) {
+    final p = (order.orderPriority ?? '').toLowerCase().trim();
+    return p == 'urgent' || p.contains('urgent');
+  }
+
+  Widget _buildUrgentRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingS,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: AppConstants.errorColor,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(8),
+          bottomRight: Radius.circular(8),
+        ),
+      ),
+      child: const Text(
+        'URGENT',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -42,10 +72,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
         children: [
           Icon(icon, size: 20),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: AppConstants.bodySmall.copyWith(fontSize: 7),
-          ),
+          Text(label, style: AppConstants.bodySmall.copyWith(fontSize: 7)),
         ],
       ),
     );
@@ -123,44 +150,57 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
   }
 
   void _applyFilters() {
-    _filteredOrders = _allOrders.where((order) {
-      // Apply tab filter
-      switch (_tabController.index) {
-        case 1: // Pending
-          if (order.status != OrderStatus.pending) return false;
-          break;
-        case 2: // In Progress
-          if (order.status != OrderStatus.inProgress) return false;
-          break;
-        case 3: // Completed
-          if (order.status != OrderStatus.completed) return false;
-          break;
-        case 4: // Cancelled
-          if (order.status != OrderStatus.cancelled) return false;
-          break;
-      }
+    _filteredOrders =
+        _allOrders.where((order) {
+          // Apply tab filter
+          switch (_tabController.index) {
+            case 1: // Pending
+              if (order.status != OrderStatus.pending) return false;
+              break;
+            case 2: // In Progress
+              if (order.status != OrderStatus.inProgress) return false;
+              break;
+            case 3: // Completed
+              if (order.status != OrderStatus.completed) return false;
+              break;
+            case 4: // Cancelled
+              if (order.status != OrderStatus.cancelled) return false;
+              break;
+          }
 
-      // Apply search filter
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
-        return order.description.toLowerCase().contains(query) ||
-            order.id.toLowerCase().contains(query) ||
-            (order.orderNo?.toLowerCase().contains(query) ?? false) ||
-            order.statusText.toLowerCase().contains(query);
-      }
+          // Apply search filter
+          if (_searchQuery.isNotEmpty) {
+            final query = _searchQuery.toLowerCase();
+            return order.description.toLowerCase().contains(query) ||
+                order.id.toLowerCase().contains(query) ||
+                (order.orderNo?.toLowerCase().contains(query) ?? false) ||
+                order.statusText.toLowerCase().contains(query);
+          }
 
-      // Apply date range filter (by createdAt)
-      if (_fromDate != null) {
-        final from = DateTime(_fromDate!.year, _fromDate!.month, _fromDate!.day);
-        if (order.createdAt.isBefore(from)) return false;
-      }
-      if (_toDate != null) {
-        final to = DateTime(_toDate!.year, _toDate!.month, _toDate!.day, 23, 59, 59, 999);
-        if (order.createdAt.isAfter(to)) return false;
-      }
+          // Apply date range filter (by createdAt)
+          if (_fromDate != null) {
+            final from = DateTime(
+              _fromDate!.year,
+              _fromDate!.month,
+              _fromDate!.day,
+            );
+            if (order.createdAt.isBefore(from)) return false;
+          }
+          if (_toDate != null) {
+            final to = DateTime(
+              _toDate!.year,
+              _toDate!.month,
+              _toDate!.day,
+              23,
+              59,
+              59,
+              999,
+            );
+            if (order.createdAt.isAfter(to)) return false;
+          }
 
-      return true;
-    }).toList();
+          return true;
+        }).toList();
 
     // Sort by creation date (newest first)
     _filteredOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -186,23 +226,24 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
 
           // Orders List
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredOrders.isEmpty
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _filteredOrders.isEmpty
                     ? _buildEmptyState()
                     : RefreshIndicator(
-                        onRefresh: () async => _loadOrders(),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(AppConstants.spacingM),
-                          itemCount: _filteredOrders.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index == 0) return _buildTableHeader();
-                            final rowIndex = index - 1;
-                            final order = _filteredOrders[rowIndex];
-                            return _buildOrderTile(rowIndex, order);
-                          },
-                        ),
+                      onRefresh: () async => _loadOrders(),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(AppConstants.spacingM),
+                        itemCount: _filteredOrders.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == 0) return _buildTableHeader();
+                          final rowIndex = index - 1;
+                          final order = _filteredOrders[rowIndex];
+                          return _buildOrderTile(rowIndex, order);
+                        },
                       ),
+                    ),
           ),
         ],
       ),
@@ -307,20 +348,14 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
               Expanded(
                 child: GestureDetector(
                   onTap: () => _pickDate(isFrom: true),
-                  child: _buildDateField(
-                    label: 'From Date',
-                    date: _fromDate,
-                  ),
+                  child: _buildDateField(label: 'From Date', date: _fromDate),
                 ),
               ),
               const SizedBox(width: AppConstants.spacingM),
               Expanded(
                 child: GestureDetector(
                   onTap: () => _pickDate(isFrom: false),
-                  child: _buildDateField(
-                    label: 'To Date',
-                    date: _toDate,
-                  ),
+                  child: _buildDateField(label: 'To Date', date: _toDate),
                 ),
               ),
               const SizedBox(width: AppConstants.spacingM),
@@ -334,7 +369,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
                 },
                 icon: const Icon(Icons.clear),
                 label: const Text('Clear'),
-              )
+              ),
             ],
           ),
         ],
@@ -343,7 +378,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
   }
 
   Future<void> _pickDate({required bool isFrom}) async {
-    final initial = isFrom ? (_fromDate ?? DateTime.now()) : (_toDate ?? DateTime.now());
+    final initial =
+        isFrom ? (_fromDate ?? DateTime.now()) : (_toDate ?? DateTime.now());
     final first = DateTime(2000);
     final last = DateTime(2100);
     final picked = await showDatePicker(
@@ -390,13 +426,21 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
           ),
           Expanded(
             flex: 4,
-            child: Text('Order No',
-                style: AppConstants.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+            child: Text(
+              'Order No',
+              style: AppConstants.bodySmall.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
           Expanded(
             flex: 3,
-            child: Text('Order date',
-                style: AppConstants.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+            child: Text(
+              'Order date',
+              style: AppConstants.bodySmall.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -451,22 +495,26 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
         }
         // Left swipe to Cancel
         else if (direction == DismissDirection.endToStart) {
-          final confirm = await showDialog<bool>(
+          final confirm =
+              await showDialog<bool>(
                 context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Cancel Order?'),
-                  content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('No'),
+                builder:
+                    (ctx) => AlertDialog(
+                      title: const Text('Cancel Order?'),
+                      content: const Text(
+                        'Are you sure you want to cancel this order? This action cannot be undone.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('No'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Yes'),
+                        ),
+                      ],
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Yes'),
-                    ),
-                  ],
-                ),
               ) ??
               false;
           if (!confirm) return false;
@@ -503,45 +551,48 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
         return false; // Default: never dismiss via swipe
       },
       // onDismissed no longer used since we don't actually dismiss items
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
-        decoration: BoxDecoration(
-          color: AppConstants.surfaceColor,
-          borderRadius: BorderRadius.circular(AppConstants.radiusM),
-          boxShadow: AppConstants.cardShadow,
-        ),
-        child: Theme(
-          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            initiallyExpanded: isOpen,
-            onExpansionChanged: (open) {
-              setState(() {
-                if (open) {
-                  _expanded.add(index);
-                } else {
-                  _expanded.remove(index);
-                }
-              });
-            },
-            tilePadding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.spacingM,
-              vertical: AppConstants.spacingS,
+      child: Stack(
+        children: [
+          Container(
+            margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
+            decoration: BoxDecoration(
+              color: AppConstants.surfaceColor,
+              borderRadius: BorderRadius.circular(AppConstants.radiusM),
+              boxShadow: AppConstants.cardShadow,
             ),
-            trailing: isOpen
-                ? _buildStatusChip(order)
-                : _buildStatusChip(order),
-            title: _buildOrderSummary(index, order),
-            childrenPadding: const EdgeInsets.all(AppConstants.spacingM),
-            children: [
-              _buildOrderDetails(order),
-            ],
+            child: Theme(
+              data: Theme.of(
+                context,
+              ).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                initiallyExpanded: isOpen,
+                onExpansionChanged: (open) {
+                  setState(() {
+                    if (open) {
+                      _expanded.add(index);
+                    } else {
+                      _expanded.remove(index);
+                    }
+                  });
+                },
+                tilePadding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingM,
+                  vertical: AppConstants.spacingS,
+                ),
+                trailing:
+                    isOpen ? _buildStatusChip(order) : _buildStatusChip(order),
+                title: _buildOrderSummary(index, order),
+                childrenPadding: const EdgeInsets.all(AppConstants.spacingM),
+                children: [_buildOrderDetails(order)],
+              ),
+            ),
           ),
-        ),
+          if (_isUrgent(order))
+            Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
+        ],
       ),
     );
   }
-
-  
 
   Widget _buildOrderSummary(int index, Order order) {
     return Column(
@@ -551,15 +602,19 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
           children: [
             SizedBox(
               width: 48,
-              child: Text('${index + 1}',
-                  style: AppConstants.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                  )),
+              child: Text(
+                '${index + 1}',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
             Expanded(
               flex: 4,
               child: Text(
-                order.orderNo?.isNotEmpty == true ? order.orderNo! : order.id.substring(0, 8),
+                order.orderNo?.isNotEmpty == true
+                    ? order.orderNo!
+                    : order.id.substring(0, 8),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppConstants.bodyMedium.copyWith(
@@ -597,25 +652,32 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             Tooltip(
-              message: order.status == OrderStatus.pending
-                  ? 'Edit order'
-                  : 'Only pending orders can be edited',
+              message:
+                  order.status == OrderStatus.pending
+                      ? 'Edit order'
+                      : 'Only pending orders can be edited',
               child: IconButton(
-                icon: Icon(Icons.edit,
-                    color: order.status == OrderStatus.pending
-                        ? AppConstants.primaryColor
-                        : AppConstants.textSecondaryColor.withOpacity(0.5)),
-                onPressed: order.status == OrderStatus.pending
-                    ? () async {
-                        final updated = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CreateOrderScreen(orderToEdit: order),
-                          ),
-                        );
-                        if (updated == true) _loadOrders();
-                      }
-                    : null,
+                icon: Icon(
+                  Icons.edit,
+                  color:
+                      order.status == OrderStatus.pending
+                          ? AppConstants.primaryColor
+                          : AppConstants.textSecondaryColor.withOpacity(0.5),
+                ),
+                onPressed:
+                    order.status == OrderStatus.pending
+                        ? () async {
+                          final updated = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) =>
+                                      CreateOrderScreen(orderToEdit: order),
+                            ),
+                          );
+                          if (updated == true) _loadOrders();
+                        }
+                        : null,
               ),
             ),
             const SizedBox(width: AppConstants.spacingXS),
@@ -628,10 +690,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
                   final created = await Navigator.push<bool>(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => CreateOrderScreen(
-                        orderToEdit: order,
-                        cloneFromOrder: true,
-                      ),
+                      builder:
+                          (context) => CreateOrderScreen(
+                            orderToEdit: order,
+                            cloneFromOrder: true,
+                          ),
                     ),
                   );
                   if (created == true) {
@@ -646,16 +709,26 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
               child: IconButton(
                 icon: Icon(Icons.cancel, color: AppConstants.errorColor),
                 onPressed: () async {
-                  final confirm = await showDialog<bool>(
+                  final confirm =
+                      await showDialog<bool>(
                         context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Cancel Order?'),
-                          content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
-                            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes')),
-                          ],
-                        ),
+                        builder:
+                            (ctx) => AlertDialog(
+                              title: const Text('Cancel Order?'),
+                              content: const Text(
+                                'Are you sure you want to cancel this order? This action cannot be undone.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('No'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('Yes'),
+                                ),
+                              ],
+                            ),
                       ) ??
                       false;
                   if (!confirm) return;
@@ -696,13 +769,19 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Created: ${_formatDate(order.createdAt)}',
-                style: AppConstants.bodySmall.copyWith(
-                    color: AppConstants.textSecondaryColor)),
+            Text(
+              'Created: ${_formatDate(order.createdAt)}',
+              style: AppConstants.bodySmall.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
             if (order.updatedAt != null)
-              Text('Updated: ${_formatDate(order.updatedAt!)}',
-                  style: AppConstants.bodySmall
-                      .copyWith(color: AppConstants.textSecondaryColor)),
+              Text(
+                'Updated: ${_formatDate(order.updatedAt!)}',
+                style: AppConstants.bodySmall.copyWith(
+                  color: AppConstants.textSecondaryColor,
+                ),
+              ),
           ],
         ),
 
@@ -710,72 +789,95 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
         if (order.orderDate != null)
           Padding(
             padding: const EdgeInsets.only(top: AppConstants.spacingXS),
-            child: Text('Order Date: ${_formatDate(order.orderDate!)}',
-                style: AppConstants.bodySmall),
+            child: Text(
+              'Order Date: ${_formatDate(order.orderDate!)}',
+              style: AppConstants.bodySmall,
+            ),
           ),
 
         // Ornament details
         if (order.ornamentDetails.isNotEmpty) ...[
           const SizedBox(height: AppConstants.spacingM),
-          Text('Ornament Details',
-              style: AppConstants.bodyMedium.copyWith(
-                fontWeight: FontWeight.w700,
-              )),
+          Text(
+            'Ornament Details',
+            style: AppConstants.bodyMedium.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: AppConstants.spacingS),
-          ...order.ornamentDetails.map((d) => Padding(
-                padding: const EdgeInsets.only(bottom: AppConstants.spacingS),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(d.name, style: AppConstants.bodyMedium),
-                        ),
-                        Text('${d.purity}',
-                            style: AppConstants.bodySmall.copyWith(
-                                color: AppConstants.textSecondaryColor)),
-                        const SizedBox(width: AppConstants.spacingM),
-                        Text('${d.weight}${d.unit ?? 'g'} x ${d.quantity}${d.size != null ? ' (${d.size})' : ''}',
-                            style: AppConstants.bodySmall.copyWith(
-                                color: AppConstants.textSecondaryColor)),
-                      ],
-                    ),
-                    if (d.colorstone != null || d.rhodium != null || d.dull != null) ...[
-                      const SizedBox(height: AppConstants.spacingXS),
+          ...order.ornamentDetails.map(
+            (d) => Padding(
+              padding: const EdgeInsets.only(bottom: AppConstants.spacingS),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(d.name, style: AppConstants.bodyMedium),
+                      ),
                       Text(
-                        [
-                          if (d.colorstone != null) 'Colorstone: ${d.colorstone}',
-                          if (d.rhodium != null) 'Rhodium: ${d.rhodium}',
-                          if (d.dull != null) 'Dull: ${d.dull}',
-                        ].join(' • '),
+                        '${d.purity}',
+                        style: AppConstants.bodySmall.copyWith(
+                          color: AppConstants.textSecondaryColor,
+                        ),
+                      ),
+                      const SizedBox(width: AppConstants.spacingM),
+                      Text(
+                        '${d.weight}${d.unit ?? 'g'} x ${d.quantity}${d.size != null ? ' (${d.size})' : ''}',
                         style: AppConstants.bodySmall.copyWith(
                           color: AppConstants.textSecondaryColor,
                         ),
                       ),
                     ],
-                    if (d.remarks != null && d.remarks!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppConstants.spacingXS),
-                        child: Text('Remarks: ${d.remarks!}', style: AppConstants.bodySmall),
+                  ),
+                  if (d.colorstone != null ||
+                      d.rhodium != null ||
+                      d.dull != null) ...[
+                    const SizedBox(height: AppConstants.spacingXS),
+                    Text(
+                      [
+                        if (d.colorstone != null) 'Colorstone: ${d.colorstone}',
+                        if (d.rhodium != null) 'Rhodium: ${d.rhodium}',
+                        if (d.dull != null) 'Dull: ${d.dull}',
+                      ].join(' • '),
+                      style: AppConstants.bodySmall.copyWith(
+                        color: AppConstants.textSecondaryColor,
                       ),
-                    if (d.images.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppConstants.spacingXS),
-                        child: _buildImageThumbnails(d.images),
-                      ),
+                    ),
                   ],
-                ),
-              )),
+                  if (d.remarks != null && d.remarks!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        top: AppConstants.spacingXS,
+                      ),
+                      child: Text(
+                        'Remarks: ${d.remarks!}',
+                        style: AppConstants.bodySmall,
+                      ),
+                    ),
+                  if (d.images.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        top: AppConstants.spacingXS,
+                      ),
+                      child: _buildImageThumbnails(d.images),
+                    ),
+                ],
+              ),
+            ),
+          ),
         ],
 
         // Notes
         if (order.notes != null && order.notes!.isNotEmpty) ...[
           const SizedBox(height: AppConstants.spacingM),
-          Text('Notes',
-              style: AppConstants.bodyMedium.copyWith(
-                fontWeight: FontWeight.w700,
-              )),
+          Text(
+            'Notes',
+            style: AppConstants.bodyMedium.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: AppConstants.spacingXS),
           Text(order.notes!, style: AppConstants.bodySmall),
         ],
@@ -802,12 +904,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
         Padding(
           padding: const EdgeInsets.only(top: AppConstants.spacingM),
           child: ElevatedButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PDFViewerScreen(order: order),
-              ),
-            ),
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PDFViewerScreen(order: order),
+                  ),
+                ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppConstants.primaryColor,
               foregroundColor: Colors.white,
@@ -820,12 +923,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
         Padding(
           padding: const EdgeInsets.only(top: AppConstants.spacingM),
           child: ElevatedButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => OrderImageGenerator(order: order),
-              ),
-            ),
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OrderImageGenerator(order: order),
+                  ),
+                ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppConstants.primaryColor,
               foregroundColor: Colors.white,
@@ -953,11 +1057,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
                 child: Image.network(
                   url,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stack) => Container(
-                    color: AppConstants.backgroundColor,
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.broken_image),
-                  ),
+                  errorBuilder:
+                      (context, error, stack) => Container(
+                        color: AppConstants.backgroundColor,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.broken_image),
+                      ),
                 ),
               ),
             ),
@@ -970,52 +1075,55 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
   void _showImagePreview(String url) {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        insetPadding: const EdgeInsets.all(16),
-        child: Stack(
-          children: [
-            InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 4,
-              child: AspectRatio(
-                aspectRatio: 1,
-                child: Image.network(
-                  url,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stack) => SizedBox(
-                    height: 300,
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.broken_image, size: 40),
-                          SizedBox(height: 8),
-                          Text('Failed to load image'),
-                        ],
-                      ),
+      builder:
+          (context) => Dialog(
+            insetPadding: const EdgeInsets.all(16),
+            child: Stack(
+              children: [
+                InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4,
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: Image.network(
+                      url,
+                      fit: BoxFit.contain,
+                      errorBuilder:
+                          (context, error, stack) => SizedBox(
+                            height: 300,
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.broken_image, size: 40),
+                                  SizedBox(height: 8),
+                                  Text('Failed to load image'),
+                                ],
+                              ),
+                            ),
+                          ),
                     ),
                   ),
                 ),
-              ),
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+              ],
             ),
-            Positioned(
-              right: 8,
-              top: 8,
-              child: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
   Widget _buildDateField({required String label, DateTime? date}) {
-    final text = date == null
-        ? label
-        : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    final text =
+        date == null
+            ? label
+            : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.spacingM,
@@ -1023,7 +1131,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppConstants.radiusS),
-        border: Border.all(color: AppConstants.textSecondaryColor.withOpacity(0.25)),
+        border: Border.all(
+          color: AppConstants.textSecondaryColor.withOpacity(0.25),
+        ),
       ),
       child: Row(
         children: [
@@ -1033,9 +1143,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
             child: Text(
               text,
               style: AppConstants.bodySmall.copyWith(
-                color: date == null
-                    ? AppConstants.textSecondaryColor
-                    : AppConstants.textPrimaryColor,
+                color:
+                    date == null
+                        ? AppConstants.textSecondaryColor
+                        : AppConstants.textPrimaryColor,
               ),
             ),
           ),

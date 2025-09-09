@@ -1,4 +1,4 @@
-  import 'dart:convert';
+import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
@@ -40,12 +40,15 @@ class OrderService {
       // Diagnostics: count and sample IDs
       developer.log('Total orders fetched: ${allOrders.length}');
       if (allOrders.isNotEmpty) {
-        developer.log('First order clientId: ${allOrders.first.clientId}, current clientId: $clientId');
+        developer.log(
+          'First order clientId: ${allOrders.first.clientId}, current clientId: $clientId',
+        );
       }
       final normalizedClientId = clientId.trim();
-      final result = allOrders
-          .where((order) => (order.clientId.trim()) == normalizedClientId)
-          .toList();
+      final result =
+          allOrders
+              .where((order) => (order.clientId.trim()) == normalizedClientId)
+              .toList();
       developer.log('Orders after client filter: ${result.length}');
       return result;
     } catch (e) {
@@ -94,10 +97,12 @@ class OrderService {
     String? notes,
     DateTime? orderDate,
     String? orderType,
+    String? orderpriority, // "Regular" | "Urgent"
     required List<Map<String, dynamic>> ornamentDetails,
     List<List<PlatformFile>>? ornamentImages, // per-ornament images group
     String? token,
   }) async {
+   
     try {
       // Prepare the request fields
       final fields = <String, String>{
@@ -106,7 +111,9 @@ class OrderService {
         if (amount != null) 'amount': amount.toString(),
         if (notes != null) 'notes': notes,
         'ordertype': orderType ?? 'Single',
-        'orderdate': (orderDate ?? DateTime.now()).toIso8601String().split('T').first,
+        'orderdate':
+            (orderDate ?? DateTime.now()).toIso8601String().split('T').first,
+        'orderpriority': ((orderpriority ?? 'Regular')),
         // API expects camelCase key per screenshot
         'ornamentDetails': jsonEncode(ornamentDetails),
       };
@@ -132,18 +139,19 @@ class OrderService {
       }
 
       // Use multipart request when any images are present, else regular POST
-      final response = (multipartFiles != null && multipartFiles.isNotEmpty)
-          ? await ApiService.postMultipart(
-              AppConstants.ordersEndpoint,
-              fields: fields,
-              files: multipartFiles,
-              token: token,
-            )
-          : await ApiService.post(
-              AppConstants.ordersEndpoint,
-              body: fields,
-              token: token,
-            );
+      final response =
+          (multipartFiles != null && multipartFiles.isNotEmpty)
+              ? await ApiService.postMultipart(
+                AppConstants.ordersEndpoint,
+                fields: fields,
+                files: multipartFiles,
+                token: token,
+              )
+              : await ApiService.post(
+                AppConstants.ordersEndpoint,
+                body: fields,
+                token: token,
+              );
 
       if (response['success'] == true && response['data'] != null) {
         return Order.fromJson(response['data']);
