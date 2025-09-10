@@ -1448,23 +1448,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Order Details Grid
-          _buildDetailSection('Order Information', [
-            _buildDetailItem('Order ID', order.id, Icons.tag_rounded),
-            if (order.orderType != null)
-              _buildDetailItem(
-                'Type',
-                order.orderType!,
-                Icons.category_outlined,
-              ),
-            if (order.orderDate != null)
-              _buildDetailItem(
-                'Order Date',
-                _formatDate(order.orderDate!),
-                Icons.calendar_today_outlined,
-              ),
-            if (order.notes != null && order.notes!.isNotEmpty)
-              _buildDetailItem('Notes', order.notes!, Icons.note_outlined),
-          ]),
+         
 
           // Ornament Details (with images under each detail)
           if (order.ornamentDetails.isNotEmpty) ...[
@@ -1619,12 +1603,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           ],
 
           // Images
-          if (order.images.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            _buildDetailSection('Total Images (${order.images.length})', []),
-            const SizedBox(height: 12),
-            
-          ],
+          
         ],
       ),
     );
