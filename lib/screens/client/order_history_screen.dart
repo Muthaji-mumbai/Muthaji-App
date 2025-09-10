@@ -33,6 +33,76 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     return p == 'urgent' || p.contains('urgent');
   }
 
+  bool _isPending(Order order) {
+    return order.status == OrderStatus.pending;
+  }
+
+  bool _isDue(Order order) {
+    if (!_isPending(order) || order.orderDate == null) return false;
+    final now = DateTime.now();
+    final days = now.difference(order.orderDate!).inDays;
+    return days >= 7 && days < 10;
+  }
+
+  bool _isDelay(Order order) {
+    if (!_isPending(order) || order.orderDate == null) return false;
+    final now = DateTime.now();
+    final days = now.difference(order.orderDate!).inDays;
+    return days >= 10;
+  }
+
+  Widget _buildDueRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFFA000),
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(8),
+          bottomLeft: Radius.circular(8),
+        ),
+      ),
+      child: const Text(
+        'DUE',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDelayRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppConstants.errorColor,
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(8),
+          bottomLeft: Radius.circular(8),
+        ),
+      ),
+      child: const Text(
+        'DELAY',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
+  String? _getFirstImageUrl(Order order) {
+    // Prefer per-ornament images
+    for (final d in order.ornamentDetails) {
+      if (d.images.isNotEmpty) return d.images.first;
+    }
+    // Fallback to order-level images
+    if (order.images.isNotEmpty) return order.images.first;
+    return null;
+  }
+
   Widget _buildUrgentRibbon() {
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -225,7 +295,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                         padding: const EdgeInsets.all(AppConstants.spacingM),
                         itemCount: _filteredOrders.length + 1,
                         itemBuilder: (context, index) {
-                          if (index == 0) return _buildTableHeader();
+                          if (index == 0) return const SizedBox.shrink();
                           final rowIndex = index - 1;
                           final order = _filteredOrders[rowIndex];
                           return _buildOrderTile(rowIndex, order);
@@ -395,45 +465,45 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   }
 
   // Header row for the table-like layout
-  Widget _buildTableHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.spacingM,
-        vertical: AppConstants.spacingS,
-      ),
-      decoration: BoxDecoration(
-        color: AppConstants.surfaceColor,
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
-        boxShadow: AppConstants.cardShadow,
-      ),
-      child: Row(
-        children: [
-          const SizedBox(
-            width: 48,
-            child: Text('Sl No', style: TextStyle(fontWeight: FontWeight.w700)),
-          ),
-          Expanded(
-            flex: 4,
-            child: Text(
-              'Order No',
-              style: AppConstants.bodySmall.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              'Order date',
-              style: AppConstants.bodySmall.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildTableHeader() {
+  //   return Container(
+  //     padding: const EdgeInsets.symmetric(
+  //       horizontal: AppConstants.spacingM,
+  //       vertical: AppConstants.spacingS,
+  //     ),
+  //     decoration: BoxDecoration(
+  //       color: AppConstants.surfaceColor,
+  //       borderRadius: BorderRadius.circular(AppConstants.radiusM),
+  //       boxShadow: AppConstants.cardShadow,
+  //     ),
+  //     child: Row(
+  //       children: [
+  //         const SizedBox(
+  //           width: 48,
+  //           child: Text('Image', style: TextStyle(fontWeight: FontWeight.w700)),
+  //         ),
+  //         Expanded(
+  //           flex: 4,
+  //           child: Text(
+  //             'Order No',
+  //             style: AppConstants.bodySmall.copyWith(
+  //               fontWeight: FontWeight.w700,
+  //             ),
+  //           ),
+  //         ),
+  //         Expanded(
+  //           flex: 3,
+  //           child: Text(
+  //             'Order date',
+  //             style: AppConstants.bodySmall.copyWith(
+  //               fontWeight: FontWeight.w700,
+  //             ),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // Collapsible row with summary and expandable details
   Widget _buildOrderTile(int index, Order order) {
@@ -577,6 +647,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           ),
           if (_isUrgent(order))
             Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
+          // Show Delay over Due when both conditions could be true
+          if (_isDelay(order))
+            Positioned(top: 0, right: 0, child: _buildDelayRibbon())
+          else if (_isDue(order))
+            Positioned(top: 0, right: 0, child: _buildDueRibbon()),
         ],
       ),
     );
@@ -590,13 +665,47 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           children: [
             SizedBox(
               width: 48,
-              child: Text(
-                '${index + 1}',
-                style: AppConstants.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+              height: 48,
+              child: Builder(
+                builder: (context) {
+                  final url = _getFirstImageUrl(order);
+                  if (url == null || url.isEmpty) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey.shade400,
+                        size: 20,
+                      ),
+                    );
+                  }
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      url,
+                      width: 48,
+                      height: 48,
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, e, s) => Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.grey.shade400,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
+            const SizedBox(width: AppConstants.spacingM),
             Expanded(
               flex: 4,
               child: Text(
@@ -812,7 +921,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                       ),
                       const SizedBox(width: AppConstants.spacingM),
                       Text(
-                        '${d.weight}${d.unit ?? 'g'} x ${d.quantity}${d.size != null ? ' (${d.size})' : ''}',
+                        'weight: ${d.weight} unit: ${d.unit ?? ' '} Qty: ${d.quantity}${d.size != null ? ' Size: (${d.size})' : ''}',
                         style: AppConstants.bodySmall.copyWith(
                           color: AppConstants.textSecondaryColor,
                         ),
