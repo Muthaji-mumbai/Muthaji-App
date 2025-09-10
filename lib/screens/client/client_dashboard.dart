@@ -499,6 +499,26 @@ class _ClientDashboardState extends State<ClientDashboard>
     );
   }
 
+  String? _getFirstImageUrl(Order order) {
+    // Prefer per-ornament images
+    for (final d in order.ornamentDetails) {
+      if (d.images.isNotEmpty) return d.images.first;
+    }
+    // Fallback to order-level images
+    if (order.images.isNotEmpty) return order.images.first;
+    return null;
+  }
+
+  String _formatFriendlyDate(DateTime date) {
+    final now = DateTime.now();
+    final d = DateTime(date.year, date.month, date.day);
+    final today = DateTime(now.year, now.month, now.day);
+    final diff = d.difference(today).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == -1) return 'Yesterday';
+    return _formatDate(date);
+  }
+
   Widget _buildRecentOrderRow(Order order, bool isExpanded) {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingL),
@@ -514,77 +534,73 @@ class _ClientDashboardState extends State<ClientDashboard>
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (order.ornamentDetails.any((d) => d.images.isNotEmpty))
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      right: AppConstants.spacingM,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                      child: SizedBox(
-                        width: 40,
-                        height: 40,
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Builder(
+                    builder: (context) {
+                      final url = _getFirstImageUrl(order);
+                      if (url == null || url.isEmpty) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: Colors.grey.shade400,
+                            size: 20,
+                          ),
+                        );
+                      }
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
                         child: Image.network(
-                          order.ornamentDetails
-                              .firstWhere((d) => d.images.isNotEmpty)
-                              .images
-                              .first,
+                          url,
+                          width: 48,
+                          height: 48,
                           fit: BoxFit.cover,
                           errorBuilder:
-                              (context, error, stack) => Container(
-                                color: AppConstants.backgroundColor,
-                                alignment: Alignment.center,
-                                child: const Icon(Icons.broken_image, size: 20),
-                              ),
-                        ),
-                      ),
-                    ),
-                  ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            '#${order.orderNo}',
-                            style: AppConstants.bodyMedium.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppConstants.primaryColor,
-                            ),
-                          ),
-                          if (_isUrgent(order)) ...[
-                            const SizedBox(width: AppConstants.spacingS),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppConstants.errorColor,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'URGENT',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
+                              (c, e, s) => Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.broken_image_outlined,
+                                  color: Colors.grey.shade400,
+                                  size: 20,
                                 ),
                               ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${order.ornamentDetails.length} item(s)',
-                        style: AppConstants.bodySmall.copyWith(
-                          color: AppConstants.textSecondaryColor,
-                          fontSize: 10,
                         ),
-                      ),
-                    ],
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: AppConstants.spacingM),
+                Expanded(
+                  flex: 4,
+                  child: Text(
+                    order.orderNo?.isNotEmpty == true
+                        ? order.orderNo!
+                        : order.id.substring(0, 8),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppConstants.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppConstants.primaryColor,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    _formatFriendlyDate(order.orderDate ?? order.createdAt),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppConstants.bodySmall.copyWith(
+                      color: AppConstants.textSecondaryColor,
+                    ),
                   ),
                 ),
               ],
