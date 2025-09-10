@@ -189,8 +189,16 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     setState(() {
       _filteredOrders =
           _allOrders.where((order) {
-            final matchesStatus =
-                _selectedStatus == null || order.status == _selectedStatus;
+            bool matchesStatus = true;
+            if (_selectedStatus != null) {
+              if (_selectedStatus == OrderStatus.due) {
+                matchesStatus = order.status == OrderStatus.due || _isDue(order);
+              } else if (_selectedStatus == OrderStatus.delay) {
+                matchesStatus = order.status == OrderStatus.delay || _isDelay(order);
+              } else {
+                matchesStatus = order.status == _selectedStatus;
+              }
+            }
             final matchesSearch =
                 _searchQuery.isEmpty ||
                 order.clientName.toLowerCase().contains(
