@@ -311,6 +311,10 @@ class Order {
         return 'Completed';
       case OrderStatus.cancelled:
         return 'Cancelled';
+      case OrderStatus.delay:
+        return 'Delay';
+      case OrderStatus.due:
+        return 'Due';
     }
   }
 
@@ -325,6 +329,10 @@ class Order {
       case OrderStatus.completed:
         return Colors.green;
       case OrderStatus.cancelled:
+        return Colors.red;
+      case OrderStatus.delay:
+        return Colors.red;
+      case OrderStatus.due:
         return Colors.red;
     }
   }
