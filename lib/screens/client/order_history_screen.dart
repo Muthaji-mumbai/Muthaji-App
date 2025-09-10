@@ -104,20 +104,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
 
         // Temporary debug fallback: if none matched but server has data, show all
         if (clientOrders.isEmpty) {
-          final all = await OrderService.getAllOrders(token);
-          if (all.isNotEmpty) {
-            effectiveOrders = all;
-            // Notify once
-            // if (mounted) {
-            //   ScaffoldMessenger.of(context).showSnackBar(
-            //     SnackBar(
-            //       content: const Text('Showing all orders (debug): logged-in user has no matching orders'),
-            //       backgroundColor: AppConstants.warningColor,
-            //       duration: const Duration(seconds: 2),
-            //     ),
-            //   );
-            // }
-          }
+          "No orders found for client";
+        
         }
 
         setState(() {
