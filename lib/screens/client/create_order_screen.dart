@@ -305,13 +305,23 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         allowMultiple: true,
         withData: true,
-        type: FileType.image,
+        type: FileType.custom,
+        allowedExtensions: [
+          'jpg',
+          'jpeg',
+          'png',
+          'gif',
+          'bmp',
+          'webp',
+          'heic',
+          'heif',
+          'pdf',
+        ],
       );
       if (result != null) {
         setState(() {
-          _ornamentImages[index].addAll(
-            result.files.where((f) => f.bytes != null),
-          );
+          // Accept both images (with bytes) and PDFs (may have bytes or only path)
+          _ornamentImages[index].addAll(result.files);
         });
       }
     } catch (e) {
@@ -744,6 +754,19 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     final Datum? cat = _findCategoryById(categoryId);
     final List<String> units = cat?.unit ?? const [];
     return units.isNotEmpty ? units.first : 'g';
+  }
+
+  // Helpers to determine file type for preview and editing
+  bool _isImageFile(PlatformFile file) {
+    final ext = file.extension?.toLowerCase();
+    const imgExts = {
+      'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'heic', 'heif',
+    };
+    return ext != null && imgExts.contains(ext);
+  }
+
+  bool _isPdfFile(PlatformFile file) {
+    return (file.extension?.toLowerCase() == 'pdf');
   }
 
   @override
@@ -1304,7 +1327,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               spacing: AppConstants.spacingS,
               children: [
                 Text(
-                  'Images for item ${index + 1}',
+                  'Files for item ${index + 1}',
                   style: AppConstants.bodyMedium,
                 ),
                 if (_isPickingImage)
@@ -1318,8 +1341,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   ),
                 OutlinedButton.icon(
                   onPressed: () => _pickImagesForItem(index),
-                  icon: const Icon(Icons.add_a_photo),
-                  label: const Text('Add Images'),
+                  icon: const Icon(Icons.attach_file),
+                  label: const Text('Add Files'),
                 ),
               ],
             ),
@@ -1376,15 +1399,43 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         borderRadius: BorderRadius.circular(
                           AppConstants.radiusS,
                         ),
-                        child:
-                            bytes != null
-                                ? Image.memory(
-                                  bytes,
-                                  width: 90,
-                                  height: 90,
-                                  fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: 90,
+                          height: 90,
+                          child: _isPdfFile(file)
+                              ? Container(
+                                  color: Colors.grey.shade100,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.picture_as_pdf, color: Colors.red),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                        child: Text(
+                                          (file.name),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontSize: 10),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 )
-                                : const SizedBox(width: 90, height: 90),
+                              : (bytes != null
+                                  ? Image.memory(
+                                      bytes,
+                                      width: 90,
+                                      height: 90,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Container(
+                                      color: Colors.grey.shade100,
+                                      child: Icon(
+                                        Icons.image,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                    )),
+                        ),
                       ),
                       Positioned(
                         right: -6,
@@ -1408,25 +1459,26 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                           ),
                         ),
                       ),
-                      Positioned(
-                        top: 4,
-                        left: 4,
-                        child: GestureDetector(
-                          onTap: () => _showImageEditorForItem(index, imgIdx),
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              color: Colors.black54,
-                              shape: BoxShape.circle,
-                            ),
-                            padding: const EdgeInsets.all(2),
-                            child: const Icon(
-                              Icons.edit,
-                              size: 14,
-                              color: Colors.white,
+                      if (_isImageFile(file) && bytes != null)
+                        Positioned(
+                          top: 4,
+                          left: 4,
+                          child: GestureDetector(
+                            onTap: () => _showImageEditorForItem(index, imgIdx),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              padding: const EdgeInsets.all(2),
+                              child: const Icon(
+                                Icons.edit,
+                                size: 14,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   );
                 },
