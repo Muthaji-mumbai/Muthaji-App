@@ -423,7 +423,31 @@ class _ClientDashboardState extends State<ClientDashboard>
             ),
           )
         else
-          ...recentOrders.map((order) => _buildOrderCard(order)),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = ResponsiveBreakpoints.of(context).isMobile;
+              if (isMobile) {
+                return Column(
+                  children: [
+                    for (final order in recentOrders)
+                      _buildOrderCard(order),
+                  ],
+                );
+              }
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: AppConstants.spacingM,
+                  crossAxisSpacing: AppConstants.spacingM,
+                  childAspectRatio: 1.9,
+                ),
+                itemCount: recentOrders.length,
+                itemBuilder: (context, index) => _buildOrderCard(recentOrders[index]),
+              );
+            },
+          ),
         const SizedBox(height: AppConstants.spacingXL),
         _buildOrderHistoryList(),
       ],
@@ -541,131 +565,101 @@ class _ClientDashboardState extends State<ClientDashboard>
                   // Space for top separation
                   const SizedBox(height: AppConstants.spacingS),
 
-                  // Actions row (Edit / Cancel)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  // Quick actions (Edit, Clone, Cancel) like Order History
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: AppConstants.spacingS,
+                    runSpacing: AppConstants.spacingS,
                     children: [
-                      Tooltip(
-                        message:
-                            order.status == OrderStatus.pending
-                                ? 'Edit order'
-                                : 'Only pending orders can be edited',
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.edit,
-                            color:
-                                order.status == OrderStatus.pending
-                                    ? AppConstants.primaryColor
-                                    : AppConstants.textSecondaryColor
-                                        .withOpacity(0.5),
-                          ),
-                          onPressed:
-                              order.status == OrderStatus.pending
-                                  ? () async {
-                                    final updated = await Navigator.push<bool>(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) => CreateOrderScreen(
-                                              orderToEdit: order,
-                                            ),
-                                      ),
-                                    );
-                                    if (updated == true) _loadOrders();
-                                  }
-                                  : null,
-                        ),
+                      OutlinedButton.icon(
+                        onPressed: order.status == OrderStatus.pending
+                            ? () async {
+                                final updated = await Navigator.push<bool>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CreateOrderScreen(orderToEdit: order),
+                                  ),
+                                );
+                                if (updated == true) _loadOrders();
+                              }
+                            : null,
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        label: const Text('Edit'),
                       ),
-                      const SizedBox(width: AppConstants.spacingXS),
-                      Tooltip(
-                        message: 'Create new from this order',
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.copy_all,
-                            color: AppConstants.accentColor,
-                          ),
-                          onPressed: () async {
-                            // Open create screen prefilled with this order's data, but as a new order
-                            final created = await Navigator.push<bool>(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => CreateOrderScreen(
-                                      orderToEdit: order,
-                                      cloneFromOrder: true,
-                                    ),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final created = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CreateOrderScreen(
+                                orderToEdit: order,
+                                cloneFromOrder: true,
                               ),
-                            );
-                            if (created == true) {
-                              _loadOrders();
-                            }
-                          },
-                        ),
+                            ),
+                          );
+                          if (created == true) {
+                            _loadOrders();
+                          }
+                        },
+                        icon: const Icon(Icons.content_copy_outlined, size: 18),
+                        label: const Text('Clone'),
                       ),
-                      const SizedBox(width: AppConstants.spacingXS),
-                      Tooltip(
-                        message: 'Cancel order',
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.cancel,
-                            color: AppConstants.errorColor,
-                          ),
-                          onPressed: () async {
-                            final confirm =
-                                await showDialog<bool>(
-                                  context: context,
-                                  builder:
-                                      (ctx) => AlertDialog(
-                                        title: const Text('Cancel Order?'),
-                                        content: const Text(
-                                          'Are you sure you want to cancel this order? This action cannot be undone.',
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed:
-                                                () => Navigator.pop(ctx, false),
-                                            child: const Text('No'),
-                                          ),
-                                          TextButton(
-                                            onPressed:
-                                                () => Navigator.pop(ctx, true),
-                                            child: const Text('Yes'),
-                                          ),
-                                        ],
-                                      ),
-                                ) ??
-                                false;
-                            if (!confirm) return;
-                            final token = AuthService.currentToken;
-                            if (token == null) return;
-                            try {
-                              await OrderService.updateOrderStatus(
-                                orderId: order.id,
-                                newStatus: OrderStatus.cancelled,
-                                token: token,
-                              );
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                      'Order cancelled successfully',
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Cancel Order?'),
+                                  content: const Text(
+                                    'Are you sure you want to cancel this order? This action cannot be undone.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: const Text('No'),
                                     ),
-                                    backgroundColor: AppConstants.successColor,
-                                  ),
-                                );
-                              }
-                              _loadOrders();
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Failed to cancel order: $e'),
-                                    backgroundColor: AppConstants.errorColor,
-                                  ),
-                                );
-                              }
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: const Text('Yes'),
+                                    ),
+                                  ],
+                                ),
+                              ) ??
+                              false;
+                          if (!confirm) return;
+                          final token = AuthService.currentToken;
+                          if (token == null) return;
+                          try {
+                            await OrderService.updateOrderStatus(
+                              orderId: order.id,
+                              newStatus: OrderStatus.cancelled,
+                              token: token,
+                            );
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Order cancelled successfully'),
+                                  backgroundColor: AppConstants.successColor,
+                                ),
+                              );
                             }
-                          },
+                            _loadOrders();
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to cancel order: $e'),
+                                  backgroundColor: AppConstants.errorColor,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.cancel_outlined, size: 18),
+                        label: const Text('Cancel'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppConstants.errorColor,
+                          side: BorderSide(color: AppConstants.errorColor.withOpacity(0.5)),
                         ),
                       ),
                     ],
@@ -729,20 +723,15 @@ class _ClientDashboardState extends State<ClientDashboard>
                                     style: AppConstants.bodyMedium,
                                   ),
                                 ),
-                                Text(
-                                  '${d.purity}',
-                                  style: AppConstants.bodySmall.copyWith(
-                                    color: AppConstants.textSecondaryColor,
-                                  ),
-                                ),
-                                const SizedBox(width: AppConstants.spacingM),
-                                Text(
-                                  '${d.weight}g x ${d.quantity}',
-                                  style: AppConstants.bodySmall.copyWith(
-                                    color: AppConstants.textSecondaryColor,
-                                  ),
-                                ),
+                                
                               ],
+                            ),
+                            const SizedBox(height: AppConstants.spacingXS),
+                            Text(
+                              'Weight: ${d.weight} • Unit: ${d.unit ?? 'g'} • Purity: ${d.purity} • Qty: ${d.quantity}${d.size != null ? ' • Size: ${d.size}' : ''} • Colorstone: ${d.colorstone} • Rhodium: ${d.rhodium} • Dull: ${d.dull}',
+                              style: AppConstants.bodySmall.copyWith(
+                                color: AppConstants.textSecondaryColor,
+                              ),
                             ),
                             if (d.remarks != null && d.remarks!.isNotEmpty)
                               Padding(
@@ -798,44 +787,57 @@ class _ClientDashboardState extends State<ClientDashboard>
                   //     ),
                   // ],
 
-                  // Generate PDF Button
+                  // Generate Actions (PDF / Image) row to match Order History
                   Padding(
                     padding: const EdgeInsets.only(top: AppConstants.spacingM),
-                    child: ElevatedButton(
-                      onPressed:
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => PDFViewerScreen(order: order),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PDFViewerScreen(order: order),
+                              ),
+                            ),
+                            icon: const Icon(Icons.picture_as_pdf_outlined),
+                            label: const Text('Generate PDF'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppConstants.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppConstants.spacingM,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                           ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppConstants.primaryColor,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Generate PDF'),
-                    ),
-                  ),
-
-                  // Generate Image Button
-                  Padding(
-                    padding: const EdgeInsets.only(top: AppConstants.spacingM),
-                    child: ElevatedButton(
-                      onPressed:
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) =>
-                                      OrderImageGenerator(order: order),
+                        ),
+                        const SizedBox(width: AppConstants.spacingM),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => OrderImageGenerator(order: order),
+                              ),
+                            ),
+                            icon: const Icon(Icons.image_outlined),
+                            label: const Text('Generate Image'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppConstants.accentColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppConstants.spacingM,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                           ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppConstants.primaryColor,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Generate Image'),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -904,7 +906,7 @@ class _ClientDashboardState extends State<ClientDashboard>
                 //       )),
                 //   const SizedBox(height: AppConstants.spacingS),
                 //   ...order.ornamentDetails.map((d) => Padding(
-                //         padding: const EdgeInsets.only(bottom: AppConstants.spacingS),
+                //         padding: const edgeInsets.only(bottom: AppConstants.spacingS),
                 //         child: Row(
                 //           children: [
                 //             Expanded(

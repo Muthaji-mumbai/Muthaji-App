@@ -737,307 +737,659 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     );
   }
 
-  Widget _buildOrderDetails(Order order) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Space for top separation
-        const SizedBox(height: AppConstants.spacingS),
+ Widget _buildOrderDetails(Order order) {
+  return Card(
+    elevation: 2,
+    margin: const EdgeInsets.all(AppConstants.spacingM),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(AppConstants.spacingL),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with status and actions
+          _buildOrderHeader(order),
+          
+          const Divider(height: AppConstants.spacingL * 2),
+          
+          // Order Information Section
+          _buildOrderInfoSection(order),
+          
+          // Ornament Details Section
+          if (order.ornamentDetails.isNotEmpty) ...[
+            const SizedBox(height: AppConstants.spacingL),
+            _buildOrnamentDetailsSection(order),
+          ],
+          
+          // Notes Section
+          if (order.notes != null && order.notes!.isNotEmpty) ...[
+            const SizedBox(height: AppConstants.spacingL),
+            _buildNotesSection(order),
+          ],
+          
+          const SizedBox(height: AppConstants.spacingL),
+          
+          // Action Buttons Section
+          _buildActionButtonsSection(order),
+        ],
+      ),
+    ),
+  );
+}
 
-        // Actions row (Edit / Cancel)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+Widget _buildOrderHeader(Order order) {
+  return Row(
+    children: [
+      // Order status chip
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.spacingM,
+          vertical: AppConstants.spacingXS,
+        ),
+        decoration: BoxDecoration(
+          color: _getStatusColor(order.status).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: _getStatusColor(order.status),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          order.status.toString().split('.').last.toUpperCase(),
+          style: AppConstants.bodySmall.copyWith(
+            color: _getStatusColor(order.status),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+
+    ],
+  );
+}
+
+Widget _buildOrderInfoSection(Order order) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Order Information',
+        style: AppConstants.bodyLarge.copyWith(
+          fontWeight: FontWeight.w600,
+          color: AppConstants.primaryColor,
+        ),
+      ),
+      
+      const SizedBox(height: AppConstants.spacingM),
+      
+      Container(
+        padding: const EdgeInsets.all(AppConstants.spacingM),
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.grey.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Column(
           children: [
-            Tooltip(
-              message:
-                  order.status == OrderStatus.pending
-                      ? 'Edit order'
-                      : 'Only pending orders can be edited',
-              child: IconButton(
-                icon: Icon(
-                  Icons.edit,
-                  color:
-                      order.status == OrderStatus.pending
-                          ? AppConstants.primaryColor
-                          : AppConstants.textSecondaryColor.withOpacity(0.5),
-                ),
-                onPressed:
-                    order.status == OrderStatus.pending
-                        ? () async {
-                          final updated = await Navigator.push<bool>(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) =>
-                                      CreateOrderScreen(orderToEdit: order),
-                            ),
-                          );
-                          if (updated == true) _loadOrders();
-                        }
-                        : null,
-              ),
+            _buildInfoRow(
+              icon: Icons.calendar_today_outlined,
+              label: 'Created',
+              value: _formatDate(order.createdAt),
             ),
-            const SizedBox(width: AppConstants.spacingXS),
-            Tooltip(
-              message: 'Create new from this order',
-              child: IconButton(
-                icon: Icon(Icons.copy_all, color: AppConstants.accentColor),
-                onPressed: () async {
-                  // Open create screen prefilled with this order's data, but as a new order
-                  final created = await Navigator.push<bool>(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => CreateOrderScreen(
-                            orderToEdit: order,
-                            cloneFromOrder: true,
-                          ),
-                    ),
-                  );
-                  if (created == true) {
-                    _loadOrders();
-                  }
-                },
+            
+            if (order.updatedAt != null) ...[
+              const SizedBox(height: AppConstants.spacingS),
+              _buildInfoRow(
+                icon: Icons.update_outlined,
+                label: 'Updated',
+                value: _formatDate(order.updatedAt!),
               ),
-            ),
-            const SizedBox(width: AppConstants.spacingXS),
-            Tooltip(
-              message: 'Cancel order',
-              child: IconButton(
-                icon: Icon(Icons.cancel, color: AppConstants.errorColor),
-                onPressed: () async {
-                  final confirm =
-                      await showDialog<bool>(
-                        context: context,
-                        builder:
-                            (ctx) => AlertDialog(
-                              title: const Text('Cancel Order?'),
-                              content: const Text(
-                                'Are you sure you want to cancel this order? This action cannot be undone.',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: const Text('No'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  child: const Text('Yes'),
-                                ),
-                              ],
-                            ),
-                      ) ??
-                      false;
-                  if (!confirm) return;
-                  final token = AuthService.currentToken;
-                  if (token == null) return;
-                  try {
-                    await OrderService.updateOrderStatus(
-                      orderId: order.id,
-                      newStatus: OrderStatus.cancelled,
-                      token: token,
-                    );
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Order cancelled successfully'),
-                          backgroundColor: AppConstants.successColor,
-                        ),
-                      );
-                    }
-                    _loadOrders();
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to cancel order: $e'),
-                          backgroundColor: AppConstants.errorColor,
-                        ),
-                      );
-                    }
-                  }
-                },
+            ],
+            
+            if (order.orderDate != null) ...[
+              const SizedBox(height: AppConstants.spacingS),
+              _buildInfoRow(
+                icon: Icons.event_outlined,
+                label: 'Order Date',
+                value: _formatDate(order.orderDate!),
               ),
-            ),
+            ],
           ],
         ),
+      ),
+    ],
+  );
+}
 
-        // Created/Updated detailed
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Created: ${_formatDate(order.createdAt)}',
-              style: AppConstants.bodySmall.copyWith(
-                color: AppConstants.textSecondaryColor,
-              ),
-            ),
-            if (order.updatedAt != null)
-              Text(
-                'Updated: ${_formatDate(order.updatedAt!)}',
-                style: AppConstants.bodySmall.copyWith(
-                  color: AppConstants.textSecondaryColor,
-                ),
-              ),
-          ],
+Widget _buildInfoRow({
+  required IconData icon,
+  required String label,
+  required String value,
+}) {
+  return Row(
+    children: [
+      Icon(
+        icon,
+        size: 18,
+        color: AppConstants.textSecondaryColor,
+      ),
+      const SizedBox(width: AppConstants.spacingS),
+      Text(
+        '$label:',
+        style: AppConstants.bodyMedium.copyWith(
+          fontWeight: FontWeight.w500,
+          color: AppConstants.textSecondaryColor,
         ),
+      ),
+      const SizedBox(width: AppConstants.spacingS),
+      Expanded(
+        child: Text(
+          value,
+          style: AppConstants.bodyMedium,
+          textAlign: TextAlign.end,
+        ),
+      ),
+    ],
+  );
+}
 
-        // Order date
-        if (order.orderDate != null)
-          Padding(
-            padding: const EdgeInsets.only(top: AppConstants.spacingXS),
-            child: Text(
-              'Order Date: ${_formatDate(order.orderDate!)}',
-              style: AppConstants.bodySmall,
+Widget _buildOrnamentDetailsSection(Order order) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Ornament Details',
+        style: AppConstants.bodyLarge.copyWith(
+          fontWeight: FontWeight.w600,
+          color: AppConstants.primaryColor,
+        ),
+      ),
+      
+      const SizedBox(height: AppConstants.spacingM),
+      
+      ...order.ornamentDetails.asMap().entries.map((entry) {
+        final index = entry.key;
+        final detail = entry.value;
+        return Container(
+          margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
+          padding: const EdgeInsets.all(AppConstants.spacingM),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppConstants.primaryColor.withOpacity(0.2),
+              width: 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-
-        // Ornament details
-        if (order.ornamentDetails.isNotEmpty) ...[
-          const SizedBox(height: AppConstants.spacingM),
-          Text(
-            'Ornament Details',
-            style: AppConstants.bodyMedium.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: AppConstants.spacingS),
-          ...order.ornamentDetails.map(
-            (d) => Padding(
-              padding: const EdgeInsets.only(bottom: AppConstants.spacingS),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with name and index
+              Row(
                 children: [
-                  Row(
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingS,
+                      vertical: AppConstants.spacingXS,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppConstants.primaryColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${index + 1}',
+                      style: AppConstants.bodySmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppConstants.spacingS),
+                  Expanded(
+                    child: Text(
+                      detail.name,
+                      style: AppConstants.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingS,
+                      vertical: AppConstants.spacingXS,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppConstants.accentColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${detail.purity}',
+                      style: AppConstants.bodySmall.copyWith(
+                        color: AppConstants.accentColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: AppConstants.spacingM),
+              
+              // Specifications grid
+              Container(
+                padding: const EdgeInsets.all(AppConstants.spacingS),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildSpecItem(
+                            'Weight',
+                            '${detail.weight} ${detail.unit ?? ''}',
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildSpecItem(
+                            'Quantity',
+                            '${detail.quantity}',
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (detail.size != null) ...[
+                      const SizedBox(height: AppConstants.spacingS),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildSpecItem(
+                              'Size',
+                              '${detail.size}',
+                            ),
+                          ),
+                          const Expanded(child: SizedBox()),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              // Additional properties
+              if (detail.colorstone != null || detail.rhodium != null || detail.dull != null) ...[
+                const SizedBox(height: AppConstants.spacingM),
+                Wrap(
+                  spacing: AppConstants.spacingS,
+                  runSpacing: AppConstants.spacingXS,
+                  children: [
+                    if (detail.colorstone != null)
+                      _buildPropertyChip('Colorstone', detail.colorstone!),
+                    if (detail.rhodium != null)
+                      _buildPropertyChip('Rhodium', detail.rhodium!),
+                    if (detail.dull != null)
+                      _buildPropertyChip('Dull', detail.dull!),
+                  ],
+                ),
+              ],
+              
+              // Remarks
+              if (detail.remarks != null && detail.remarks!.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.spacingM),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppConstants.spacingS),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.blue.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(d.name, style: AppConstants.bodyMedium),
-                      ),
                       Text(
-                        '${d.purity}',
+                        'Remarks',
                         style: AppConstants.bodySmall.copyWith(
-                          color: AppConstants.textSecondaryColor,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue,
                         ),
                       ),
-                      const SizedBox(width: AppConstants.spacingM),
+                      const SizedBox(height: AppConstants.spacingXS),
                       Text(
-                        'weight: ${d.weight} unit: ${d.unit ?? ' '} Qty: ${d.quantity}${d.size != null ? ' Size: (${d.size})' : ''}',
-                        style: AppConstants.bodySmall.copyWith(
-                          color: AppConstants.textSecondaryColor,
-                        ),
+                        detail.remarks!,
+                        style: AppConstants.bodySmall,
                       ),
                     ],
                   ),
-                  if (d.colorstone != null ||
-                      d.rhodium != null ||
-                      d.dull != null) ...[
-                    const SizedBox(height: AppConstants.spacingXS),
-                    Text(
-                      [
-                        if (d.colorstone != null) 'Colorstone: ${d.colorstone}',
-                        if (d.rhodium != null) 'Rhodium: ${d.rhodium}',
-                        if (d.dull != null) 'Dull: ${d.dull}',
-                      ].join(' • '),
-                      style: AppConstants.bodySmall.copyWith(
-                        color: AppConstants.textSecondaryColor,
+                ),
+              ],
+              
+              // Images
+              if (detail.images.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.spacingM),
+                _buildImageThumbnails(detail.images),
+              ],
+            ],
+          ),
+        );
+      }),
+    ],
+  );
+}
+
+Widget _buildSpecItem(String label, String value) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: AppConstants.bodySmall.copyWith(
+          color: AppConstants.textSecondaryColor,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      const SizedBox(height: 2),
+      Text(
+        value,
+        style: AppConstants.bodyMedium.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildPropertyChip(String label, String value) {
+  return Container(
+    padding: const EdgeInsets.symmetric(
+      horizontal: AppConstants.spacingS,
+      vertical: AppConstants.spacingXS,
+    ),
+    decoration: BoxDecoration(
+      color: Colors.orange.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(
+        color: Colors.orange.withOpacity(0.3),
+        width: 1,
+      ),
+    ),
+    child: Text(
+      '$label: $value',
+      style: AppConstants.bodySmall.copyWith(
+        color: Colors.orange.shade700,
+        fontWeight: FontWeight.w500,
+      ),
+    ),
+  );
+}
+
+Widget _buildNotesSection(Order order) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Notes',
+        style: AppConstants.bodyLarge.copyWith(
+          fontWeight: FontWeight.w600,
+          color: AppConstants.primaryColor,
+        ),
+      ),
+      
+      const SizedBox(height: AppConstants.spacingM),
+      
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppConstants.spacingM),
+        decoration: BoxDecoration(
+          color: Colors.amber.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.amber.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          order.notes!,
+          style: AppConstants.bodyMedium,
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildActionButtonsSection(Order order) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(
+        'Actions',
+        style: AppConstants.bodyLarge.copyWith(
+          fontWeight: FontWeight.w600,
+          color: AppConstants.primaryColor,
+        ),
+      ),
+      
+      const SizedBox(height: AppConstants.spacingS),
+      
+      Wrap(
+        spacing: AppConstants.spacingS,
+        runSpacing: AppConstants.spacingS,
+        children: [
+          // Edit
+          OutlinedButton.icon(
+            onPressed: order.status == OrderStatus.pending
+                ? () async {
+                    final updated = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CreateOrderScreen(orderToEdit: order),
+                      ),
+                    );
+                    if (updated == true) _loadOrders();
+                  }
+                : null,
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Edit'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingM,
+                vertical: AppConstants.spacingS,
+              ),
+            ),
+          ),
+
+          // Clone
+          OutlinedButton.icon(
+            onPressed: () async {
+              final created = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CreateOrderScreen(
+                    orderToEdit: order,
+                    cloneFromOrder: true,
+                  ),
+                ),
+              );
+              if (created == true) {
+                _loadOrders();
+              }
+            },
+            icon: const Icon(Icons.content_copy_outlined, size: 18),
+            label: const Text('Clone'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingM,
+                vertical: AppConstants.spacingS,
+              ),
+            ),
+          ),
+
+          // Cancel
+          OutlinedButton.icon(
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      title: const Text('Cancel Order?'),
+                      content: const Text(
+                        'Are you sure you want to cancel this order? This action cannot be undone.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('No'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppConstants.errorColor,
+                          ),
+                          child: const Text('Yes'),
+                        ),
+                      ],
+                    ),
+                  ) ??
+                  false;
+
+              if (!confirm) return;
+
+              final token = AuthService.currentToken;
+              if (token == null) return;
+
+              try {
+                await OrderService.updateOrderStatus(
+                  orderId: order.id,
+                  newStatus: OrderStatus.cancelled,
+                  token: token,
+                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Order cancelled successfully'),
+                      backgroundColor: AppConstants.successColor,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                  ],
-                  if (d.remarks != null && d.remarks!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        top: AppConstants.spacingXS,
-                      ),
-                      child: Text(
-                        'Remarks: ${d.remarks!}',
-                        style: AppConstants.bodySmall,
+                  );
+                }
+                _loadOrders();
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to cancel order: $e'),
+                      backgroundColor: AppConstants.errorColor,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                  if (d.images.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        top: AppConstants.spacingXS,
-                      ),
-                      child: _buildImageThumbnails(d.images),
-                    ),
-                ],
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.cancel_outlined, size: 18),
+            label: const Text('Cancel'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppConstants.errorColor,
+              side: BorderSide(color: AppConstants.errorColor.withOpacity(0.5)),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingM,
+                vertical: AppConstants.spacingS,
               ),
             ),
           ),
         ],
-
-        // Notes
-        if (order.notes != null && order.notes!.isNotEmpty) ...[
-          const SizedBox(height: AppConstants.spacingM),
-          Text(
-            'Notes',
-            style: AppConstants.bodyMedium.copyWith(
-              fontWeight: FontWeight.w700,
+      ),
+      
+      const SizedBox(height: AppConstants.spacingM),
+      
+      Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PDFViewerScreen(order: order),
+                ),
+              ),
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              label: const Text('Generate PDF'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingM),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: AppConstants.spacingXS),
-          Text(order.notes!, style: AppConstants.bodySmall),
+          
+          const SizedBox(width: AppConstants.spacingM),
+          
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => OrderImageGenerator(order: order),
+                ),
+              ),
+              icon: const Icon(Icons.image_outlined),
+              label: const Text('Generate Image'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.accentColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingM),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
         ],
+      ),
+    ],
+  );
+}
 
-        // Attachments info
-        // if (order.images.isNotEmpty || order.pdfs.isNotEmpty) ...[
-        //   const SizedBox(height: AppConstants.spacingM),
-        //   if (order.images.isNotEmpty) ...[
-        //     Text('Imagess',
-        //         style: AppConstants.bodyMedium
-        //             .copyWith(fontWeight: FontWeight.w700)),
-        //     const SizedBox(height: AppConstants.spacingS),
-        //     _buildImageThumbnails(order.images),
-        //     const SizedBox(height: AppConstants.spacingM),
-        //   ],
-        //   if (order.pdfs.isNotEmpty)
-        //     Chip(
-        //       avatar: const Icon(Icons.picture_as_pdf, size: 18),
-        //       label: Text('${order.pdfs.length} PDF(s)'),
-        //     ),
-        // ],
-
-        // Generate PDF Button
-        Padding(
-          padding: const EdgeInsets.only(top: AppConstants.spacingM),
-          child: ElevatedButton(
-            onPressed:
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PDFViewerScreen(order: order),
-                  ),
-                ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Generate PDF'),
-          ),
-        ),
-
-        // Generate Image Button
-        Padding(
-          padding: const EdgeInsets.only(top: AppConstants.spacingM),
-          child: ElevatedButton(
-            onPressed:
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => OrderImageGenerator(order: order),
-                  ),
-                ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Generate Image'),
-          ),
-        ),
-      ],
-    );
+Color _getStatusColor(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.pending:
+      return Colors.orange;
+    case OrderStatus.confirmed:
+      return Colors.blue;
+    case OrderStatus.completed:
+      return Colors.green;
+    case OrderStatus.cancelled:
+      return Colors.red;
+    default:
+      return Colors.grey;
   }
-
+}
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -1125,24 +1477,24 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     }
   }
 
-  Color _getStatusColor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return AppConstants.warningColor;
-      case OrderStatus.confirmed:
-        return AppConstants.accentColor;
-      case OrderStatus.inProgress:
-        return AppConstants.secondaryColor;
-      case OrderStatus.completed:
-        return AppConstants.successColor;
-      case OrderStatus.cancelled:
-        return AppConstants.errorColor;
-      case OrderStatus.delay:
-        return AppConstants.errorColor;
-      case OrderStatus.due:
-        return AppConstants.errorColor;
-    }
-  }
+  // Color _getStatusColor(OrderStatus status) {
+  //   switch (status) {
+  //     case OrderStatus.pending:
+  //       return AppConstants.warningColor;
+  //     case OrderStatus.confirmed:
+  //       return AppConstants.accentColor;
+  //     case OrderStatus.inProgress:
+  //       return AppConstants.secondaryColor;
+  //     case OrderStatus.completed:
+  //       return AppConstants.successColor;
+  //     case OrderStatus.cancelled:
+  //       return AppConstants.errorColor;
+  //     case OrderStatus.delay:
+  //       return AppConstants.errorColor;
+  //     case OrderStatus.due:
+  //       return AppConstants.errorColor;
+  //   }
+  // }
 
   Widget _buildImageThumbnails(List<String> images) {
     return SizedBox(
