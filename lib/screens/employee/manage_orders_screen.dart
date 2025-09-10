@@ -125,19 +125,19 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     );
   }
 
-  Widget _buildPendingRibbon() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppConstants.warningColor,
-        borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomLeft: Radius.circular(8)),
-      ),
-      child: const Text(
-        'PENDING',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8),
-      ),
-    );
-  }
+  // Widget _buildPendingRibbon() {
+  //   return Container(
+  //     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  //     decoration: BoxDecoration(
+  //       color: AppConstants.warningColor,
+  //       borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomLeft: Radius.circular(8)),
+  //     ),
+  //     child: const Text(
+  //       'PENDING',
+  //       style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8),
+  //     ),
+  //   );
+  // }
 
   void _applyFilters() {
     setState(() {
@@ -922,7 +922,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       child: Row(
         children: [
           Text(
-            '${_filteredOrders.length} Orders',
+            'Summary',
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
           ),
           const SizedBox(width: 16),
@@ -1429,8 +1429,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             children: [_buildExpandedContent(order)],
           ),
         ),),),
-        if (order.status == OrderStatus.pending)
-          Positioned(top: 0, right: 0, child: _buildPendingRibbon()),
+        
         if (_isUrgent(order))
           Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
       ],
