@@ -182,6 +182,11 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
               pageKey: keys[index],
               ornamentName: 'Order',
               purity: '-',
+              unit: '-',
+              size: '-',
+              colorstone: '-',
+              rhodium: '-',
+              dull: '-',
               weight: '-',
               quantity: '-',
               remarks: widget.order.notes ?? '',
@@ -224,6 +229,11 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                         pageKey: keys[pageIdx],
                         ornamentName: ornament.name,
                         purity: ornament.purity,
+                        unit: ornament.unit ?? '-',
+                        size: ornament.size ?? '-',
+                        colorstone: ornament.colorstone ?? '-',
+                        rhodium: ornament.rhodium ?? '-',
+                        dull: ornament.dull ?? '-',
                         weight: '${ornament.weight}g',
                         quantity: '${ornament.quantity}',
                         remarks: ornament.remarks ?? '',
@@ -251,6 +261,11 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     required String quantity,
     required String remarks,
     required List<String> images,
+    required String unit,
+    required String size,
+    required String colorstone,
+    required String rhodium,
+    required String dull,
   }) {
     return RepaintBoundary(
       key: pageKey,
@@ -279,7 +294,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                             Padding(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: _buildDetailsTable(
-                                  ornamentName, purity, weight, quantity, remarks),
+                                  ornamentName, purity, weight, quantity, remarks, unit, size, colorstone, rhodium, dull),
                             ),
                             // Images bottom
                             Padding(
@@ -308,7 +323,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                                   ),
                                 ),
                                 child: _buildDetailsTable(
-                                    ornamentName, purity, weight, quantity, remarks),
+                                    ornamentName, purity, weight, quantity, remarks, unit, size, colorstone, rhodium, dull),
                               ),
                             ),
                             // Right: Images box
@@ -337,8 +352,8 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     );
   }
 
-  Widget _buildDetailsTable(String ornamentName, String purity, String weight, String quantity, String remarks) {
-    Text _cell(String text, {bool bold = false, Color? color}) => Text(
+  Widget _buildDetailsTable(String ornamentName, String purity, String weight, String quantity, String remarks, String unit, String size, String colorstone, String rhodium, String dull) {
+    Text cell(String text, {bool bold = false, Color? color}) => Text(
           text,
           style: TextStyle(
             fontSize: 14,
@@ -353,10 +368,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           ),
           child: Row(
             children: [
-              SizedBox(width: 110, child: _cell('$label :', bold: true, color: const Color(0xFF334155))),
+              SizedBox(width: 110, child: cell('$label :', bold: true, color: const Color(0xFF334155))),
               const SizedBox(width: 8),
-              Expanded(child: _cell(value, bold: emphasize, color: emphasize ? const Color(0xFF111827) : null)),
-            ],
+              Expanded(child: cell(value, bold: emphasize, color: emphasize ? const Color(0xFF111827) : null)),
+            ],  
           ),
         );
 
@@ -367,6 +382,11 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         row('Party Name', widget.order.clientName),
         row('Items', ornamentName, emphasize: true),
         row('Purity', purity),
+        row('Unit', unit),
+        row('Size', size),
+        row('Color Stone', colorstone),
+        row('Rhodium', rhodium),
+        row('Dull', dull),
         row('Weight', weight),
         row('Quantity', quantity),
         row('Remarks', remarks.isNotEmpty ? remarks : '-'),
@@ -698,6 +718,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             const Color(0xFF10B981),
           ),
         ),
+
         const SizedBox(width: 12),
         Expanded(
           child: _buildSpecItem(
