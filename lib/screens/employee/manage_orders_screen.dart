@@ -1562,7 +1562,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${detail.weight}${detail.unit ?? 'g'} • ${detail.purity} • Qty: ${detail.quantity}${detail.size != null ? ' • Size: ${detail.size}' : ''}',
+                            'Weight: ${detail.weight} • Unit: ${detail.unit ?? 'g'} • Purity: ${detail.purity} • Qty: ${detail.quantity} • ${detail.size != null ? ' • Size: ${detail.size}' : ''}',
                             style: TextStyle(
                               color: Colors.grey.shade600,
                               fontSize: 12,
