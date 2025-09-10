@@ -69,6 +69,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     '18K Yellow gold',
     '18K Rose gold',
     '18K White gold',
+    '22k'
     'Other',
   ];
   static const List<String> _colorstoneOptions = [
@@ -406,7 +407,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
           // For customers, always use 'Single' order type regardless of selection
           final orderType =
-              currentUser.role == UserRole.client
+              currentUser.role == UserRole.customer
                   ? 'Single'
                   : _selectedOrderType;
 

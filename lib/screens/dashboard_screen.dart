@@ -30,7 +30,7 @@ class DashboardScreen extends StatelessWidget {
 
         // Show different dashboard based on user role
         switch (user.role) {
-          case UserRole.client:
+          case UserRole.customer:
             return const ClientDashboard();
           case UserRole.employee:
             return const EmployeeDashboard();

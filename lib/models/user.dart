@@ -1,4 +1,4 @@
-enum UserRole { client, employee, admin }
+enum UserRole { customer, employee, admin }
 
 class User {
   final String id;
@@ -41,7 +41,7 @@ class User {
   }
 
   static UserRole _parseRole(String? role) {
-    if (role == null) return UserRole.client;
+    if (role == null) return UserRole.customer;
 
     switch (role.toLowerCase()) {
       case 'admin':
@@ -50,9 +50,9 @@ class User {
         return UserRole.employee;
       case 'customer':
       case 'client':
-        return UserRole.client;
+        return UserRole.customer;
       default:
-        return UserRole.client;
+        return UserRole.customer;
     }
   }
 

@@ -118,7 +118,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
               _selectedRoleFilter = index == 0
                   ? null
                   : index == 1
-                      ? UserRole.client
+                      ? UserRole.customer
                       : index == 2
                           ? UserRole.employee
                           : UserRole.admin;
@@ -571,7 +571,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
         return 'Admin';
       case UserRole.employee:
         return 'Employee';
-      case UserRole.client:
+      case UserRole.customer:
         return 'Customer';
     }
   }
@@ -582,7 +582,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
         return AppConstants.errorColor;
       case UserRole.employee:
         return AppConstants.accentColor;
-      case UserRole.client:
+      case UserRole.customer:
         return AppConstants.primaryColor;
     }
   }
@@ -593,7 +593,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
         return Icons.admin_panel_settings;
       case UserRole.employee:
         return Icons.work;
-      case UserRole.client:
+      case UserRole.customer:
         return Icons.person;
     }
   }
@@ -613,7 +613,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
   final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
-  UserRole _selectedRole = UserRole.client;
+  UserRole _selectedRole = UserRole.customer;
   bool _isLoading = false;
 
   @override
@@ -818,7 +818,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
         return 'Admin';
       case UserRole.employee:
         return 'Employee';
-      case UserRole.client:
+      case UserRole.customer:
         return 'Customer';
     }
   }
@@ -839,7 +839,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
-  UserRole _selectedRole = UserRole.client;
+  UserRole _selectedRole = UserRole.customer;
   bool _isLoading = false;
 
   @override
@@ -1052,7 +1052,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
         return 'Admin';
       case UserRole.employee:
         return 'Employee';
-      case UserRole.client:
+      case UserRole.customer:
         return 'Customer';
     }
   }

@@ -286,7 +286,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           'adminUsers': users.where((u) => u.role == UserRole.admin).length,
           'employeeUsers':
               users.where((u) => u.role == UserRole.employee).length,
-          'clientUsers': users.where((u) => u.role == UserRole.client).length,
+          'clientUsers': users.where((u) => u.role == UserRole.customer).length,
         };
         _recentUsers = users.take(5).toList();
 
@@ -2261,7 +2261,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return 'Admin';
       case UserRole.employee:
         return 'Employee';
-      case UserRole.client:
+      case UserRole.customer:
         return 'Client';
     }
   }
@@ -2272,7 +2272,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return AppConstants.errorColor;
       case UserRole.employee:
         return AppConstants.accentColor;
-      case UserRole.client:
+      case UserRole.customer:
         return AppConstants.primaryColor;
     }
   }
@@ -2283,7 +2283,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return Icons.admin_panel_settings;
       case UserRole.employee:
         return Icons.work;
-      case UserRole.client:
+      case UserRole.customer:
         return Icons.person;
     }
   }
