@@ -36,7 +36,7 @@
       String id;
       String categoryname;
       List<String> size;
-      String unit;
+      List<String> unit;
       int v;
 
       Datum({
@@ -53,7 +53,11 @@
           size: json["size"] == null
               ? <String>[]
               : List<String>.from((json["size"] as List).map((x) => x.toString())),
-          unit: (json["unit"] ?? '').toString(),
+          unit: json["unit"] == null
+              ? <String>[]
+              : (json["unit"] is List
+                  ? List<String>.from((json["unit"] as List).map((x) => x.toString()))
+                  : <String>[json["unit"].toString()]),
           v: json["__v"] ?? 0,
       );
 
@@ -61,7 +65,7 @@
           "_id": id,
           "categoryname": categoryname,
           "size": List<dynamic>.from(size.map((x) => x)),
-          "unit": unit,
+          "unit": List<dynamic>.from(unit.map((x) => x)),
           "__v": v,
       };
   }

@@ -27,7 +27,7 @@ class CategoryService {
   static Future<CategoryResponse> createCategory(
     String categoryName,
     List<String> size,
-    String unit,
+    List<String> unit,
     String token,
   ) async {
     try {
@@ -56,7 +56,7 @@ class CategoryService {
     String categoryId,
     String categoryName,
     List<String> size,
-    String unit,
+    List<String> unit,
     String token,
   ) async {
     try {

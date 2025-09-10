@@ -35,7 +35,7 @@ class CategoryResponse {
 class Data {
     String categoryname;
     List<String> size;
-    String unit;
+    List<String> unit;
     String id;
     int v;
 
@@ -52,7 +52,11 @@ class Data {
         size: json["size"] == null
             ? <String>[]
             : List<String>.from((json["size"] as List).map((x) => x.toString())),
-        unit: (json["unit"] ?? '').toString(),
+        unit: json["unit"] == null
+            ? <String>[]
+            : (json["unit"] is List
+                ? List<String>.from((json["unit"] as List).map((x) => x.toString()))
+                : <String>[json["unit"].toString()]),
         id: json["_id"],
         v: json["__v"] ?? 0,
     );
@@ -60,7 +64,7 @@ class Data {
     Map<String, dynamic> toJson() => {
         "categoryname": categoryname,
         "size": List<dynamic>.from(size.map((x) => x)),
-        "unit": unit,
+        "unit": List<dynamic>.from(unit.map((x) => x)),
         "_id": id,
         "__v": v,
     };

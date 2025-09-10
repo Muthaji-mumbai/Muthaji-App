@@ -17,7 +17,7 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _categoryNameController = TextEditingController();
   final _sizeController = TextEditingController(); // comma-separated, e.g. 2.4,2.5
-  final _unitController = TextEditingController(); // e.g. anai
+  final _unitController = TextEditingController(); // comma-separated e.g. anai, aani
   bool _isLoading = false;
   bool _isLoadingCategories = false;
   List<Datum> _categories = [];
@@ -92,7 +92,7 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
       await CategoryService.createCategory(
         _categoryNameController.text.trim(),
         _parseSizes(_sizeController.text),
-        _unitController.text.trim(),
+        _parseUnits(_unitController.text),
         token,
       );
 
@@ -130,6 +130,14 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
 
   List<String> _parseSizes(String sizes) {
     return sizes
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
+
+  List<String> _parseUnits(String units) {
+    return units
         .split(',')
         .map((s) => s.trim())
         .where((s) => s.isNotEmpty)
@@ -215,8 +223,8 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
                       TextFormField(
                         controller: _unitController,
                         decoration: InputDecoration(
-                          labelText: 'Unit',
-                          hintText: 'e.g. anai',
+                          labelText: 'Units (comma-separated)',
+                          hintText: 'e.g. anai, aani',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(
                               AppConstants.radiusM,
@@ -226,9 +234,8 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
                           fillColor: AppConstants.surfaceColor,
                         ),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter a unit';
-                          }
+                          final units = _parseUnits(value ?? '');
+                          if (units.isEmpty) return 'Enter at least one unit';
                           return null;
                         },
                       ),
@@ -322,7 +329,7 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       subtitle: Text(
-                        'Unit: ${category.unit}  •  Sizes: ${category.size.join(', ')}',
+                        'Units: ${category.unit.join(', ')}  •  Sizes: ${category.size.join(', ')}',
                         style: const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                       trailing: PopupMenuButton<String>(
@@ -358,7 +365,7 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
   Future<void> _showUpdateDialog(Datum category) async {
     final TextEditingController nameController = TextEditingController(text: category.categoryname);
     final TextEditingController sizeController = TextEditingController(text: category.size.join(', '));
-    final TextEditingController unitController = TextEditingController(text: category.unit);
+    final TextEditingController unitController = TextEditingController(text: category.unit.join(', '));
 
     return showDialog<void>(
       context: context,
@@ -389,7 +396,7 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
               TextField(
                 controller: unitController,
                 decoration: const InputDecoration(
-                  labelText: 'Unit',
+                  labelText: 'Units (comma-separated)',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -411,7 +418,7 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
                     category.id,
                     nameController.text.trim(),
                     _parseSizes(sizeController.text),
-                    unitController.text.trim(),
+                    _parseUnits(unitController.text),
                   );
                 }
               },
@@ -422,7 +429,7 @@ class _CreateCategoryScreenState extends State<CreateCategoryScreen> {
     );
   }
 
-  Future<void> _updateCategory(String categoryId, String newName, List<String> sizes, String unit) async {
+  Future<void> _updateCategory(String categoryId, String newName, List<String> sizes, List<String> unit) async {
     try {
       final authProvider = context.read<AuthProvider>();
       final token = authProvider.currentUser?.token;
