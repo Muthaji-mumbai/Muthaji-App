@@ -1021,6 +1021,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         return 'Completed';
       case OrderStatus.cancelled:
         return 'Cancelled';
+      case OrderStatus.delay:
+        return 'Delay';
+      case OrderStatus.due:
+        return 'Due';
     }
   }
 
@@ -1035,6 +1039,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       case OrderStatus.completed:
         return AppConstants.successColor;
       case OrderStatus.cancelled:
+        return AppConstants.errorColor;
+      case OrderStatus.delay:
+        return AppConstants.errorColor;
+      case OrderStatus.due:
         return AppConstants.errorColor;
     }
   }

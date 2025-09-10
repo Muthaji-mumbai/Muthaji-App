@@ -692,6 +692,10 @@ class _UpdateOrderScreenState extends State<UpdateOrderScreen> {
         return 'Completed';
       case OrderStatus.cancelled:
         return 'Cancelled';
+      case OrderStatus.delay:
+        return 'Delay';
+      case OrderStatus.due:
+        return 'Due';
     }
   }
 }

@@ -1307,6 +1307,10 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         return const Color(0xFF4CAF50); // Green
       case OrderStatus.cancelled:
         return const Color(0xFFF44336); // Red
+      case OrderStatus.delay:
+        return const Color(0xFFF44336); // Red
+      case OrderStatus.due:
+        return const Color(0xFFF44336); // Red
     }
   }
 }

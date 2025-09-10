@@ -1386,12 +1386,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
         singleCompleted = 0,
         singleCancelled = 0,
         singleConfirmed = 0;
+        int singleDelay = 0,
+        singleDue = 0;
     int bulkPending = 0,
         bulkInProgress = 0,
         bulkCompleted = 0,
         bulkCancelled = 0,
         bulkConfirmed = 0;
-
+        int bulkDelay = 0,
+        bulkDue = 0;
     for (final o in _allOrders) {
       final isSingle = (o.orderType ?? '').toLowerCase().contains('single');
       final isBulk = (o.orderType ?? '').toLowerCase().contains('bulk');
@@ -1413,6 +1416,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
             break;
           case OrderStatus.cancelled:
             toSingle ? singleCancelled++ : bulkCancelled++;
+            break;
+          case OrderStatus.delay:
+            toSingle ? singleDelay++ : bulkDelay++;
+            break;
+          case OrderStatus.due:
+            toSingle ? singleDue++ : bulkDue++;
             break;
         }
       }

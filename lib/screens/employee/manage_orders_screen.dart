@@ -111,6 +111,24 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     return p == 'urgent' || p.contains('urgent');
   }
 
+  bool _isPending(Order order) {
+    return order.status == OrderStatus.pending;
+  }
+
+  bool _isDue(Order order) {
+    if (!_isPending(order) || order.orderDate == null) return false;
+    final now = DateTime.now();
+    final days = now.difference(order.orderDate!).inDays;
+    return days >= 7 && days < 10;
+  }
+
+  bool _isDelay(Order order) {
+    if (!_isPending(order) || order.orderDate == null) return false;
+    final now = DateTime.now();
+    final days = now.difference(order.orderDate!).inDays;
+    return days >= 10;
+  }
+
   Widget _buildUrgentRibbon() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -125,19 +143,47 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     );
   }
 
-  // Widget _buildPendingRibbon() {
-  //   return Container(
-  //     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-  //     decoration: BoxDecoration(
-  //       color: AppConstants.warningColor,
-  //       borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomLeft: Radius.circular(8)),
-  //     ),
-  //     child: const Text(
-  //       'PENDING',
-  //       style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8),
-  //     ),
-  //   );
-  // }
+  Widget _buildPendingRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppConstants.warningColor,
+        borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomLeft: Radius.circular(8)),
+      ),
+      child: const Text(
+        'PENDING',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8),
+      ),
+    );
+  }
+
+  Widget _buildDueRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFFA000), // Amber 700
+        borderRadius: BorderRadius.only(topRight: Radius.circular(8), bottomLeft: Radius.circular(8)),
+      ),
+      child: const Text(
+        'DUE',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8),
+      ),
+    );
+  }
+
+  Widget _buildDelayRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppConstants.errorColor,
+        borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomLeft: Radius.circular(8)),
+      ),
+      child: const Text(
+        'DELAY',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8),
+      ),
+    );
+  }
 
   void _applyFilters() {
     setState(() {
@@ -1222,7 +1268,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      _formatDate(order.createdAt),
+                      _formatDate(order.orderDate!),
                       style: TextStyle(
                         color: Colors.grey.shade500,
                         fontSize: 12,
@@ -1432,6 +1478,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         
         if (_isUrgent(order))
           Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
+        if (_isDelay(order))
+          Positioned(top: 0, right: 0, child: _buildDelayRibbon())
+        else if (_isDue(order))
+          Positioned(top: 0, right: 0, child: _buildDueRibbon())
+        else if (_isPending(order))
+          Positioned(top: 0, right: 0, child: _buildPendingRibbon()),
       ],
     );
   }
@@ -1877,6 +1929,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       case OrderStatus.completed:
         return const Color(0xFF4CAF50); // Green
       case OrderStatus.cancelled:
+        return const Color(0xFFF44336); // Red
+      case OrderStatus.delay:
+        return const Color(0xFFF44336); // Red
+      case OrderStatus.due:
         return const Color(0xFFF44336); // Red
     }
   }

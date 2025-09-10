@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum OrderStatus { pending, confirmed, inProgress, completed, cancelled }
+enum OrderStatus { pending, confirmed, inProgress, completed, cancelled,delay, due}
 
 class OrnamentDetail {
   final String id;
