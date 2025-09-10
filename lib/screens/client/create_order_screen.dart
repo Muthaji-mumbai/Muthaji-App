@@ -1087,6 +1087,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               ),
               const SizedBox(width: AppConstants.spacingS),
               Expanded(
+                flex: 3,
                 child: DropdownButtonFormField<String>(
                   decoration: InputDecoration(
                     labelText: 'Purity',
@@ -1098,22 +1099,36 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       vertical: AppConstants.spacingS,
                     ),
                   ),
+                  isExpanded: true,
                   value:
                       (detail['purity'] as String?)?.isNotEmpty == true
                           ? detail['purity'] as String
                           : null,
-                  items:
-                      _purityOptions
-                          .map(
-                            (option) => DropdownMenuItem<String>(
-                              value: option,
-                              child: Text(
-                                option,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          )
-                          .toList(),
+                  items: _purityOptions
+                      .map(
+                        (option) => DropdownMenuItem<String>(
+                          value: option,
+                          child: Text(
+                            option,
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  selectedItemBuilder: (context) => _purityOptions
+                      .map(
+                        (option) => Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            option,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      )
+                      .toList(),
                   onChanged:
                       (value) => setState(() {
                         _ornamentDetails[index]['purity'] = value ?? '';
@@ -1125,6 +1140,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               ),
               const SizedBox(width: AppConstants.spacingS),
               Expanded(
+                flex: 1,
                 child: TextFormField(
                   initialValue: detail['quantity'].toString(),
                   decoration: InputDecoration(
