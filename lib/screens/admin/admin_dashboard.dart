@@ -439,8 +439,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color.fromARGB(160, 255, 236, 140),
-            const Color.fromARGB(255, 209, 180, 91),
+            const Color.fromARGB(159, 71, 214, 105),
+            const Color.fromARGB(255, 75, 145, 77),
           ],
         ),
         borderRadius: BorderRadius.circular(AppConstants.radiusXL),
@@ -476,7 +476,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                                 child: const Icon(
                                   Icons.trending_up,
-                                  color: AppConstants.primaryColor,
+                                  color: Colors.white,
                                   size: 20,
                                 ),
                               ),
@@ -485,7 +485,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 child: Text(
                                   'Order Analytics',
                                   style: AppConstants.headingMedium.copyWith(
-                                    color: Colors.black,
+                                    color: Colors.white,
                                     fontSize: isMobile ? 18 : 24,
                                   ),
                                 ),
@@ -563,7 +563,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: _buildCompactLegendButton('Single', AppConstants.primaryColor, _showSingleOrders, () => setState(() => _showSingleOrders = !_showSingleOrders))),
+                          Expanded(child: _buildCompactLegendButton('Single', Colors.white, _showSingleOrders, () => setState(() => _showSingleOrders = !_showSingleOrders))),
                           const SizedBox(width: AppConstants.spacingS),
                           Expanded(child: _buildCompactLegendButton('Bulk', AppConstants.accentColor, _showBulkOrders, () => setState(() => _showBulkOrders = !_showBulkOrders))),
                         ],
@@ -692,7 +692,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         LineChartBarData(
           spots: _singleOrdersData,
           isCurved: true,
-          color: AppConstants.primaryColor,
+          color: Colors.white,
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: FlDotData(
@@ -709,8 +709,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             show: true,
             gradient: LinearGradient(
               colors: [
-                AppConstants.primaryColor.withOpacity(0.25),
-                AppConstants.primaryColor.withOpacity(0.05),
+                AppConstants.primaryColor.withValues(alpha: 0.25),
+                AppConstants.primaryColor.withValues(alpha: 0.05),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -725,7 +725,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         LineChartBarData(
           spots: _bulkOrdersData,
           isCurved: true,
-          color: AppConstants.accentColor,
+          color: Colors.orange,
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: FlDotData(
