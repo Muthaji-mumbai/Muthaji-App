@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/client/pdfview.dart';
+import 'package:soloshine/screens/employee/order_detailed_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../widgets/custom_button.dart';
@@ -520,220 +521,268 @@ class _ClientDashboardState extends State<ClientDashboard>
   }
 
   Widget _buildRecentOrderRow(Order order, bool isExpanded) {
-    return Container(
-      padding: const EdgeInsets.all(AppConstants.spacingL),
-      color:
-          isExpanded
-              ? AppConstants.backgroundColor.withOpacity(0.5)
-              : Colors.transparent,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: Builder(
-                    builder: (context) {
-                      final url = _getFirstImageUrl(order);
-                      if (url == null || url.isEmpty) {
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.image_not_supported_outlined,
-                            color: Colors.grey.shade400,
-                            size: 20,
-                          ),
-                        );
-                      }
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          url,
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (c, e, s) => Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: Colors.grey.shade400,
-                                  size: 20,
-                                ),
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppConstants.spacingL),
+          color:
+              isExpanded
+                  ? AppConstants.backgroundColor.withOpacity(0.5)
+                  : Colors.transparent,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                flex: 2,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Builder(
+                        builder: (context) {
+                          final url = _getFirstImageUrl(order);
+                          if (url == null || url.isEmpty) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8),
                               ),
+                              child: Icon(
+                                Icons.image_not_supported_outlined,
+                                color: Colors.grey.shade400,
+                                size: 20,
+                              ),
+                            );
+                          }
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              url,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (c, e, s) => Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.broken_image_outlined,
+                                      color: Colors.grey.shade400,
+                                      size: 20,
+                                    ),
+                                  ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: AppConstants.spacingM),
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        order.orderNo?.isNotEmpty == true
+                            ? order.orderNo!
+                            : order.id.substring(0, 8),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppConstants.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppConstants.primaryColor,
                         ),
-                      );
-                    },
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        _formatFriendlyDate(order.orderDate ?? order.createdAt),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppConstants.bodySmall.copyWith(
+                          color: AppConstants.textSecondaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingM,
+                      vertical: AppConstants.spacingS,
+                    ),
+                    decoration: BoxDecoration(
+                      color: order.statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                      border: Border.all(
+                        color: order.statusColor.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      order.statusText,
+                      style: AppConstants.bodySmall.copyWith(
+                        color: order.statusColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
-                const SizedBox(width: AppConstants.spacingM),
-                Expanded(
-                  flex: 4,
+              ),
+              Expanded(
+                flex: 2,
+                child: Align(
+                  alignment: Alignment.centerLeft,
                   child: Text(
-                    order.orderNo?.isNotEmpty == true
-                        ? order.orderNo!
-                        : order.id.substring(0, 8),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    _formatDate(order.createdAt),
+                    textAlign: TextAlign.left,
                     style: AppConstants.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppConstants.primaryColor,
+                      color: AppConstants.textPrimaryColor,
                     ),
                   ),
                 ),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    _formatFriendlyDate(order.orderDate ?? order.createdAt),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppConstants.bodySmall.copyWith(
-                      color: AppConstants.textSecondaryColor,
+              ),
+              Expanded(
+                flex: 1,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: PopupMenuButton<String>(
+                    onSelected: (value) => _handleOrderAction(value, order),
+                    itemBuilder:
+                        (context) => [
+                        const PopupMenuItem(
+                          value: 'view',
+                          child: Row(
+                            children: [
+                              Icon(Icons.visibility_outlined, size: 18),
+                              SizedBox(width: 8),
+                              Text('View Details'),
+                            ],
+                          ),
+                        ),
+                        if (order.status == OrderStatus.pending)
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit_outlined, size: 18),
+                                SizedBox(width: 8),
+                                Text('Edit'),
+                              ],
+                            ),
+                          ),
+                        const PopupMenuItem(
+                          value: 'clone',
+                          child: Row(
+                            children: [
+                              Icon(Icons.content_copy_outlined, size: 18),
+                              SizedBox(width: 8),
+                              Text('Clone'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'pdf',
+                          child: Row(
+                            children: [
+                              Icon(Icons.picture_as_pdf_outlined, size: 18),
+                              SizedBox(width: 8),
+                              Text('Generate PDF'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'image',
+                          child: Row(
+                            children: [
+                              Icon(Icons.image_outlined, size: 18),
+                              SizedBox(width: 8),
+                              Text('Generate Image'),
+                            ],
+                          ),
+                        ),
+                        if (order.status == OrderStatus.pending) ...[
+                          const PopupMenuDivider(),
+                          const PopupMenuItem(
+                            value: 'cancel',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.cancel_outlined,
+                                  size: 18,
+                                  color: Colors.red,
+                                ),
+                                SizedBox(width: 8),
+                                Text('Cancel', style: TextStyle(color: Colors.red)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppConstants.backgroundColor,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: AppConstants.textSecondaryColor.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.more_vert,
+                        size: 18,
+                        color: AppConstants.textSecondaryColor,
+                      ),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          Expanded(
-            flex: 2,
+        ),
+        // Priority ribbon for urgent orders
+        if (order.orderPriority?.toLowerCase() == 'urgent')
+          Positioned(
+            top: 0,
+            right: 0,
             child: Container(
               padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingM,
-                vertical: AppConstants.spacingS,
+                horizontal: 8,
+                vertical: 4,
               ),
               decoration: BoxDecoration(
-                color: order.statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                border: Border.all(
-                  color: order.statusColor.withOpacity(0.3),
-                  width: 1,
+                color: Colors.red,
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(8),
+                  bottomLeft: Radius.circular(8),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Text(
-                order.statusText,
+                'URGENT',
                 style: AppConstants.bodySmall.copyWith(
-                  color: order.statusColor,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              _formatDate(order.createdAt),
-              style: AppConstants.bodyMedium.copyWith(
-                color: AppConstants.textPrimaryColor,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: PopupMenuButton<String>(
-              onSelected: (value) => _handleOrderAction(value, order),
-              itemBuilder:
-                  (context) => [
-                    const PopupMenuItem(
-                      value: 'view',
-                      child: Row(
-                        children: [
-                          Icon(Icons.visibility_outlined, size: 18),
-                          SizedBox(width: 8),
-                          Text('View Details'),
-                        ],
-                      ),
-                    ),
-                    if (order.status == OrderStatus.pending)
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit_outlined, size: 18),
-                            SizedBox(width: 8),
-                            Text('Edit'),
-                          ],
-                        ),
-                      ),
-                    const PopupMenuItem(
-                      value: 'clone',
-                      child: Row(
-                        children: [
-                          Icon(Icons.content_copy_outlined, size: 18),
-                          SizedBox(width: 8),
-                          Text('Clone'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'pdf',
-                      child: Row(
-                        children: [
-                          Icon(Icons.picture_as_pdf_outlined, size: 18),
-                          SizedBox(width: 8),
-                          Text('Generate PDF'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'image',
-                      child: Row(
-                        children: [
-                          Icon(Icons.image_outlined, size: 18),
-                          SizedBox(width: 8),
-                          Text('Generate Image'),
-                        ],
-                      ),
-                    ),
-                    if (order.status == OrderStatus.pending) ...[
-                      const PopupMenuDivider(),
-                      const PopupMenuItem(
-                        value: 'cancel',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.cancel_outlined,
-                              size: 18,
-                              color: Colors.red,
-                            ),
-                            SizedBox(width: 8),
-                            Text('Cancel', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppConstants.backgroundColor,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: AppConstants.textSecondaryColor.withOpacity(0.2),
-                  ),
-                ),
-                child: Icon(
-                  Icons.more_vert,
-                  size: 18,
-                  color: AppConstants.textSecondaryColor,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
                 ),
               ),
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -934,7 +983,12 @@ class _ClientDashboardState extends State<ClientDashboard>
   void _handleOrderAction(String action, Order order) async {
     switch (action) {
       case 'view':
-        _showOrderDetailsDialog(order);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OrderDetailsScreen(order: order),
+          ),
+        );
         break;
       case 'edit':
         final updated = await Navigator.push<bool>(
