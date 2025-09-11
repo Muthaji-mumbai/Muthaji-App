@@ -69,7 +69,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     '18K Yellow gold',
     '18K Rose gold',
     '18K White gold',
-    '22k'
+    '22k',
     'Other',
   ];
   static const List<String> _colorstoneOptions = [

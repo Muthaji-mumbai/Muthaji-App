@@ -105,8 +105,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
 
   Widget _buildUrgentRibbon() {
     return Container(
+      
       padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.spacingS,
+        horizontal: 8,
         vertical: 4,
       ),
       decoration: BoxDecoration(
@@ -312,7 +313,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   Widget _buildStatusChip(Order order) {
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.spacingS,
+        horizontal: AppConstants.spacingL,
         vertical: AppConstants.spacingXS,
       ),
       decoration: BoxDecoration(
@@ -637,8 +638,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                   horizontal: AppConstants.spacingM,
                   vertical: AppConstants.spacingS,
                 ),
-                trailing:
-                    isOpen ? _buildStatusChip(order) : _buildStatusChip(order),
+                // trailing:
+                //     isOpen ? _buildStatusChip(order) : _buildStatusChip(order),
                 title: _buildOrderSummary(index, order),
                 childrenPadding: const EdgeInsets.all(AppConstants.spacingM),
                 children: [_buildOrderDetails(order)],
@@ -647,11 +648,45 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           ),
           if (_isUrgent(order))
             Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
-          // Show Delay over Due when both conditions could be true
+          // Status ribbon positioned on the right end
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: order.statusColor,
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(AppConstants.radiusM),
+                  bottomLeft: Radius.circular(8),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: order.statusColor.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                order.statusText.toUpperCase(),
+                style: AppConstants.bodySmall.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+          // Show Delay over Due when both conditions could be true (positioned below status ribbon)
           if (_isDelay(order))
-            Positioned(top: 0, right: 0, child: _buildDelayRibbon())
+            Positioned(top: 30, right: 0, child: _buildDelayRibbon())
           else if (_isDue(order))
-            Positioned(top: 0, right: 0, child: _buildDueRibbon()),
+            Positioned(top: 30, right: 0, child: _buildDueRibbon()),
         ],
       ),
     );
@@ -738,44 +773,50 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   }
 
  Widget _buildOrderDetails(Order order) {
-  return Card(
-    elevation: 2,
-    margin: const EdgeInsets.all(AppConstants.spacingM),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(AppConstants.spacingL),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header with status and actions
-          _buildOrderHeader(order),
-          
-          const Divider(height: AppConstants.spacingL * 2),
-          
-          // Order Information Section
-          _buildOrderInfoSection(order),
-          
-          // Ornament Details Section
-          if (order.ornamentDetails.isNotEmpty) ...[
-            const SizedBox(height: AppConstants.spacingL),
-            _buildOrnamentDetailsSection(order),
-          ],
-          
-          // Notes Section
-          if (order.notes != null && order.notes!.isNotEmpty) ...[
-            const SizedBox(height: AppConstants.spacingL),
-            _buildNotesSection(order),
-          ],
-          
-          const SizedBox(height: AppConstants.spacingL),
-          
-          // Action Buttons Section
-          _buildActionButtonsSection(order),
-        ],
+  return Stack(
+    children: [
+      Card(
+        elevation: 2,
+        margin: const EdgeInsets.all(AppConstants.spacingM),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.spacingL),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with status and actions
+             
+              
+             
+              
+              // Order Information Section
+              _buildOrderInfoSection(order),
+              
+              // Ornament Details Section
+              if (order.ornamentDetails.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.spacingL),
+                _buildOrnamentDetailsSection(order),
+              ],
+              
+              // Notes Section
+              if (order.notes != null && order.notes!.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.spacingL),
+                _buildNotesSection(order),
+              ],
+              
+              const SizedBox(height: AppConstants.spacingL),
+              
+              // Action Buttons Section
+              _buildActionButtonsSection(order),
+            ],
+          ),
+        ),
       ),
-    ),
+      // Status ribbon positioned on the right
+      
+    ],
   );
 }
 
@@ -1611,4 +1652,5 @@ Color _getStatusColor(OrderStatus status) {
       ),
     );
   }
+
 }

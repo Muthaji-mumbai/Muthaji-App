@@ -596,7 +596,7 @@ class _ClientDashboardState extends State<ClientDashboard>
                       ),
                     ),
                     Expanded(
-                      flex: 3,
+                      flex: 1,
                       child: Text(
                         _formatFriendlyDate(order.orderDate ?? order.createdAt),
                         maxLines: 1,
@@ -609,47 +609,7 @@ class _ClientDashboardState extends State<ClientDashboard>
                   ],
                 ),
               ),
-              Expanded(
-                flex: 2,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingM,
-                      vertical: AppConstants.spacingS,
-                    ),
-                    decoration: BoxDecoration(
-                      color: order.statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                      border: Border.all(
-                        color: order.statusColor.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      order.statusText,
-                      style: AppConstants.bodySmall.copyWith(
-                        color: order.statusColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    _formatDate(order.createdAt),
-                    textAlign: TextAlign.left,
-                    style: AppConstants.bodyMedium.copyWith(
-                      color: AppConstants.textPrimaryColor,
-                    ),
-                  ),
-                ),
-              ),
+              
               Expanded(
                 flex: 1,
                 child: Align(
@@ -748,11 +708,11 @@ class _ClientDashboardState extends State<ClientDashboard>
             ],
           ),
         ),
-        // Priority ribbon for urgent orders
+        // Priority ribbon for urgent orders (positioned on the left)
         if (order.orderPriority?.toLowerCase() == 'urgent')
           Positioned(
             top: 0,
-            right: 0,
+            left: 0,
             child: Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 8,
@@ -761,8 +721,8 @@ class _ClientDashboardState extends State<ClientDashboard>
               decoration: BoxDecoration(
                 color: Colors.red,
                 borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(8),
-                  bottomLeft: Radius.circular(8),
+                  topLeft: Radius.circular(8),
+                  bottomRight: Radius.circular(8),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -782,6 +742,8 @@ class _ClientDashboardState extends State<ClientDashboard>
               ),
             ),
           ),
+        // Status ribbon for all orders (positioned on the right)
+        _buildStatusRibbon(order),
       ],
     );
   }
@@ -820,12 +782,7 @@ class _ClientDashboardState extends State<ClientDashboard>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    'Created: ${_formatDate(order.createdAt)}',
-                    style: AppConstants.bodySmall.copyWith(
-                      color: AppConstants.textSecondaryColor,
-                    ),
-                  ),
+
                   if (order.updatedAt != null)
                     Text(
                       'Updated: ${_formatDate(order.updatedAt!)}',
@@ -1044,7 +1001,7 @@ class _ClientDashboardState extends State<ClientDashboard>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildDetailRow('Status', order.statusText),
-                  _buildDetailRow('Created', _formatDate(order.createdAt)),
+                 //
                   if (order.orderDate != null)
                     _buildDetailRow(
                       'Order Date',
@@ -1202,6 +1159,42 @@ class _ClientDashboardState extends State<ClientDashboard>
   bool _isUrgent(Order order) {
     final p = (order.orderPriority ?? '').toLowerCase().trim();
     return p == 'urgent' || p.contains('urgent');
+  }
+
+  Widget _buildStatusRibbon(Order order) {
+    return Positioned(
+      top: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 8,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          color: order.statusColor,
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(8),
+            bottomLeft: Radius.circular(8),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: order.statusColor.withOpacity(0.3),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Text(
+          order.statusText.toUpperCase(),
+          style: AppConstants.bodySmall.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 10,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildUrgentRibbon() {
