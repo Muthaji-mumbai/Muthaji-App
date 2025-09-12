@@ -134,11 +134,18 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppConstants.errorColor,
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(8),
+          bottomRight: Radius.circular(8),
+        ),
       ),
       child: const Text(
         'URGENT',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8),
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
@@ -148,11 +155,18 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppConstants.warningColor,
-        borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomLeft: Radius.circular(8)),
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(8),
+          bottomLeft: Radius.circular(8),
+        ),
       ),
       child: const Text(
         'PENDING',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8),
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
@@ -162,11 +176,18 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: const BoxDecoration(
         color: Color(0xFFFFA000), // Amber 700
-        borderRadius: BorderRadius.only(topRight: Radius.circular(8), bottomLeft: Radius.circular(8)),
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(8),
+          bottomLeft: Radius.circular(8),
+        ),
       ),
       child: const Text(
         'DUE',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8),
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
@@ -176,11 +197,18 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppConstants.errorColor,
-        borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomLeft: Radius.circular(8)),
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(8),
+          bottomLeft: Radius.circular(8),
+        ),
       ),
       child: const Text(
         'DELAY',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8),
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
@@ -192,9 +220,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             bool matchesStatus = true;
             if (_selectedStatus != null) {
               if (_selectedStatus == OrderStatus.due) {
-                matchesStatus = order.status == OrderStatus.due || _isDue(order);
+                matchesStatus =
+                    order.status == OrderStatus.due || _isDue(order);
               } else if (_selectedStatus == OrderStatus.delay) {
-                matchesStatus = order.status == OrderStatus.delay || _isDelay(order);
+                matchesStatus =
+                    order.status == OrderStatus.delay || _isDelay(order);
               } else {
                 matchesStatus = order.status == _selectedStatus;
               }
@@ -328,9 +358,138 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     });
   }
 
+  void _selectAllOrders() {
+    setState(() {
+      _selectedOrderIds.clear();
+      for (final order in _filteredOrders) {
+        _selectedOrderIds.add(order.id);
+      }
+      _selectionMode = _selectedOrderIds.isNotEmpty;
+    });
+  }
+
+  void _selectNoneOrders() {
+    _clearSelection();
+  }
+
   Future<void> _bulkChangeStatus(OrderStatus status) async {
     final token = AuthService.currentToken;
     if (token == null || _selectedOrderIds.isEmpty) return;
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppConstants.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.sync_alt_rounded,
+                    color: AppConstants.primaryColor,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text('Bulk Status Update'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Are you sure you want to update ${_selectedOrderIds.length} orders to "${status.toString().split('.').last}"?',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(status),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'New Status: ${status.toString().split('.').last}',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Update All'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed != true) return;
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Updating ${_selectedOrderIds.length} orders...'),
+              ],
+            ),
+          ),
+    );
+
     try {
       for (final id in _selectedOrderIds) {
         final order = _allOrders.firstWhere((o) => o.id == id);
@@ -341,6 +500,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         );
       }
       await _loadData();
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -360,6 +523,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       );
       _clearSelection();
     } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -479,15 +645,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     }
   }
 
-  void _navigateToUpdateOrder(Order order) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => UpdateOrderScreen(orderId: order.id),
-      ),
-    ).then((_) => _loadData());
-  }
-
   void _toggleFilters() {
     setState(() {
       _showFilters = !_showFilters;
@@ -530,6 +687,16 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         ),
         actions: [
           if (_selectionMode) ...[
+            IconButton(
+              tooltip: 'Select All',
+              icon: const Icon(Icons.select_all_rounded),
+              onPressed: _selectAllOrders,
+            ),
+            IconButton(
+              tooltip: 'Select None',
+              icon: const Icon(Icons.deselect_rounded),
+              onPressed: _selectNoneOrders,
+            ),
             IconButton(
               tooltip: 'Clear Selection',
               icon: const Icon(Icons.clear_all_rounded),
@@ -678,6 +845,20 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           ),
         ],
       ),
+      floatingActionButton:
+          !_selectionMode
+              ? FloatingActionButton.extended(
+                onPressed: () {
+                  setState(() {
+                    _selectionMode = true;
+                  });
+                },
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                icon: const Icon(Icons.checklist_rounded),
+                label: const Text('Select Orders'),
+              )
+              : null,
     );
   }
 
@@ -1103,11 +1284,24 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color:
+                isSelected
+                    ? AppConstants.primaryColor.withOpacity(0.05)
+                    : Colors.white,
             borderRadius: BorderRadius.circular(16),
+            border:
+                isSelected
+                    ? Border.all(
+                      color: AppConstants.primaryColor.withOpacity(0.3),
+                      width: 2,
+                    )
+                    : null,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.shade200,
+                color:
+                    isSelected
+                        ? AppConstants.primaryColor.withOpacity(0.1)
+                        : Colors.grey.shade200,
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -1126,364 +1320,381 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 );
               },
               child: ExpansionTile(
-            tilePadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 8,
-            ),
-            childrenPadding: const EdgeInsets.all(20),
-            leading: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _getStatusColor(order.status).withOpacity(0.3),
-                  width: 2,
+                tilePadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
                 ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child:
-                    order.images.isNotEmpty
-                        ? Image.network(
-                          order.images.first,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (context, error, stackTrace) => Container(
-                                color: _getStatusColor(
-                                  order.status,
-                                ).withOpacity(0.1),
-                                child: Icon(
-                                  Icons.image_not_supported_rounded,
-                                  color: _getStatusColor(order.status),
-                                  size: 24,
-                                ),
+                childrenPadding: const EdgeInsets.all(20),
+                leading: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _getStatusColor(order.status).withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child:
+                        order.images.isNotEmpty
+                            ? Image.network(
+                              order.images.first,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (context, error, stackTrace) => Container(
+                                    color: _getStatusColor(
+                                      order.status,
+                                    ).withOpacity(0.1),
+                                    child: Icon(
+                                      Icons.image_not_supported_rounded,
+                                      color: _getStatusColor(order.status),
+                                      size: 24,
+                                    ),
+                                  ),
+                            )
+                            : Container(
+                              color: _getStatusColor(
+                                order.status,
+                              ).withOpacity(0.1),
+                              child: Icon(
+                                Icons.shopping_bag_outlined,
+                                color: _getStatusColor(order.status),
+                                size: 24,
                               ),
-                        )
-                        : Container(
-                          color: _getStatusColor(order.status).withOpacity(0.1),
-                          child: Icon(
-                            Icons.shopping_bag_outlined,
-                            color: _getStatusColor(order.status),
-                            size: 24,
-                          ),
-                        ),
-              ),
-            ),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        order.orderNo ?? order.id,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(order.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _getStatusColor(order.status).withOpacity(0.3),
-                        ),
-                      ),
-                      child: Text(
-                        order.status.toString().split('.').last,
-                        style: TextStyle(
-                          color: _getStatusColor(order.status),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline_rounded,
-                      size: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        order.clientName,
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                Text(
-                  order.description,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (order.orderType != null) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.blue.shade200),
-                        ),
-                        child: Text(
-                          order.orderType!,
-                          style: TextStyle(
-                            color: Colors.blue.shade700,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    Icon(
-                      Icons.access_time_rounded,
-                      size: 14,
-                      color: Colors.grey.shade500,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _formatDate(order.orderDate!),
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (order.images.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.photo_library_outlined,
-                              size: 12,
-                              color: Colors.green.shade600,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${order.images.length}',
+                  ),
+                ),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            order.orderNo ?? order.id,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(
+                              order.status,
+                            ).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: _getStatusColor(
+                                order.status,
+                              ).withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            order.status.toString().split('.').last,
+                            style: TextStyle(
+                              color: _getStatusColor(order.status),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline_rounded,
+                          size: 16,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            order.clientName,
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      order.description,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        if (order.orderType != null) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Text(
+                              order.orderType!,
                               style: TextStyle(
-                                color: Colors.green.shade600,
+                                color: Colors.blue.shade700,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ],
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Icon(
+                          Icons.access_time_rounded,
+                          size: 14,
+                          color: Colors.grey.shade500,
                         ),
-                      ),
-                  ],
-                ),
-                if (_selectionMode) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: isSelected,
-                        onChanged:
-                            (val) => _toggleSelection(order.id, val ?? false),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Select for bulk action',
-                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatDate(order.orderDate!),
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (order.images.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.photo_library_outlined,
+                                  size: 12,
+                                  color: Colors.green.shade600,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${order.images.length}',
+                                  style: TextStyle(
+                                    color: Colors.green.shade600,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (_selectionMode) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: isSelected,
+                            onChanged:
+                                (val) =>
+                                    _toggleSelection(order.id, val ?? false),
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Select for bulk action',
+                            style: TextStyle(fontSize: 13, color: Colors.grey),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ],
-              ],
-            ),
-            trailing: PopupMenuButton<String>(
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(
-                  Icons.more_vert_rounded,
-                  size: 18,
-                  color: Colors.grey,
-                ),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              onSelected: (value) {
-                if (value == 'edit') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CreateOrderScreen(orderToEdit: order),
-                    ),
-                  ).then((_) => _loadData());
-                } else if (value == 'status') {
-                  _showStatusUpdateDialog(order);
-                } else if (value == 'delete') {
-                  _deleteOrder(order.id);
-                } else if (value == 'full_details') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => OrderDetailsScreen(order: order),
-                    ),
-                  );
-                } else if (value == 'generate_image') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => OrderImageGenerator(order: order),
-                    ),
-                  );
-                } else if (value == 'generate_pdf') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PDFViewerScreen(order: order),
-                    ),
-                  );
-                }
-              },
-
-              itemBuilder:
-                  (context) => [
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.edit_outlined,
-                            size: 18,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 12),
-                          const Text('Edit Order'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'status',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.sync_alt_rounded,
-                            size: 18,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 12),
-                          const Text('Update Status'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'full_details',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.visibility_outlined,
-                            size: 18,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 12),
-                          const Text('Full Details'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'generate_image',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.visibility_outlined,
-                            size: 18,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 12),
-                          const Text('Generate Image'),
-                        ],
-                      ),
-                    ),
-                     PopupMenuItem(
-                      value: 'generate_pdf',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.picture_as_pdf_outlined,
-                            size: 18,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 12),
-                          const Text('Generate PDF'),
-                        ],
-                      ),
-                    ),
-                    if (order.orderType == 'Single')
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.delete_outline_rounded,
-                              size: 18,
-                              color: Colors.red.shade600,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Delete Order',
-                              style: TextStyle(color: Colors.red.shade600),
-                            ),
-                          ],
-                        ),
-                      ),
                   ],
+                ),
+                trailing: PopupMenuButton<String>(
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.more_vert_rounded,
+                      size: 18,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) =>
+                                  CreateOrderScreen(orderToEdit: order),
+                        ),
+                      ).then((_) => _loadData());
+                    } else if (value == 'status') {
+                      _showStatusUpdateDialog(order);
+                    } else if (value == 'delete') {
+                      _deleteOrder(order.id);
+                    } else if (value == 'full_details') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => OrderDetailsScreen(order: order),
+                        ),
+                      );
+                    } else if (value == 'generate_image') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => OrderImageGenerator(order: order),
+                        ),
+                      );
+                    } else if (value == 'generate_pdf') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PDFViewerScreen(order: order),
+                        ),
+                      );
+                    }
+                  },
+
+                  itemBuilder:
+                      (context) => [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.edit_outlined,
+                                size: 18,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Edit Order'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'status',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.sync_alt_rounded,
+                                size: 18,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Update Status'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'full_details',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.visibility_outlined,
+                                size: 18,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Full Details'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'generate_image',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.visibility_outlined,
+                                size: 18,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Generate Image'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'generate_pdf',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.picture_as_pdf_outlined,
+                                size: 18,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Generate PDF'),
+                            ],
+                          ),
+                        ),
+                        if (order.orderType == 'Single')
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 18,
+                                  color: Colors.red.shade600,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Delete Order',
+                                  style: TextStyle(color: Colors.red.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                ),
+                children: [_buildExpandedContent(order)],
+              ),
             ),
-            children: [_buildExpandedContent(order)],
           ),
-        ),),),
-        
+        ),
+
         if (_isUrgent(order))
           Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
         if (_isDelay(order))
@@ -1507,162 +1718,166 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Order Details Grid
-         
 
           // Ornament Details (with images under each detail)
           if (order.ornamentDetails.isNotEmpty) ...[
             const SizedBox(height: 20),
             _buildDetailSection('Ornament Details', []),
             const SizedBox(height: 8),
-            ...order.ornamentDetails
-                .asMap()
-                .entries
-                .map(
-                  (entry) {
-                    final idx = entry.key;
-                    final detail = entry.value;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.amber,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Ornament Detail ${idx + 1}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            detail.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Weight: ${detail.weight} • Unit: ${detail.unit ?? 'g'} • Purity: ${detail.purity} • Qty: ${detail.quantity} • ${detail.size != null ? ' • Size: ${detail.size}' : ''}',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 12,
-                            ),
-                          ),
-                          if (detail.colorstone != null || detail.rhodium != null || detail.dull != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              [
-                                if (detail.colorstone != null) 'Colorstone: ${detail.colorstone}',
-                                if (detail.rhodium != null) 'Rhodium: ${detail.rhodium}',
-                                if (detail.dull != null) 'Dull: ${detail.dull}',
-                              ].join(' • '),
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                          if ((detail.remarks ?? '').isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              'Remarks: ${detail.remarks}',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                          if (detail.images.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              'Images (${detail.images.length})',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: 100,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: detail.images.length,
-                                itemBuilder: (context, index) {
-                                  final imageUrl = detail.images[index];
-                                  return GestureDetector(
-                                    onTap: () => _showFullScreenImage(detail.images, index),
-                                    child: Container(
-                                      margin: const EdgeInsets.only(right: 12),
-                                      width: 100,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.grey.shade300),
-                                      ),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(11),
-                                        child: Image.network(
-                                          imageUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Container(
-                                              color: Colors.grey.shade100,
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons.broken_image_outlined,
-                                                    color: Colors.grey.shade400,
-                                                    size: 32,
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    'Error',
-                                                    style: TextStyle(
-                                                      color: Colors.grey.shade400,
-                                                      fontSize: 10,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  },
+            ...order.ornamentDetails.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final detail = entry.value;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.amber,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Ornament Detail ${idx + 1}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      detail.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Weight: ${detail.weight} • Unit: ${detail.unit ?? 'g'} • Purity: ${detail.purity} • Qty: ${detail.quantity} • ${detail.size != null ? ' • Size: ${detail.size}' : ''}',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (detail.colorstone != null ||
+                        detail.rhodium != null ||
+                        detail.dull != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        [
+                          if (detail.colorstone != null)
+                            'Colorstone: ${detail.colorstone}',
+                          if (detail.rhodium != null)
+                            'Rhodium: ${detail.rhodium}',
+                          if (detail.dull != null) 'Dull: ${detail.dull}',
+                        ].join(' • '),
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                    if ((detail.remarks ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Remarks: ${detail.remarks}',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                    if (detail.images.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Images (${detail.images.length})',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 100,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: detail.images.length,
+                          itemBuilder: (context, index) {
+                            final imageUrl = detail.images[index];
+                            return GestureDetector(
+                              onTap:
+                                  () => _showFullScreenImage(
+                                    detail.images,
+                                    index,
+                                  ),
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 12),
+                                width: 100,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(11),
+                                  child: Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: Colors.grey.shade100,
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.broken_image_outlined,
+                                              color: Colors.grey.shade400,
+                                              size: 32,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Error',
+                                              style: TextStyle(
+                                                color: Colors.grey.shade400,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
           ],
 
           // Images
-          
         ],
       ),
     );
@@ -1682,36 +1897,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         ),
         if (children.isNotEmpty) ...[const SizedBox(height: 12), ...children],
       ],
-    );
-  }
-
-  Widget _buildDetailItem(String label, String value, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 16, color: Colors.grey.shade600),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade700,
-                fontSize: 13,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 13, color: Colors.black87),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
