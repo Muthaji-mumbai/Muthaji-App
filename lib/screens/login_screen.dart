@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:responsive_framework/responsive_framework.dart';
@@ -36,6 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success && mounted) {
+        final fcmToken = await FirebaseMessaging.instance.getToken();
+        print("FCM TOKEN========>${fcmToken}");
         // On successful login, navigate to Dashboard and clear back stack
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const DashboardScreen()),

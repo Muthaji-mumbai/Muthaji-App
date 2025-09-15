@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "129231948033",
+    "project_id": "soloshine-906d5",
+    "storage_bucket": "soloshine-906d5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:129231948033:android:e9dde08290c79af2a0f300",
+        "android_client_info": {
+          "package_name": "com.example.soloshine"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVKeK7R59dXXE570dMpaIHTDeqNHugaGs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

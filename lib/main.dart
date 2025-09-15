@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:responsive_framework/responsive_framework.dart';
@@ -10,7 +11,9 @@ import 'services/navigation_service.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   // Register a global unauthorized handler used by ApiService
   ApiService.setUnauthorizedHandler(AuthService.handleUnauthorized);
   runApp(const MyApp());
@@ -63,7 +66,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _initializeAuth() async {
     final authProvider = context.read<AuthProvider>();
     await authProvider.initializeAuth();
-    
+
     if (mounted) {
       setState(() {
         _isInitializing = false;
