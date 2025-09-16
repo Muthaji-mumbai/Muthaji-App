@@ -7,6 +7,8 @@ import '../constants/app_constants.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import 'dashboard_screen.dart';
+import '../services/user_service.dart';
+import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -37,8 +39,17 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success && mounted) {
-        final fcmToken = await FirebaseMessaging.instance.getToken();
-        print("FCM TOKEN========>${fcmToken}");
+        try {
+          final fcmToken = await FirebaseMessaging.instance.getToken();
+          if (fcmToken != null && AuthService.currentUser != null) {
+            await UserService.updateFcmToken(
+              userId: AuthService.currentUser!.id,
+              fcmtoken: fcmToken,
+              token: AuthService.currentToken,
+            );
+          }
+        } catch (_) {}
+
         // On successful login, navigate to Dashboard and clear back stack
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const DashboardScreen()),

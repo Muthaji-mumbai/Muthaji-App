@@ -3,6 +3,25 @@ import 'api_service.dart';
 import '../constants/app_constants.dart';
 
 class UserService {
+  // Update FCM token for a user
+  static Future<bool> updateFcmToken({
+    required String userId,
+    required String fcmtoken,
+    String? token,
+  }) async {
+    try {
+      final response = await ApiService.patch(
+        '${AppConstants.usersEndpoint}/$userId',
+        body: {'fcmtoken': fcmtoken},
+        token: token,
+      );
+
+      return response['success'] == true;
+    } catch (e) {
+      throw Exception('Error updating FCM token: $e');
+    }
+  }
+
   // Get all users
   static Future<List<User>> getAllUsers(String token) async {
     try {

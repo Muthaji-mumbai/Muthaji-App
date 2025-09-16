@@ -14,10 +14,11 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "1.8"
     }
 
     defaultConfig {
@@ -42,6 +43,7 @@ android {
 
 dependencies {
   implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
+  coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
 }
 
 
