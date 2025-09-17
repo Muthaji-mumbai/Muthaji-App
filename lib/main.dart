@@ -11,12 +11,15 @@ import 'services/navigation_service.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/push_notification_service.dart';
+import 'package:flutter/foundation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  // Init push notifications (foreground, background, terminated)
-  await PushNotificationService.instance.initialize();
+  if (!kIsWeb) {
+    await Firebase.initializeApp();
+    // Init push notifications (foreground, background, terminated)
+    await PushNotificationService.instance.initialize();
+  }
   // Register a global unauthorized handler used by ApiService
   ApiService.setUnauthorizedHandler(AuthService.handleUnauthorized);
   runApp(const MyApp());

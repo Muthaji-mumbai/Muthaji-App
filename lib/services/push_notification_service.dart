@@ -31,6 +31,7 @@ class PushNotificationService {
       );
 
   Future<void> initialize() async {
+    if (kIsWeb) return; // Skip on web
     await _requestPermissions();
     await _initLocalNotifications();
 
@@ -73,6 +74,7 @@ class PushNotificationService {
   }
 
   Future<void> _initLocalNotifications() async {
+    if (kIsWeb) return; // Skip on web
     const initializationSettingsAndroid = AndroidInitializationSettings(
       '@mipmap/launcher_icon',
     );
