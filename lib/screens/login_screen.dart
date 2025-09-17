@@ -51,6 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
         } catch (_) {}
 
         // On successful login, navigate to Dashboard and clear back stack
+        if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const DashboardScreen()),
           (route) => false,

@@ -127,16 +127,23 @@ class AuthService {
     if (_handlingUnauthorized) return;
     _handlingUnauthorized = true;
     try {
+      // Capture state before clearing session
+      final bool wasLoggedIn = _currentUser != null;
+      final UserRole? previousRole = _currentUser?.role;
       // Clear local session
       await logout();
 
       final context =
+          NavigationService.navigatorKey.currentContext ??
           NavigationService.navigatorKey.currentState?.overlay?.context;
 
-      if (context != null) {
-        // Show a session expired dialog
+      // Only show dialog if a user was actually logged in (avoid showing during login failures)
+      final shouldShowDialog =
+          wasLoggedIn && previousRole == UserRole.customer && context != null;
+
+      if (shouldShowDialog) {
         await showDialog(
-          context: context,
+          context: context!,
           barrierDismissible: false,
           builder:
               (ctx) => AlertDialog(
@@ -152,13 +159,13 @@ class AuthService {
                 ],
               ),
         );
-
-        // Navigate to login screen and clear back stack
-        NavigationService.navigatorKey.currentState?.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
       }
+
+      // Navigate to login screen and clear back stack
+      NavigationService.navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
     } catch (_) {
       // Ignore
     } finally {

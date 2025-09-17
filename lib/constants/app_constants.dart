@@ -25,6 +25,9 @@ class AppConstants {
   static const String baseUrl = 'https://soloshine-backend.onrender.com';
   static const String loginEndpoint = '/auth/login';
   static const String loginUrl = '$baseUrl$loginEndpoint';
+  // Web push (FCM) VAPID public key
+  static const String webVapidKey =
+      'BCgdsTYFX0WQ02XxVKAcIexvvy-HyJeqbVIqRETb1ZWGqOQjXp_LVYk1e698JREZI9ddrO0ZNArgTSDsXDi4dKs';
 
   // Additional API endpoints for future use
   static const String usersEndpoint = '/user';

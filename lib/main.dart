@@ -15,7 +15,19 @@ import 'package:flutter/foundation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (!kIsWeb) {
+  if (kIsWeb) {
+    // Firebase initialization for Web
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: 'AIzaSyA8aMOr_tiQ6smcs0rXZY1W3Kjk1hKBeIA',
+        authDomain: 'soloshine-906d5.firebaseapp.com',
+        projectId: 'soloshine-906d5',
+        storageBucket: 'soloshine-906d5.firebasestorage.app',
+        messagingSenderId: '129231948033',
+        appId: '1:129231948033:web:97d57a3bdac43a8ea0f300',
+      ),
+    );
+  } else {
     await Firebase.initializeApp();
     // Init push notifications (foreground, background, terminated)
     await PushNotificationService.instance.initialize();

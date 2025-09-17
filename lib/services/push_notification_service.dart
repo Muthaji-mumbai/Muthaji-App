@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'navigation_service.dart';
+import '../models/user.dart';
+import 'user_service.dart';
+import 'auth_service.dart';
+import '../constants/app_constants.dart';
 
 // Background handler must be a top-level function.
 @pragma('vm:entry-point')
@@ -31,7 +35,10 @@ class PushNotificationService {
       );
 
   Future<void> initialize() async {
-    if (kIsWeb) return; // Skip on web
+    if (kIsWeb) {
+      await _requestWebPermissionAndToken();
+      return;
+    }
     await _requestPermissions();
     await _initLocalNotifications();
 
@@ -49,6 +56,24 @@ class PushNotificationService {
     if (initialMessage != null) {
       _handleMessageOpenedApp(initialMessage);
     }
+  }
+
+  Future<void> _requestWebPermissionAndToken() async {
+    try {
+      final settings = await _messaging.requestPermission();
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+        final token = await _messaging.getToken(
+          vapidKey:
+              AppConstants.webVapidKey.isEmpty
+                  ? null
+                  : AppConstants.webVapidKey,
+        );
+        if (token != null) {
+          await _updateServerWithTokenIfLoggedIn(token);
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _requestPermissions() async {
@@ -122,6 +147,43 @@ class PushNotificationService {
         payload: _extractPayloadFromMessage(message),
       );
     }
+  }
+
+  // Public: subscribe/unsubscribe based on role
+  Future<void> updateTopicSubscriptionsForRole(UserRole role) async {
+    if (kIsWeb) return; // Not supported on web client
+    const topic = 'orders';
+    if (role == UserRole.admin || role == UserRole.employee) {
+      await _messaging.subscribeToTopic(topic);
+    } else {
+      await _messaging.unsubscribeFromTopic(topic);
+    }
+  }
+
+  // Public: ensure server has latest token if user logged in
+  Future<void> ensureServerHasCurrentToken() async {
+    final token = await _messaging.getToken(
+      vapidKey:
+          kIsWeb && AppConstants.webVapidKey.isNotEmpty
+              ? AppConstants.webVapidKey
+              : null,
+    );
+    if (token != null) {
+      await _updateServerWithTokenIfLoggedIn(token);
+    }
+  }
+
+  Future<void> _updateServerWithTokenIfLoggedIn(String token) async {
+    final user = AuthService.currentUser;
+    final authToken = AuthService.currentToken;
+    if (user == null) return;
+    try {
+      await UserService.updateFcmToken(
+        userId: user.id,
+        fcmtoken: token,
+        token: authToken,
+      );
+    } catch (_) {}
   }
 
   void _handleMessageOpenedApp(RemoteMessage message) {

@@ -53,7 +53,6 @@ class ApiService {
         headers: headers,
         body: body != null ? json.encode(body) : null,
       );
-
       return _handleResponse(response);
     } catch (e) {
       throw Exception('Network error: $e');
@@ -138,7 +137,10 @@ class ApiService {
     String? token,
   }) async {
     try {
-      var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl$endpoint'));
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_baseUrl$endpoint'),
+      );
 
       // Add token to headers if provided
       if (token != null) {
@@ -157,7 +159,9 @@ class ApiService {
       final response = await request.send();
       final responseBody = await http.Response.fromStream(response);
 
-      return _handleResponse(http.Response(responseBody.body, response.statusCode));
+      return _handleResponse(
+        http.Response(responseBody.body, response.statusCode),
+      );
     } catch (e) {
       throw Exception('Network error: $e');
     }
@@ -170,15 +174,11 @@ class ApiService {
       if (response.statusCode == 401 || response.statusCode == 403) {
         // Fire-and-forget the unauthorized handler
         _onUnauthorized?.call();
-        return {
-          'success': false,
-          'message': 'Unauthorized',
-          'data': null,
-        };
+        return {'success': false, 'message': 'Unauthorized', 'data': null};
       }
 
       final responseData = json.decode(response.body);
-      
+
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return responseData;
       } else {
@@ -188,7 +188,7 @@ class ApiService {
       return {
         'success': false,
         'message': 'Request failed with status: ${response.statusCode}',
-        'data': null
+        'data': null,
       };
     }
   }

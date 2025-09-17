@@ -59,7 +59,6 @@ class _ClientDashboardState extends State<ClientDashboard>
     try {
       final currentUser = context.read<AuthProvider>().currentUser;
       final token = AuthService.currentToken;
-
       if (currentUser != null && token != null) {
         final orders = await OrderService.getOrdersByClient(
           currentUser.id,
@@ -609,7 +608,7 @@ class _ClientDashboardState extends State<ClientDashboard>
                   ],
                 ),
               ),
-              
+
               Expanded(
                 flex: 1,
                 child: Align(
@@ -618,82 +617,87 @@ class _ClientDashboardState extends State<ClientDashboard>
                     onSelected: (value) => _handleOrderAction(value, order),
                     itemBuilder:
                         (context) => [
-                        const PopupMenuItem(
-                          value: 'view',
-                          child: Row(
-                            children: [
-                              Icon(Icons.visibility_outlined, size: 18),
-                              SizedBox(width: 8),
-                              Text('View Details'),
-                            ],
-                          ),
-                        ),
-                        if (order.status == OrderStatus.pending)
                           const PopupMenuItem(
-                            value: 'edit',
+                            value: 'view',
                             child: Row(
                               children: [
-                                Icon(Icons.edit_outlined, size: 18),
+                                Icon(Icons.visibility_outlined, size: 18),
                                 SizedBox(width: 8),
-                                Text('Edit'),
+                                Text('View Details'),
                               ],
                             ),
                           ),
-                        const PopupMenuItem(
-                          value: 'clone',
-                          child: Row(
-                            children: [
-                              Icon(Icons.content_copy_outlined, size: 18),
-                              SizedBox(width: 8),
-                              Text('Clone'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'pdf',
-                          child: Row(
-                            children: [
-                              Icon(Icons.picture_as_pdf_outlined, size: 18),
-                              SizedBox(width: 8),
-                              Text('Generate PDF'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'image',
-                          child: Row(
-                            children: [
-                              Icon(Icons.image_outlined, size: 18),
-                              SizedBox(width: 8),
-                              Text('Generate Image'),
-                            ],
-                          ),
-                        ),
-                        if (order.status == OrderStatus.pending) ...[
-                          const PopupMenuDivider(),
+                          if (order.status == OrderStatus.pending)
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_outlined, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Edit'),
+                                ],
+                              ),
+                            ),
                           const PopupMenuItem(
-                            value: 'cancel',
+                            value: 'clone',
                             child: Row(
                               children: [
-                                Icon(
-                                  Icons.cancel_outlined,
-                                  size: 18,
-                                  color: Colors.red,
-                                ),
+                                Icon(Icons.content_copy_outlined, size: 18),
                                 SizedBox(width: 8),
-                                Text('Cancel', style: TextStyle(color: Colors.red)),
+                                Text('Clone'),
                               ],
                             ),
                           ),
+                          const PopupMenuItem(
+                            value: 'pdf',
+                            child: Row(
+                              children: [
+                                Icon(Icons.picture_as_pdf_outlined, size: 18),
+                                SizedBox(width: 8),
+                                Text('Generate PDF'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'image',
+                            child: Row(
+                              children: [
+                                Icon(Icons.image_outlined, size: 18),
+                                SizedBox(width: 8),
+                                Text('Generate Image'),
+                              ],
+                            ),
+                          ),
+                          if (order.status == OrderStatus.pending) ...[
+                            const PopupMenuDivider(),
+                            const PopupMenuItem(
+                              value: 'cancel',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.cancel_outlined,
+                                    size: 18,
+                                    color: Colors.red,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Cancel',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: AppConstants.backgroundColor,
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                          color: AppConstants.textSecondaryColor.withOpacity(0.2),
+                          color: AppConstants.textSecondaryColor.withOpacity(
+                            0.2,
+                          ),
                         ),
                       ),
                       child: Icon(
@@ -714,10 +718,7 @@ class _ClientDashboardState extends State<ClientDashboard>
             top: 0,
             left: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 4,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.red,
                 borderRadius: const BorderRadius.only(
@@ -782,7 +783,6 @@ class _ClientDashboardState extends State<ClientDashboard>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-
                   if (order.updatedAt != null)
                     Text(
                       'Updated: ${_formatDate(order.updatedAt!)}',
@@ -1001,7 +1001,7 @@ class _ClientDashboardState extends State<ClientDashboard>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildDetailRow('Status', order.statusText),
-                 //
+                  //
                   if (order.orderDate != null)
                     _buildDetailRow(
                       'Order Date',
@@ -1166,10 +1166,7 @@ class _ClientDashboardState extends State<ClientDashboard>
       top: 0,
       right: 0,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 8,
-          vertical: 4,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: order.statusColor,
           borderRadius: const BorderRadius.only(
