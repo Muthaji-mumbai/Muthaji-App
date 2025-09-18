@@ -1165,45 +1165,116 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children:
-                    statusCounts.entries.map((entry) {
-                      return Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                children: [
+                  // "All" button to clear filters
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedStatus = null;
+                      });
+                      _applyFilters();
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _selectedStatus == null 
+                            ? AppConstants.primaryColor.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _selectedStatus == null
+                              ? AppConstants.primaryColor
+                              : Colors.grey.withOpacity(0.3),
+                          width: _selectedStatus == null ? 2 : 1,
                         ),
-                        decoration: BoxDecoration(
-                          color: _getStatusColor(entry.key).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _getStatusColor(entry.key).withOpacity(0.3),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: _selectedStatus == null 
+                                  ? AppConstants.primaryColor 
+                                  : Colors.grey,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: _getStatusColor(entry.key),
-                                shape: BoxShape.circle,
-                              ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'All: ${_allOrders.length}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _selectedStatus == null 
+                                  ? AppConstants.primaryColor 
+                                  : Colors.grey,
+                              fontWeight: _selectedStatus == null ? FontWeight.w600 : FontWeight.w500,
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${entry.key.toString().split('.').last}: ${entry.value}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _getStatusColor(entry.key),
-                                fontWeight: FontWeight.w500,
-                              ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Status-specific buttons
+                  ...statusCounts.entries.map((entry) {
+                      final isSelected = _selectedStatus == entry.key;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            // Toggle filter: if already selected, clear it; otherwise set it
+                            _selectedStatus = isSelected ? null : entry.key;
+                          });
+                          _applyFilters();
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected 
+                                ? _getStatusColor(entry.key).withOpacity(0.2)
+                                : _getStatusColor(entry.key).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? _getStatusColor(entry.key)
+                                  : _getStatusColor(entry.key).withOpacity(0.3),
+                              width: isSelected ? 2 : 1,
                             ),
-                          ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(entry.key),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${entry.key.toString().split('.').last}: ${entry.value}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _getStatusColor(entry.key),
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     }).toList(),
+                ],
               ),
             ),
           ),
