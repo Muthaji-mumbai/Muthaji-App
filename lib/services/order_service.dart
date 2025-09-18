@@ -112,7 +112,7 @@ class OrderService {
         if (notes != null) 'notes': notes,
         'ordertype': orderType ?? 'Single',
         'orderdate':
-            (orderDate ?? DateTime.now()).toIso8601String().split('T').first,
+            (orderDate ?? DateTime.now()).toIso8601String(),
         'orderpriority': ((orderpriority ?? 'Regular')),
         // API expects camelCase key per screenshot
         'ornamentDetails': jsonEncode(ornamentDetails),

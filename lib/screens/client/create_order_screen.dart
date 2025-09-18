@@ -133,9 +133,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         final updateData = <String, dynamic>{
           'orderdate':
               (_selectedOrderDate ?? DateTime.now())
-                  .toIso8601String()
-                  .split('T')
-                  .first,
+                  .toIso8601String(),
           'ordertype': _selectedOrderType,
           'ornamentDetails': detailsPayload,
           'orderpriority': _selectedPriority,
