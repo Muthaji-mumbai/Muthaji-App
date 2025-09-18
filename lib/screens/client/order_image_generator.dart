@@ -296,16 +296,18 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                               child: _buildDetailsTable(
                                   ornamentName, purity, weight, quantity, remarks, unit, size, colorstone, rhodium, dull),
                             ),
-                            // Images bottom
-                            Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF8FAFC),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                            // Images bottom, expanded to fill remaining space
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  ),
+                                  child: _buildImagesGridForPage(images, isMobile: true),
                                 ),
-                                child: _buildImagesGridForPage(images, isMobile: true),
                               ),
                             ),
                           ],
@@ -326,7 +328,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                                     ornamentName, purity, weight, quantity, remarks, unit, size, colorstone, rhodium, dull),
                               ),
                             ),
-                            // Right: Images box
+                            // Right: Images box, expanded to fill
                             Expanded(
                               flex: 18,
                               child: Padding(
@@ -400,23 +402,22 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     }
     // Layout: if 1 => big; if 2-3 => grid that fits
     if (images.length == 1) {
-      return _buildModernImageCard(images.first, height: isMobile ? 240 : null);
+      return _buildModernImageCard(images.first);
     }
     return Padding(
       padding: const EdgeInsets.all(12),
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: images.length.clamp(1, 3), // Dynamically adjust cross count for better fit (1-3 images)
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          childAspectRatio: 3 / 4,
+          childAspectRatio: 3 / 4, // Keep portrait aspect for jewelry images
         ),
         itemCount: images.length,
         itemBuilder: (context, i) => _buildModernImageCard(
           images[i],
-          height: isMobile ? 160 : 220,
         ),
       ),
     );
@@ -908,10 +909,8 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     );
   }
 
-  Widget _buildModernImageCard(String imageUrl, {double? height}) {
-    final double cardHeight = height ?? MediaQuery.of(context).size.height * 0.35;
+  Widget _buildModernImageCard(String imageUrl) {
     return Container(
-      height: cardHeight,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         color: const Color(0xFFF1F5F9),
@@ -920,8 +919,9 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         borderRadius: BorderRadius.circular(12),
         child: Image.network(
           imageUrl,
-          fit: BoxFit.cover,
+          fit: BoxFit.contain,
           width: double.infinity,
+          height: double.infinity,
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
             return Container(
@@ -1124,16 +1124,6 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         ),
       );
 
-      // Capture the entire screen
-      RenderRepaintBoundary boundary =
-          _repaintBoundaryKey.currentContext!.findRenderObject()
-              as RenderRepaintBoundary;
-      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      ByteData? byteData = await image.toByteData(
-        format: ui.ImageByteFormat.png,
-      );
-      Uint8List pngBytes = byteData!.buffer.asUint8List();
-
       // Collect page images (bytes) from ALL ornaments' composed pages
       final List<Uint8List> pagePngs = [];
       // Visit keys in order: single-order (-1) first if present, then ornaments 0..N-1
@@ -1151,8 +1141,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         }
       }
 
-      // Add the main screen capture first
-      pagePngs.insert(0, pngBytes);
+      // Note: Removed adding the main screen capture to avoid redundancy and ensure only clean composed pages are shared
 
       if (kIsWeb) {
         // Web: share in-memory files without path_provider
