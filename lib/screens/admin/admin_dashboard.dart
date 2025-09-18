@@ -585,55 +585,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
-  // Widget _buildQuickStatsRow(bool isMobile) {
-  //   final stats = [
-  //     {'label': 'Today', 'value': '${_graphData.isNotEmpty ? _graphData.last['totalOrders'] ?? 0 : 0}', 'color': AppConstants.primaryColor},
-  //     {'label': 'This Week', 'value': '${_graphData.fold<int>(0, (sum, item) => sum + ((item['totalOrders'] ?? 0) as int))}', 'color': AppConstants.accentColor},
-  //     {'label': 'Growth', 'value': '+12%', 'color': AppConstants.successColor},
-  //   ];
-
-  //   return Container(
-  //     padding: const EdgeInsets.all(AppConstants.spacingM),
-  //     decoration: BoxDecoration(
-  //       color: Colors.white.withOpacity(0.05),
-  //       borderRadius: BorderRadius.circular(AppConstants.radiusM),
-  //       border: Border.all(color: Colors.white.withOpacity(0.1)),
-  //     ),
-  //     child: isMobile 
-  //         ? Column(
-  //             children: stats.map((stat) => Padding(
-  //               padding: const EdgeInsets.symmetric(vertical: 4),
-  //               child: _buildStatItem(stat),
-  //             )).toList(),
-  //           )
-  //         : Row(
-  //             mainAxisAlignment: MainAxisAlignment.spaceAround,
-  //             children: stats.map((stat) => _buildStatItem(stat)).toList(),
-  //           ),
-  //   );
-  // }
-
-  Widget _buildStatItem(Map<String, dynamic> stat) {
-    return Column(
-      children: [
-        Text(
-          stat['value'],
-          style: AppConstants.headingMedium.copyWith(
-            color: stat['color'],
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          stat['label'],
-          style: AppConstants.bodySmall.copyWith(
-            color: Colors.white70,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildCompactLegendButton(
     String label,
     Color color,
@@ -1037,57 +988,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ],
     );
   }
-
-  Widget _buildKPICard(Map<String, dynamic> kpi) {
-    return Container(
-      padding: const EdgeInsets.all(AppConstants.spacingL),
-      decoration: BoxDecoration(
-        color: AppConstants.surfaceColor,
-        borderRadius: BorderRadius.circular(AppConstants.radiusL),
-        boxShadow: AppConstants.cardShadow,
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppConstants.spacingM),
-            decoration: BoxDecoration(
-              color: (kpi['color'] as Color).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppConstants.radiusM),
-            ),
-            child: Icon(kpi['icon'], color: kpi['color'], size: 28),
-          ),
-          const SizedBox(width: AppConstants.spacingM),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  kpi['value'],
-                  style: AppConstants.headingLarge.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: kpi['color'],
-                  ),
-                ),
-                Text(
-                  kpi['title'],
-                  style: AppConstants.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  kpi['subtitle'],
-                  style: AppConstants.bodySmall.copyWith(
-                    color: AppConstants.textSecondaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildQuickActions() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
 
@@ -1177,7 +1077,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ],
     );
   }
-
   Widget _buildQuickActionCard(Map<String, dynamic> action) {
     return GestureDetector(
       onTap: action['onTap'],
@@ -1372,9 +1271,162 @@ class _AdminDashboardState extends State<AdminDashboard> {
       children: [
         _buildDetailedStatistics(), // Moved detailed stats higher for priority
         const SizedBox(height: AppConstants.spacingL),
-        _buildPieChartsSection(),
+        _buildTypePieChartsSection(),
         const SizedBox(height: AppConstants.spacingL),
         _buildTypeStatusBarCharts(),
+        const SizedBox(height: AppConstants.spacingL),
+        _buildPieChartsSection(),
+      ],
+    );
+  }
+
+  Widget _buildTypePieChartsSection() {
+    // Compute per type status counts from _allOrders
+    int singlePending = 0,
+        singleInProgress = 0,
+        singleCompleted = 0,
+        singleCancelled = 0,
+        singleConfirmed = 0;
+    int singleDelay = 0,
+        singleDue = 0;
+    int bulkPending = 0,
+        bulkInProgress = 0,
+        bulkCompleted = 0,
+        bulkCancelled = 0,
+        bulkConfirmed = 0;
+    int bulkDelay = 0,
+        bulkDue = 0;
+    
+    for (final o in _allOrders) {
+      final isSingle = (o.orderType ?? '').toLowerCase().contains('single');
+      final isBulk = (o.orderType ?? '').toLowerCase().contains('bulk');
+      if (!isSingle && !isBulk) continue; // skip unknown types
+
+      void addTo(bool toSingle) {
+        switch (o.status) {
+          case OrderStatus.pending:
+            toSingle ? singlePending++ : bulkPending++;
+            break;
+          case OrderStatus.confirmed:
+            toSingle ? singleConfirmed++ : bulkConfirmed++;
+            break;
+          case OrderStatus.inProgress:
+            toSingle ? singleInProgress++ : bulkInProgress++;
+            break;
+          case OrderStatus.completed:
+            toSingle ? singleCompleted++ : bulkCompleted++;
+            break;
+          case OrderStatus.cancelled:
+            toSingle ? singleCancelled++ : bulkCancelled++;
+            break;
+          case OrderStatus.delay:
+            toSingle ? singleDelay++ : bulkDelay++;
+            break;
+          case OrderStatus.due:
+            toSingle ? singleDue++ : bulkDue++;
+            break;
+        }
+      }
+
+      if (isSingle) addTo(true);
+      if (isBulk) addTo(false);
+    }
+
+    final singleData = [
+      {
+        'label': 'Pending',
+        'value': singlePending.toDouble(),
+        'color': AppConstants.warningColor,
+      },
+      {
+        'label': 'Confirmed',
+        'value': singleConfirmed.toDouble(),
+        'color': AppConstants.accentColor,
+      },
+      {
+        'label': 'In Progress',
+        'value': singleInProgress.toDouble(),
+        'color': AppConstants.secondaryColor,
+      },
+      {
+        'label': 'Completed',
+        'value': singleCompleted.toDouble(),
+        'color': AppConstants.successColor,
+      },
+      {
+        'label': 'Cancelled',
+        'value': singleCancelled.toDouble(),
+        'color': AppConstants.errorColor,
+      },
+    ];
+
+    final bulkData = [
+      {
+        'label': 'Pending',
+        'value': bulkPending.toDouble(),
+        'color': AppConstants.warningColor,
+      },
+      {
+        'label': 'Confirmed',
+        'value': bulkConfirmed.toDouble(),
+        'color': AppConstants.accentColor,
+      },
+      {
+        'label': 'In Progress',
+        'value': bulkInProgress.toDouble(),
+        'color': AppConstants.secondaryColor,
+      },
+      {
+        'label': 'Completed',
+        'value': bulkCompleted.toDouble(),
+        'color': AppConstants.successColor,
+      },
+      {
+        'label': 'Cancelled',
+        'value': bulkCancelled.toDouble(),
+        'color': AppConstants.errorColor,
+      },
+    ];
+
+    final isMobile = ResponsiveBreakpoints.of(context).isMobile;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Order Type Status Distribution', style: AppConstants.headingSmall),
+        const SizedBox(height: AppConstants.spacingM),
+        isMobile
+            ? Column(
+                children: [
+                  _buildPieChart(
+                    title: 'Single Orders Status',
+                    data: singleData,
+                  ),
+                  const SizedBox(height: AppConstants.spacingL),
+                  _buildPieChart(
+                    title: 'Bulk Orders Status',
+                    data: bulkData,
+                  ),
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _buildPieChart(
+                      title: 'Single Orders Status',
+                      data: singleData,
+                    ),
+                  ),
+                  const SizedBox(width: AppConstants.spacingL),
+                  Expanded(
+                    child: _buildPieChart(
+                      title: 'Bulk Orders Status',
+                      data: bulkData,
+                    ),
+                  ),
+                ],
+              ),
       ],
     );
   }
