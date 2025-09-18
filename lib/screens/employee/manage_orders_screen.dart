@@ -236,7 +236,13 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 ) ||
                 order.description.toLowerCase().contains(
                   _searchQuery.toLowerCase(),
-                );
+                ) ||
+                order.id.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ) ||
+                (order.orderNo?.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ) ?? false);
             final matchesType =
                 _selectedOrderType == null ||
                 (_selectedOrderType == (order.orderType ?? 'Single'));
