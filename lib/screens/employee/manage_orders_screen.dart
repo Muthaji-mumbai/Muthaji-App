@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+import 'package:intl/intl.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/employee/order_detailed_screen.dart';
 import 'package:soloshine/screens/client/pdfview.dart';
@@ -1554,7 +1555,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           size: 14,
                           color: Colors.grey.shade500,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 2),
                         Text(
                           _formatDate(order.orderDate!),
                           style: TextStyle(
@@ -2185,7 +2186,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final timeFormat = DateFormat('h:mm:ss a'); // 12-hour format with AM/PM
+    return '${dateFormat.format(date)} ${timeFormat.format(date)}';
   }
 
   Color _getStatusColor(OrderStatus status) {
