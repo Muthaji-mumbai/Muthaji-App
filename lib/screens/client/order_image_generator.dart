@@ -683,13 +683,13 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           files.add(XFile.fromData(
             pagePngs[i],
             mimeType: 'image/png',
-            name: 'order_${widget.order.id}_$i.png',
+            name: 'order_${widget.order.orderNo}_$i.png',
           ));
         }
       } else {
         final directory = await getTemporaryDirectory();
         for (int i = 0; i < pagePngs.length; i++) {
-          final file = File('${directory.path}/order_${widget.order.id}_$i.png');
+          final file = File('${directory.path}/order_${widget.order.orderNo}_$i.png');
           await file.writeAsBytes(pagePngs[i]);
           files.add(XFile(file.path));
         }
@@ -697,7 +697,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
 
       await Share.shareXFiles(
         files,
-        text: 'Order Details - ${widget.order.id}',
+        text: 'Order Details - ${widget.order.orderNo} , ${widget.order.clientName}, ${widget.order.orderType}, ${widget.order.orderDate}',
       );
 
       if (mounted) {
