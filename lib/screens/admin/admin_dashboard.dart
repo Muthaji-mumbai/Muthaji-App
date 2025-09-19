@@ -954,40 +954,116 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'icon': Icons.people,
         'color': AppConstants.accentColor,
         'subtitle': 'Registered',
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const UserManagementScreen(),
+          ),
+        ),
       },
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Text('Key Metrics', style: AppConstants.headingSmall),
-        // const SizedBox(height: AppConstants.spacingM),
-        // isMobile
-        //     ? Column(
-        //       children:
-        //           kpiData
-        //               .map(
-        //                 (kpi) => Padding(
-        //                   padding: const EdgeInsets.only(
-        //                     bottom: AppConstants.spacingM,
-        //                   ),
-        //                   child: _buildKPICard(kpi),
-        //                 ),
-        //               )
-        //               .toList(),
-        //     )
-        //     : GridView.count(
-        //       crossAxisCount: 2,
-        //       shrinkWrap: true,
-        //       physics: const NeverScrollableScrollPhysics(),
-        //       crossAxisSpacing: AppConstants.spacingL, // Increased spacing
-        //       mainAxisSpacing: AppConstants.spacingL,
-        //       childAspectRatio: 3, // Adjusted for better fit
-        //       children: kpiData.map((kpi) => _buildKPICard(kpi)).toList(),
-        //     ),
+        Text('Key Metrics', style: AppConstants.headingSmall),
+        const SizedBox(height: AppConstants.spacingM),
+        isMobile
+            ? Column(
+              children:
+                  kpiData
+                      .map(
+                        (kpi) => Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: AppConstants.spacingM,
+                          ),
+                          child: _buildKPICard(kpi),
+                        ),
+                      )
+                      .toList(),
+            )
+            : GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: AppConstants.spacingL, // Increased spacing
+              mainAxisSpacing: AppConstants.spacingL,
+              childAspectRatio: 3, // Adjusted for better fit
+              children: kpiData.map((kpi) => _buildKPICard(kpi)).toList(),
+            ),
       ],
     );
   }
+
+  Widget _buildKPICard(Map<String, dynamic> kpi) {
+    final hasOnTap = kpi['onTap'] != null;
+    
+    return GestureDetector(
+      onTap: hasOnTap ? kpi['onTap'] : null,
+      child: Container(
+        padding: const EdgeInsets.all(AppConstants.spacingL),
+        decoration: BoxDecoration(
+          color: AppConstants.surfaceColor,
+          borderRadius: BorderRadius.circular(AppConstants.radiusL),
+          boxShadow: AppConstants.cardShadow,
+          border: hasOnTap ? Border.all(
+            color: (kpi['color'] as Color).withOpacity(0.2),
+            width: 1,
+          ) : null,
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppConstants.spacingM),
+              decoration: BoxDecoration(
+                color: (kpi['color'] as Color).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppConstants.radiusM),
+              ),
+              child: Icon(
+                kpi['icon'] as IconData,
+                color: kpi['color'] as Color,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: AppConstants.spacingM),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    kpi['value'] as String,
+                    style: AppConstants.headingMedium.copyWith(
+                      color: kpi['color'] as Color,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    kpi['title'] as String,
+                    style: AppConstants.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    kpi['subtitle'] as String,
+                    style: AppConstants.bodySmall.copyWith(
+                      color: AppConstants.textSecondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (hasOnTap)
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: AppConstants.textSecondaryColor.withOpacity(0.6),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildQuickActions() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
 
@@ -1204,63 +1280,81 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildRecentUserCard(User user) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
-      padding: const EdgeInsets.all(AppConstants.spacingL),
-      decoration: BoxDecoration(
-        color: AppConstants.surfaceColor,
-        borderRadius: BorderRadius.circular(AppConstants.radiusL),
-        boxShadow: AppConstants.cardShadow,
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const UserManagementScreen(),
+        ),
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: _getRoleColor(user.role).withOpacity(0.1),
-            child: Icon(
-              _getRoleIcon(user.role),
-              color: _getRoleColor(user.role),
-              size: 20,
-            ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
+        padding: const EdgeInsets.all(AppConstants.spacingL),
+        decoration: BoxDecoration(
+          color: AppConstants.surfaceColor,
+          borderRadius: BorderRadius.circular(AppConstants.radiusL),
+          boxShadow: AppConstants.cardShadow,
+          border: Border.all(
+            color: AppConstants.accentColor.withOpacity(0.1),
+            width: 1,
           ),
-          const SizedBox(width: AppConstants.spacingM),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user.name,
-                  style: AppConstants.bodyLarge.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  user.email,
-                  style: AppConstants.bodyMedium.copyWith(
-                    color: AppConstants.textSecondaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.spacingS,
-              vertical: AppConstants.spacingXS,
-            ),
-            decoration: BoxDecoration(
-              color: _getRoleColor(user.role).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppConstants.radiusS),
-            ),
-            child: Text(
-              _getRoleText(user.role),
-              style: AppConstants.bodySmall.copyWith(
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: _getRoleColor(user.role).withOpacity(0.1),
+              child: Icon(
+                _getRoleIcon(user.role),
                 color: _getRoleColor(user.role),
-                fontWeight: FontWeight.w600,
+                size: 20,
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: AppConstants.spacingM),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.name,
+                    style: AppConstants.bodyLarge.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    user.email,
+                    style: AppConstants.bodyMedium.copyWith(
+                      color: AppConstants.textSecondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingS,
+                vertical: AppConstants.spacingXS,
+              ),
+              decoration: BoxDecoration(
+                color: _getRoleColor(user.role).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppConstants.radiusS),
+              ),
+              child: Text(
+                _getRoleText(user.role),
+                style: AppConstants.bodySmall.copyWith(
+                  color: _getRoleColor(user.role),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppConstants.spacingS),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: AppConstants.textSecondaryColor.withOpacity(0.6),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2135,6 +2229,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ],
                   Icons.people,
                   AppConstants.accentColor,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const UserManagementScreen(),
+                    ),
+                  ),
                 ),
               ],
             )
@@ -2202,6 +2302,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ],
                     Icons.people,
                     AppConstants.accentColor,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const UserManagementScreen(),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -2214,16 +2320,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
     String title,
     List<Map<String, String>> stats,
     IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(AppConstants.spacingL),
-      decoration: BoxDecoration(
-        color: AppConstants.surfaceColor,
-        borderRadius: BorderRadius.circular(AppConstants.radiusL),
-        boxShadow: AppConstants.cardShadow,
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
-      ),
+    Color color, {
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppConstants.spacingL),
+        decoration: BoxDecoration(
+          color: AppConstants.surfaceColor,
+          borderRadius: BorderRadius.circular(AppConstants.radiusL),
+          boxShadow: AppConstants.cardShadow,
+          border: Border.all(
+            color: color.withOpacity(onTap != null ? 0.3 : 0.2), 
+            width: onTap != null ? 1.5 : 1,
+          ),
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2238,10 +2350,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Icon(icon, color: color, size: 20),
               ),
               const SizedBox(width: AppConstants.spacingM),
-              Text(
-                title,
-                style: AppConstants.headingSmall.copyWith(color: color),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppConstants.headingSmall.copyWith(color: color),
+                ),
               ),
+              if (onTap != null)
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: color.withOpacity(0.6),
+                ),
             ],
           ),
           const SizedBox(height: AppConstants.spacingL),
@@ -2276,6 +2396,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
