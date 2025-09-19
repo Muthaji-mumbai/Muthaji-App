@@ -14,7 +14,14 @@ import '../../constants/app_constants.dart';
 import 'update_order_screen.dart';
 
 class ManageOrdersScreen extends StatefulWidget {
-  const ManageOrdersScreen({super.key});
+  final OrderStatus? initialStatus;
+  final String? initialOrderType;
+  
+  const ManageOrdersScreen({
+    super.key,
+    this.initialStatus,
+    this.initialOrderType,
+  });
 
   @override
   State<ManageOrdersScreen> createState() => _ManageOrdersScreenState();
@@ -52,6 +59,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   @override
   void initState() {
     super.initState();
+    
+    // Set initial filter values from widget parameters
+    _selectedStatus = widget.initialStatus;
+    _selectedOrderType = widget.initialOrderType;
+    
     _filterAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,

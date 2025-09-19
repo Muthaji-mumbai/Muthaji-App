@@ -1401,11 +1401,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   _buildPieChart(
                     title: 'Single Orders Status',
                     data: singleData,
+                    onItemTap: _onSingleOrderStatusItemTap,
                   ),
                   const SizedBox(height: AppConstants.spacingL),
                   _buildPieChart(
                     title: 'Bulk Orders Status',
                     data: bulkData,
+                    onItemTap: _onBulkOrderStatusItemTap,
                   ),
                 ],
               )
@@ -1416,6 +1418,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     child: _buildPieChart(
                       title: 'Single Orders Status',
                       data: singleData,
+                      onItemTap: _onSingleOrderStatusItemTap,
                     ),
                   ),
                   const SizedBox(width: AppConstants.spacingL),
@@ -1423,6 +1426,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     child: _buildPieChart(
                       title: 'Bulk Orders Status',
                       data: bulkData,
+                      onItemTap: _onBulkOrderStatusItemTap,
                     ),
                   ),
                 ],
@@ -1701,6 +1705,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       'color': AppConstants.errorColor,
                     },
                   ],
+                  onItemTap: _onStatusItemTap,
                 ),
                 const SizedBox(height: AppConstants.spacingL),
                 _buildPieChart(
@@ -1717,6 +1722,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       'color': AppConstants.accentColor,
                     },
                   ],
+                  onItemTap: _onOrderTypeItemTap,
                 ),
               ],
             )
@@ -1748,6 +1754,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         'color': AppConstants.errorColor,
                       },
                     ],
+                    onItemTap: _onStatusItemTap,
                   ),
                 ),
                 const SizedBox(width: AppConstants.spacingL),
@@ -1766,6 +1773,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         'color': AppConstants.accentColor,
                       },
                     ],
+                    onItemTap: _onOrderTypeItemTap,
                   ),
                 ),
               ],
@@ -1777,6 +1785,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildPieChart({
     required String title,
     required List<Map<String, dynamic>> data,
+    Function(String label, Map<String, dynamic> item)? onItemTap,
   }) {
     final total = data.fold<double>(0, (sum, item) => sum + item['value']);
     final isEmpty = total == 0;
@@ -1858,44 +1867,60 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 padding: const EdgeInsets.only(
                                   bottom: AppConstants.spacingM,
                                 ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 16,
-                                      height: 16,
-                                      decoration: BoxDecoration(
-                                        color: item['color'],
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
+                                child: GestureDetector(
+                                  onTap: onItemTap != null ? () => onItemTap(item['label'], item) : null,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      color: onItemTap != null ? Colors.transparent : null,
                                     ),
-                                    const SizedBox(
-                                      width: AppConstants.spacingS,
-                                    ),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            item['label'],
-                                            style: AppConstants.bodyMedium
-                                                .copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 16,
+                                          height: 16,
+                                          decoration: BoxDecoration(
+                                            color: item['color'],
+                                            borderRadius: BorderRadius.circular(4),
                                           ),
-                                          Text(
-                                            '${item['value'].toInt()} orders',
-                                            style: AppConstants.bodySmall
-                                                .copyWith(
-                                                  color:
-                                                      AppConstants
-                                                          .textSecondaryColor,
-                                                ),
+                                        ),
+                                        const SizedBox(
+                                          width: AppConstants.spacingS,
+                                        ),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item['label'],
+                                                style: AppConstants.bodyMedium
+                                                    .copyWith(
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                              ),
+                                              Text(
+                                                '${item['value'].toInt()} orders',
+                                                style: AppConstants.bodySmall
+                                                    .copyWith(
+                                                      color:
+                                                          AppConstants
+                                                              .textSecondaryColor,
+                                                    ),
+                                              ),
+                                            ],
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                        if (onItemTap != null)
+                                          Icon(
+                                            Icons.arrow_forward_ios,
+                                            size: 12,
+                                            color: AppConstants.textSecondaryColor,
+                                          ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             )
@@ -1973,46 +1998,62 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   padding: const EdgeInsets.only(
                                     bottom: AppConstants.spacingM,
                                   ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 16,
-                                        height: 16,
-                                        decoration: BoxDecoration(
-                                          color: item['color'],
-                                          borderRadius: BorderRadius.circular(
-                                            4,
+                                  child: GestureDetector(
+                                    onTap: onItemTap != null ? () => onItemTap(item['label'], item) : null,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        color: onItemTap != null ? Colors.transparent : null,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 16,
+                                            height: 16,
+                                            decoration: BoxDecoration(
+                                              color: item['color'],
+                                              borderRadius: BorderRadius.circular(
+                                                4,
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                      ),
-                                      const SizedBox(
-                                        width: AppConstants.spacingS,
-                                      ),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              item['label'],
-                                              style: AppConstants.bodyMedium
-                                                  .copyWith(
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
+                                          const SizedBox(
+                                            width: AppConstants.spacingS,
+                                          ),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item['label'],
+                                                  style: AppConstants.bodyMedium
+                                                      .copyWith(
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                ),
+                                                Text(
+                                                  '${item['value'].toInt()} orders',
+                                                  style: AppConstants.bodySmall
+                                                      .copyWith(
+                                                        color:
+                                                            AppConstants
+                                                                .textSecondaryColor,
+                                                      ),
+                                                ),
+                                              ],
                                             ),
-                                            Text(
-                                              '${item['value'].toInt()} orders',
-                                              style: AppConstants.bodySmall
-                                                  .copyWith(
-                                                    color:
-                                                        AppConstants
-                                                            .textSecondaryColor,
-                                                  ),
+                                          ),
+                                          if (onItemTap != null)
+                                            Icon(
+                                              Icons.arrow_forward_ios,
+                                              size: 12,
+                                              color: AppConstants.textSecondaryColor,
                                             ),
-                                          ],
-                                        ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               )
@@ -2338,5 +2379,150 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case UserRole.customer:
         return Icons.person;
     }
+  }
+
+  // Navigation callback methods for pie chart items
+  void _onStatusItemTap(String label, Map<String, dynamic> item) {
+    OrderStatus? status;
+    
+    // Map the label to OrderStatus enum
+    switch (label.toLowerCase()) {
+      case 'pending':
+        status = OrderStatus.pending;
+        break;
+      case 'in progress':
+        status = OrderStatus.inProgress;
+        break;
+      case 'completed':
+        status = OrderStatus.completed;
+        break;
+      case 'cancelled':
+        status = OrderStatus.cancelled;
+        break;
+      default:
+        status = null;
+    }
+    
+    // Navigate to ManageOrdersScreen with the selected status filter
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ManageOrdersScreen(
+          initialStatus: status,
+        ),
+      ),
+    );
+  }
+
+  void _onOrderTypeItemTap(String label, Map<String, dynamic> item) {
+    String? orderType;
+    
+    // Map the label to order type
+    switch (label.toLowerCase()) {
+      case 'single orders':
+        orderType = 'Single';
+        break;
+      case 'bulk orders':
+        orderType = 'Bulk';
+        break;
+      default:
+        orderType = null;
+    }
+    
+    // Navigate to ManageOrdersScreen with the selected order type filter
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ManageOrdersScreen(
+          initialOrderType: orderType,
+        ),
+      ),
+    );
+  }
+
+  // Navigation callback methods for single order status items
+  void _onSingleOrderStatusItemTap(String label, Map<String, dynamic> item) {
+    OrderStatus? status;
+    
+    // Map the label to OrderStatus enum
+    switch (label.toLowerCase()) {
+      case 'pending':
+        status = OrderStatus.pending;
+        break;
+      case 'confirmed':
+        status = OrderStatus.confirmed;
+        break;
+      case 'in progress':
+        status = OrderStatus.inProgress;
+        break;
+      case 'completed':
+        status = OrderStatus.completed;
+        break;
+      case 'cancelled':
+        status = OrderStatus.cancelled;
+        break;
+      case 'delay':
+        status = OrderStatus.delay;
+        break;
+      case 'due':
+        status = OrderStatus.due;
+        break;
+      default:
+        status = null;
+    }
+    
+    // Navigate to ManageOrdersScreen with both status and Single order type filters
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ManageOrdersScreen(
+          initialStatus: status,
+          initialOrderType: 'Single',
+        ),
+      ),
+    );
+  }
+
+  // Navigation callback methods for bulk order status items
+  void _onBulkOrderStatusItemTap(String label, Map<String, dynamic> item) {
+    OrderStatus? status;
+    
+    // Map the label to OrderStatus enum
+    switch (label.toLowerCase()) {
+      case 'pending':
+        status = OrderStatus.pending;
+        break;
+      case 'confirmed':
+        status = OrderStatus.confirmed;
+        break;
+      case 'in progress':
+        status = OrderStatus.inProgress;
+        break;
+      case 'completed':
+        status = OrderStatus.completed;
+        break;
+      case 'cancelled':
+        status = OrderStatus.cancelled;
+        break;
+      case 'delay':
+        status = OrderStatus.delay;
+        break;
+      case 'due':
+        status = OrderStatus.due;
+        break;
+      default:
+        status = null;
+    }
+    
+    // Navigate to ManageOrdersScreen with both status and Bulk order type filters
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ManageOrdersScreen(
+          initialStatus: status,
+          initialOrderType: 'Bulk',
+        ),
+      ),
+    );
   }
 }

@@ -37,11 +37,6 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     super.dispose();
   }
 
-  // Responsive breakpoints
-  bool _isSmallScreen(double width) => width < 380;
-  bool _isMediumScreen(double width) => width >= 380 && width < 600;
-  bool _isLargeScreen(double width) => width >= 600;
-
   List<String> get _currentOrnamentImages {
     if (widget.order.ornamentDetails.isEmpty) return widget.order.images;
     final selectedOrnament = widget.order.ornamentDetails[_currentOrnamentIndex];
@@ -489,7 +484,8 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     }
     if (gridCount > 6) gridCount = 6; // Cap at 6 for now
 
-    final crossAxisCount = _getGridCrossAxisCount(width, gridCount);
+    // Calculate dynamic crossAxisCount based on screen width
+    int crossAxisCount = _getDynamicGridCount(width, gridCount);
 
     return GridView.builder(
       shrinkWrap: true,
@@ -518,14 +514,15 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     );
   }
 
-  int _getGridCrossAxisCount(double width, int gridCount) {
-    if (_isSmallScreen(width)) {
-      return gridCount == 2 ? 1 : gridCount == 4 ? 2 : 3;
+  int _getDynamicGridCount(double width, int gridCount) {
+    double screenWidth = width;
+    if (screenWidth <= 360) { // Small screens (e.g., iPhone SE)
+      return gridCount <= 2 ? 1 : gridCount <= 4 ? 2 : 3;
+    } else if (screenWidth <= 600) { // Medium screens (e.g., iPhone 12/13)
+      return gridCount <= 2 ? 1 : gridCount <= 4 ? 2 : 3;
+    } else { // Larger screens (e.g., tablets or wide phones)
+      return gridCount <= 2 ? 2 : gridCount <= 4 ? 2 : 3;
     }
-    if (_isMediumScreen(width)) {
-      return gridCount == 2 ? 1 : gridCount == 4 ? 2 : 3;
-    }
-    return gridCount == 2 ? 2 : gridCount == 4 ? 2 : 3;
   }
 
   Widget _buildImageCard(String imageUrl) {
@@ -683,13 +680,13 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           files.add(XFile.fromData(
             pagePngs[i],
             mimeType: 'image/png',
-            name: 'order_${widget.order.orderNo}_$i.png',
+            name: 'order_${widget.order.id}_$i.png',
           ));
         }
       } else {
         final directory = await getTemporaryDirectory();
         for (int i = 0; i < pagePngs.length; i++) {
-          final file = File('${directory.path}/order_${widget.order.orderNo}_$i.png');
+          final file = File('${directory.path}/order_${widget.order.id}_$i.png');
           await file.writeAsBytes(pagePngs[i]);
           files.add(XFile(file.path));
         }
@@ -697,7 +694,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
 
       await Share.shareXFiles(
         files,
-        text: 'Order Details - ${widget.order.orderNo} , ${widget.order.clientName}, ${widget.order.orderType}, ${widget.order.orderDate}',
+        text: 'Order Details - ${widget.order.id}',
       );
 
       if (mounted) {
