@@ -51,6 +51,17 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     'Custom',
   ];
 
+  // Sorting variables
+  String _sortBy = 'orderDate'; // Default sort by order date
+  bool _sortAscending = false; // Default to descending (newest first)
+  final List<Map<String, String>> _sortOptions = const [
+    {'value': 'orderDate', 'label': 'Order Date'},
+    {'value': 'clientName', 'label': 'Client Name'},
+    {'value': 'status', 'label': 'Status'},
+    {'value': 'orderNo', 'label': 'Order Number'},
+    {'value': 'description', 'label': 'Description'},
+  ];
+
   bool _isLoading = true;
   bool _showFilters = false;
   late AnimationController _filterAnimationController;
@@ -133,7 +144,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           _isLoading = false;
         });
         
-        // Apply additional client-side filters (search, order type)
+        // Apply additional client-side filters (search, order type, sorting)
         _applyFilters();
       } else {
         throw Exception('No authentication token');
@@ -302,6 +313,45 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             // Date filtering is now handled at API level
             return matchesStatus && matchesSearch && matchesType;
           }).toList();
+          
+      // Apply sorting
+      _filteredOrders.sort((a, b) {
+        int comparison = 0;
+        
+        switch (_sortBy) {
+          case 'orderDate':
+            if (a.orderDate != null && b.orderDate != null) {
+              comparison = a.orderDate!.compareTo(b.orderDate!);
+            } else if (a.orderDate != null) {
+              comparison = -1;
+            } else if (b.orderDate != null) {
+              comparison = 1;
+            }
+            break;
+          case 'clientName':
+            comparison = a.clientName.toLowerCase().compareTo(b.clientName.toLowerCase());
+            break;
+          case 'status':
+            comparison = a.status.toString().compareTo(b.status.toString());
+            break;
+          case 'orderNo':
+            final aOrderNo = a.orderNo ?? a.id;
+            final bOrderNo = b.orderNo ?? b.id;
+            comparison = aOrderNo.toLowerCase().compareTo(bOrderNo.toLowerCase());
+            break;
+          case 'description':
+            comparison = a.description.toLowerCase().compareTo(b.description.toLowerCase());
+            break;
+          default:
+            // Default to order date
+            if (a.orderDate != null && b.orderDate != null) {
+              comparison = a.orderDate!.compareTo(b.orderDate!);
+            }
+        }
+        
+        // Reverse if descending
+        return _sortAscending ? comparison : -comparison;
+      });
     });
   }
 
@@ -949,6 +999,54 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             ),
             const SizedBox(height: 12),
             _buildDateRangeField(),
+            const SizedBox(height: 12),
+            _buildDropdownField<String>(
+              'Sort By',
+              _sortBy,
+              _sortOptions
+                  .map(
+                    (option) => DropdownMenuItem<String>(
+                      value: option['value']!,
+                      child: Text(option['label']!),
+                    ),
+                  )
+                  .toList(),
+              (value) {
+                setState(() => _sortBy = value ?? 'orderDate');
+                _applyFilters();
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildDropdownField<bool>(
+              'Sort Order',
+              _sortAscending,
+              const [
+                DropdownMenuItem<bool>(
+                  value: false,
+                  child: Row(
+                    children: [
+                      Icon(Icons.arrow_downward, size: 16),
+                      SizedBox(width: 8),
+                      Text('Descending (Newest First)'),
+                    ],
+                  ),
+                ),
+                DropdownMenuItem<bool>(
+                  value: true,
+                  child: Row(
+                    children: [
+                      Icon(Icons.arrow_upward, size: 16),
+                      SizedBox(width: 8),
+                      Text('Ascending (Oldest First)'),
+                    ],
+                  ),
+                ),
+              ],
+              (value) {
+                setState(() => _sortAscending = value ?? false);
+                _applyFilters();
+              },
+            ),
           ] else ...[
             Row(
               children: [
@@ -991,6 +1089,58 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 ),
                 const SizedBox(width: 16),
                 Expanded(child: _buildDateRangeField()),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildDropdownField<String>(
+                    'Sort By',
+                    _sortBy,
+                    _sortOptions
+                        .map(
+                          (option) => DropdownMenuItem<String>(
+                            value: option['value']!,
+                            child: Text(option['label']!),
+                          ),
+                        )
+                        .toList(),
+                    (value) {
+                      setState(() => _sortBy = value ?? 'orderDate');
+                      _applyFilters();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildDropdownField<bool>(
+                    'Sort Order',
+                    _sortAscending,
+                    const [
+                      DropdownMenuItem<bool>(
+                        value: false,
+                        child: Row(
+                          children: [
+                            Icon(Icons.arrow_downward, size: 16),
+                            SizedBox(width: 8),
+                            Text('Desc'),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem<bool>(
+                        value: true,
+                        child: Row(
+                          children: [
+                            Icon(Icons.arrow_upward, size: 16),
+                            SizedBox(width: 8),
+                            Text('Asc'),
+                          ],
+                        ),
+                      ),
+                    ],
+                    (value) {
+                      setState(() => _sortAscending = value ?? false);
+                      _applyFilters();
+                    },
+                  ),
+                ),
               ],
             ),
           ],
@@ -1561,12 +1711,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           ),
                           const SizedBox(width: 8),
                         ],
-                        Icon(
-                          Icons.access_time_rounded,
-                          size: 14,
-                          color: Colors.grey.shade500,
-                        ),
-                        const SizedBox(width: 2),
+                       
+                       
                         Text(
                           _formatDate(order.orderDate!),
                           style: TextStyle(
@@ -1574,7 +1720,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             fontSize: 12,
                           ),
                         ),
-                        const Spacer(),
+                       SizedBox(width: 8),
                         if (order.images.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -2180,7 +2326,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     return _selectedStatus != null ||
         _selectedOrderType != null ||
         _selectedRange != 'All time' ||
-        _searchQuery.isNotEmpty;
+        _searchQuery.isNotEmpty ||
+        _sortBy != 'orderDate' ||
+        _sortAscending != false; // Default is descending
   }
 
   void _clearAllFilters() {
@@ -2192,6 +2340,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       _selectedRange = 'All time';
       _startDate = null;
       _endDate = null;
+      _sortBy = 'orderDate';
+      _sortAscending = false; // Reset to default descending
     });
     _loadData(); // Reload data from API with cleared filters
   }
