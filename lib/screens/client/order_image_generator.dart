@@ -22,12 +22,11 @@ class OrderImageGenerator extends StatefulWidget {
 
 class _OrderImageGeneratorState extends State<OrderImageGenerator> {
   final GlobalKey _repaintBoundaryKey = GlobalKey();
-  // Keep page keys per ornament index; use -1 for single-order mode
   final Map<int, List<GlobalKey>> _ornamentPageKeys = {};
   PageController? _ornamentPageController;
-  PageController? _imagePageController; // pager for generated pages per ornament
+  PageController? _imagePageController;
   int _currentOrnamentIndex = 0;
-  int _currentImageIndex = 0; // page index within generated pages
+  int _currentImageIndex = 0;
   bool _isGeneratingImage = false;
 
   @override
@@ -46,15 +45,13 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
 
   List<String> get _currentOrnamentImages {
     if (widget.order.ornamentDetails.isEmpty) return widget.order.images;
-    final selectedOrnament =
-        widget.order.ornamentDetails[_currentOrnamentIndex];
+    final selectedOrnament = widget.order.ornamentDetails[_currentOrnamentIndex];
     return selectedOrnament.images.isNotEmpty
         ? selectedOrnament.images
         : widget.order.images;
   }
 
-  // Partition images into pages with up to 3 images per page
-  List<List<String>> _partitionImages(List<String> images, {int pageSize = 3}) {
+  List<List<String>> _partitionImages(List<String> images, {int pageSize = 4}) {
     final List<List<String>> pages = [];
     for (int i = 0; i < images.length; i += pageSize) {
       pages.add(images.sublist(i, i + pageSize > images.length ? images.length : i + pageSize));
@@ -62,7 +59,6 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     return pages.isEmpty ? [[]] : pages;
   }
 
-  // Ensure we have a list of keys for a given ornament index
   List<GlobalKey> _ensurePageKeys(int ornamentIndex, int pageCount) {
     final existing = _ornamentPageKeys[ornamentIndex] ?? [];
     if (existing.length != pageCount) {
@@ -119,10 +115,9 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         Container(
           margin: const EdgeInsets.only(right: 16),
           child: Material(
-            color:
-                _isGeneratingImage
-                    ? const Color(0xFFE2E8F0)
-                    : const Color(0xFF3B82F6),
+            color: _isGeneratingImage
+                ? const Color(0xFFE2E8F0)
+                : const Color(0xFF3B82F6),
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
@@ -152,10 +147,9 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color:
-                            _isGeneratingImage
-                                ? const Color(0xFF64748B)
-                                : Colors.white,
+                        color: _isGeneratingImage
+                            ? const Color(0xFF64748B)
+                            : Colors.white,
                       ),
                     ),
                   ],
@@ -252,7 +246,6 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     );
   }
 
-  // Build a composed single page similar to the sample: details on left, images on right
   Widget _buildComposedPage({
     required GlobalKey pageKey,
     required String ornamentName,
@@ -277,7 +270,6 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             return Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  // Keep a nice readable width on desktop, narrower on mobile
                   maxWidth: isMobile ? 640 : 1000,
                 ),
                 child: Container(
@@ -290,13 +282,11 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // Details top
                             Padding(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: _buildDetailsTable(
                                   ornamentName, purity, weight, quantity, remarks, unit, size, colorstone, rhodium, dull),
                             ),
-                            // Images bottom, expanded to fill remaining space
                             Expanded(
                               child: Padding(
                                 padding: const EdgeInsets.all(12),
@@ -315,7 +305,6 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                       : Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // Left: Details table
                             Expanded(
                               flex: 12,
                               child: Container(
@@ -328,7 +317,6 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                                     ornamentName, purity, weight, quantity, remarks, unit, size, colorstone, rhodium, dull),
                               ),
                             ),
-                            // Right: Images box, expanded to fill
                             Expanded(
                               flex: 18,
                               child: Padding(
@@ -373,7 +361,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
               SizedBox(width: 110, child: cell('$label :', bold: true, color: const Color(0xFF334155))),
               const SizedBox(width: 8),
               Expanded(child: cell(value, bold: emphasize, color: emphasize ? const Color(0xFF111827) : null)),
-            ],  
+            ],
           ),
         );
 
@@ -400,30 +388,32 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     if (images.isEmpty) {
       return Center(child: _buildNoImagesState());
     }
-    // Layout: if 1 => big; if 2-3 => grid that fits
-    if (images.length == 1) {
-      return _buildModernImageCard(images.first);
-    }
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: images.length.clamp(1, 3), // Dynamically adjust cross count for better fit (1-3 images)
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 3 / 4, // Keep portrait aspect for jewelry images
-        ),
-        itemCount: images.length,
-        itemBuilder: (context, i) => _buildModernImageCard(
-          images[i],
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        // Dynamic cross count: 1 for narrow screens, up to 4 for wider screens
+        final crossAxisCount = isMobile
+            ? (width < 400 ? 1 : (width < 600 ? 2 : 3))
+            : (width < 800 ? 2 : (width < 1000 ? 3 : 4));
+        return Padding(
+          padding: const EdgeInsets.all(8),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 3 / 4, // Consistent aspect ratio for jewelry
+            ),
+            itemCount: images.length,
+            itemBuilder: (context, i) => _buildModernImageCard(images[i]),
+          ),
+        );
+      },
     );
   }
 
-  // Page indicators for generated pages
   Widget _buildGeneratedPageIndicators(int length) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -446,8 +436,6 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
       ),
     );
   }
-
-  // Removed: keys are maintained per ornament via _ensurePageKeys
 
   Widget _buildOrderSummaryCard() {
     return Container(
@@ -719,7 +707,6 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             const Color(0xFF10B981),
           ),
         ),
-
         const SizedBox(width: 12),
         Expanded(
           child: _buildSpecItem(
@@ -742,12 +729,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     );
   }
 
-  Widget _buildSpecItem(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildSpecItem(String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -832,7 +814,6 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     if (images.isEmpty) {
       return _buildNoImagesState();
     }
-
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -897,11 +878,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: images.length,
             separatorBuilder: (context, index) => const SizedBox(height: 16),
-            itemBuilder:
-                (context, index) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: _buildModernImageCard(images[index]),
-                ),
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _buildModernImageCard(images[index]),
+            ),
           ),
           const SizedBox(height: 24),
         ],
@@ -910,23 +890,30 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
   }
 
   Widget _buildModernImageCard(String imageUrl) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: const Color(0xFFF1F5F9),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          imageUrl,
-          fit: BoxFit.contain,
-          width: double.infinity,
-          height: double.infinity,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              color: const Color(0xFFF1F5F9),
-              child: Center(
+    return AspectRatio(
+      aspectRatio: 3 / 4,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xFFF1F5F9),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            width: double.infinity,
+            height: double.infinity,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -944,10 +931,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                     ),
                   ],
                 ),
-              ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) => _buildImageError(),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) => _buildImageError(),
+          ),
         ),
       ),
     );
@@ -1080,10 +1067,9 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                     height: 8,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(4),
-                      color:
-                          index == _currentOrnamentIndex
-                              ? const Color(0xFF3B82F6)
-                              : const Color(0xFFE2E8F0),
+                      color: index == _currentOrnamentIndex
+                          ? const Color(0xFF3B82F6)
+                          : const Color(0xFFE2E8F0),
                     ),
                   ),
                 ),
@@ -1102,7 +1088,6 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     });
 
     try {
-      // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -1124,9 +1109,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         ),
       );
 
-      // Collect page images (bytes) from ALL ornaments' composed pages
       final List<Uint8List> pagePngs = [];
-      // Visit keys in order: single-order (-1) first if present, then ornaments 0..N-1
       final sortedKeys = _ornamentPageKeys.keys.toList()..sort();
       for (final ornamentIndex in sortedKeys) {
         final keys = _ornamentPageKeys[ornamentIndex] ?? [];
@@ -1141,10 +1124,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         }
       }
 
-      // Note: Removed adding the main screen capture to avoid redundancy and ensure only clean composed pages are shared
-
       if (kIsWeb) {
-        // Web: share in-memory files without path_provider
         final files = <XFile>[];
         for (int i = 0; i < pagePngs.length; i++) {
           files.add(XFile.fromData(
@@ -1155,7 +1135,6 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         }
         await Share.shareXFiles(files, text: 'Order Details - ${widget.order.id}');
       } else {
-        // Mobile/Desktop: write to temp directory and share file paths
         final directory = await getTemporaryDirectory();
         final files = <XFile>[];
         for (int i = 0; i < pagePngs.length; i++) {

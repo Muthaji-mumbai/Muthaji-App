@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 import '../models/order.dart';
 import 'api_service.dart';
@@ -10,10 +11,39 @@ import 'dart:developer' as developer;
 
 class OrderService {
   // Get all orders
-  static Future<List<Order>> getAllOrders(String? token) async {
+  static Future<List<Order>> getAllOrders(
+    String? token, {
+    OrderStatus? status,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
+      // Build query parameters
+      final queryParams = <String, String>{};
+      
+      if (status != null) {
+        queryParams['status'] = status.toString().split('.').last;
+      }
+      
+      if (startDate != null) {
+        queryParams['startDate'] = DateFormat('yyyy-MM-dd').format(startDate);
+      }
+      
+      if (endDate != null) {
+        queryParams['endDate'] = DateFormat('yyyy-MM-dd').format(endDate);
+      }
+      
+      // Build endpoint with query parameters
+      String endpoint = AppConstants.ordersEndpoint;
+      if (queryParams.isNotEmpty) {
+        final queryString = queryParams.entries
+            .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+            .join('&');
+        endpoint = '$endpoint?$queryString';
+      }
+      
       final response = await ApiService.get(
-        AppConstants.ordersEndpoint,
+        endpoint,
         token: token,
       );
       developer.log('response: $response');
@@ -62,8 +92,8 @@ class OrderService {
     String? token,
   ) async {
     try {
-      final allOrders = await getAllOrders(token);
-      return allOrders.where((order) => order.status == status).toList();
+      // Use the API filtering for better performance
+      return await getAllOrders(token, status: status);
     } catch (e) {
       throw Exception('Error fetching orders by status: $e');
     }

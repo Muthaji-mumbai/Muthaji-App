@@ -80,13 +80,49 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     try {
       final token = AuthService.currentToken;
       if (token != null) {
-        final orders = await OrderService.getAllOrders(token);
+        // Calculate date range for API call
+        DateTime? apiStartDate;
+        DateTime? apiEndDate;
+        
+        final now = DateTime.now();
+        switch (_selectedRange) {
+          case 'Today':
+            apiStartDate = DateTime(now.year, now.month, now.day);
+            apiEndDate = apiStartDate.add(const Duration(days: 1));
+            break;
+          case 'Last 7 days':
+            apiStartDate = now.subtract(const Duration(days: 7));
+            apiEndDate = now;
+            break;
+          case 'Last 30 days':
+            apiStartDate = now.subtract(const Duration(days: 30));
+            apiEndDate = now;
+            break;
+          case 'Custom':
+            apiStartDate = _startDate;
+            apiEndDate = _endDate;
+            break;
+          case 'All time':
+          default:
+            // No date filtering at API level
+            break;
+        }
+        
+        final orders = await OrderService.getAllOrders(
+          token,
+          status: _selectedStatus,
+          startDate: apiStartDate,
+          endDate: apiEndDate,
+        );
 
         setState(() {
           _allOrders = orders;
           _filteredOrders = orders;
           _isLoading = false;
         });
+        
+        // Apply additional client-side filters (search, order type)
+        _applyFilters();
       } else {
         throw Exception('No authentication token');
       }
@@ -218,6 +254,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     setState(() {
       _filteredOrders =
           _allOrders.where((order) {
+            // Status filtering is now handled at API level, but we still need to handle special cases
             bool matchesStatus = true;
             if (_selectedStatus != null) {
               if (_selectedStatus == OrderStatus.due) {
@@ -230,6 +267,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 matchesStatus = order.status == _selectedStatus;
               }
             }
+            
             final matchesSearch =
                 _searchQuery.isEmpty ||
                 order.clientName.toLowerCase().contains(
@@ -244,52 +282,13 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 (order.orderNo?.toLowerCase().contains(
                   _searchQuery.toLowerCase(),
                 ) ?? false);
+                
             final matchesType =
                 _selectedOrderType == null ||
                 (_selectedOrderType == (order.orderType ?? 'Single'));
 
-            final created = order.createdAt;
-            bool matchesDate = true;
-            final now = DateTime.now();
-            switch (_selectedRange) {
-              case 'All time':
-                matchesDate = true;
-                break;
-              case 'Today':
-                final startOfDay = DateTime(now.year, now.month, now.day);
-                final endOfDay = startOfDay.add(const Duration(days: 1));
-                matchesDate =
-                    created.isAfter(startOfDay) && created.isBefore(endOfDay);
-                break;
-              case 'Last 7 days':
-                final from = now.subtract(const Duration(days: 7));
-                matchesDate = created.isAfter(from);
-                break;
-              case 'Last 30 days':
-                final from = now.subtract(const Duration(days: 30));
-                matchesDate = created.isAfter(from);
-                break;
-              case 'Custom':
-                if (_startDate != null) {
-                  final start = DateTime(
-                    _startDate!.year,
-                    _startDate!.month,
-                    _startDate!.day,
-                  );
-                  if (created.isBefore(start)) matchesDate = false;
-                }
-                if (_endDate != null) {
-                  final end = DateTime(
-                    _endDate!.year,
-                    _endDate!.month,
-                    _endDate!.day,
-                  ).add(const Duration(days: 1));
-                  if (created.isAfter(end)) matchesDate = false;
-                }
-                break;
-            }
-
-            return matchesStatus && matchesSearch && matchesType && matchesDate;
+            // Date filtering is now handled at API level
+            return matchesStatus && matchesSearch && matchesType;
           }).toList();
     });
   }
@@ -955,7 +954,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                         .toList(),
                     (value) {
                       setState(() => _selectedStatus = value);
-                      _applyFilters();
+                      _loadData(); // Reload data from API with new status filter
                     },
                     allowNull: true,
                     nullText: 'All Statuses',
@@ -972,7 +971,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     ],
                     (value) {
                       setState(() => _selectedOrderType = value);
-                      _applyFilters();
+                      _applyFilters(); // Order type is still filtered client-side
                     },
                     allowNull: true,
                     nullText: 'All Types',
@@ -1141,7 +1140,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                   });
                 }
               }
-              _applyFilters();
+              _loadData(); // Reload data from API with new date filter
             },
           ),
         ),
@@ -1179,7 +1178,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                       setState(() {
                         _selectedStatus = null;
                       });
-                      _applyFilters();
+                      _loadData(); // Reload data from API
                     },
                     child: Container(
                       margin: const EdgeInsets.only(right: 12),
@@ -1236,7 +1235,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             // Toggle filter: if already selected, clear it; otherwise set it
                             _selectedStatus = isSelected ? null : entry.key;
                           });
-                          _applyFilters();
+                          _loadData(); // Reload data from API
                         },
                         child: Container(
                           margin: const EdgeInsets.only(right: 12),
@@ -2182,7 +2181,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       _startDate = null;
       _endDate = null;
     });
-    _applyFilters();
+    _loadData(); // Reload data from API with cleared filters
   }
 
   String _formatDate(DateTime date) {
