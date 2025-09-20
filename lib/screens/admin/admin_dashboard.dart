@@ -89,6 +89,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   List<User> _allUsers = [];
   bool _loadingUsers = false;
 
+  // Date filtering for reports
+  DateTime? _startDate;
+  DateTime? _endDate;
+
   // Navigation bar for switching views
   Widget _buildNavigationBar() {
     return Container(
@@ -354,6 +358,46 @@ class _AdminDashboardState extends State<AdminDashboard> {
       setState(() => _loadingUsers = false);
       // Silently fail for user loading as it's not critical
     }
+  }
+
+  Future<void> _selectDate({required bool isStartDate}) async {
+    final initialDate = isStartDate 
+        ? (_startDate ?? DateTime.now()) 
+        : (_endDate ?? DateTime.now());
+    
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    
+    if (pickedDate != null) {
+      setState(() {
+        if (isStartDate) {
+          _startDate = pickedDate;
+          // If end date is before start date, adjust it
+          if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+            _endDate = _startDate;
+          }
+        } else {
+          _endDate = pickedDate;
+          // If start date is after end date, adjust it
+          if (_startDate != null && _startDate!.isAfter(_endDate!)) {
+            _startDate = _endDate;
+          }
+        }
+      });
+      // Charts will automatically update since they use the filtered data
+    }
+  }
+
+  void _clearDateFilters() {
+    setState(() {
+      _startDate = null;
+      _endDate = null;
+    });
+    // Charts will automatically update since they use the filtered data
   }
 
   @override
@@ -1497,16 +1541,152 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     },
                   ),
                 ),
+          const SizedBox(height: AppConstants.spacingM),
+          _buildDateFilterSection(),
         ],
       ),
     );
   }
 
+  Widget _buildDateFilterSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.date_range_outlined,
+              color: AppConstants.primaryColor,
+              size: 16,
+            ),
+            const SizedBox(width: AppConstants.spacingXS),
+            Text(
+              'Date Filter',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+                color: AppConstants.primaryColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppConstants.spacingS),
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _selectDate(isStartDate: true),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _startDate != null
+                              ? '${_startDate!.day.toString().padLeft(2, '0')}/${_startDate!.month.toString().padLeft(2, '0')}/${_startDate!.year}'
+                              : 'Start Date',
+                          style: TextStyle(
+                            color: _startDate != null ? Colors.black87 : Colors.grey.shade600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppConstants.spacingS),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _selectDate(isStartDate: false),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _endDate != null
+                              ? '${_endDate!.day.toString().padLeft(2, '0')}/${_endDate!.month.toString().padLeft(2, '0')}/${_endDate!.year}'
+                              : 'End Date',
+                          style: TextStyle(
+                            color: _endDate != null ? Colors.black87 : Colors.grey.shade600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppConstants.spacingS),
+            IconButton(
+              onPressed: _clearDateFilters,
+              icon: Icon(
+                Icons.clear,
+                size: 20,
+                color: Colors.grey.shade600,
+              ),
+              tooltip: 'Clear dates',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildTypePieChartsSection() {
-    // Filter orders by selected party if any
-    final filteredOrders = _selectedUserId != null
-        ? _allOrders.where((order) => order.clientId == _selectedUserId).toList()
-        : _allOrders;
+    // Filter orders by selected party and date range
+    var filteredOrders = _allOrders;
+    
+    // Filter by party
+    if (_selectedUserId != null) {
+      filteredOrders = filteredOrders.where((order) => order.clientId == _selectedUserId).toList();
+    }
+    
+    // Filter by date range
+    if (_startDate != null) {
+      filteredOrders = filteredOrders.where((order) {
+        final orderDate = order.orderDate ?? order.createdAt;
+        return orderDate.isAfter(_startDate!.subtract(const Duration(days: 1)));
+      }).toList();
+    }
+    
+    if (_endDate != null) {
+      filteredOrders = filteredOrders.where((order) {
+        final orderDate = order.orderDate ?? order.createdAt;
+        return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
+      }).toList();
+    }
     
     // Compute per type status counts from filtered orders
     int singlePending = 0,
@@ -1673,10 +1853,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildTypeStatusBarCharts() {
-    // Filter orders by selected party if any
-    final filteredOrders = _selectedUserId != null
-        ? _allOrders.where((order) => order.clientId == _selectedUserId).toList()
-        : _allOrders;
+    // Filter orders by selected party and date range
+    var filteredOrders = _allOrders;
+    
+    // Filter by party
+    if (_selectedUserId != null) {
+      filteredOrders = filteredOrders.where((order) => order.clientId == _selectedUserId).toList();
+    }
+    
+    // Filter by date range
+    if (_startDate != null) {
+      filteredOrders = filteredOrders.where((order) {
+        final orderDate = order.orderDate ?? order.createdAt;
+        return orderDate.isAfter(_startDate!.subtract(const Duration(days: 1)));
+      }).toList();
+    }
+    
+    if (_endDate != null) {
+      filteredOrders = filteredOrders.where((order) {
+        final orderDate = order.orderDate ?? order.createdAt;
+        return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
+      }).toList();
+    }
     
     // Compute per type status counts from filtered orders
     int singlePending = 0,
@@ -1910,10 +2108,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildPieChartsSection() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
     
-    // Filter orders by selected party if any
-    final filteredOrders = _selectedUserId != null
-        ? _allOrders.where((order) => order.clientId == _selectedUserId).toList()
-        : _allOrders;
+    // Filter orders by selected party and date range
+    var filteredOrders = _allOrders;
+    
+    // Filter by party
+    if (_selectedUserId != null) {
+      filteredOrders = filteredOrders.where((order) => order.clientId == _selectedUserId).toList();
+    }
+    
+    // Filter by date range
+    if (_startDate != null) {
+      filteredOrders = filteredOrders.where((order) {
+        final orderDate = order.orderDate ?? order.createdAt;
+        return orderDate.isAfter(_startDate!.subtract(const Duration(days: 1)));
+      }).toList();
+    }
+    
+    if (_endDate != null) {
+      filteredOrders = filteredOrders.where((order) {
+        final orderDate = order.orderDate ?? order.createdAt;
+        return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
+      }).toList();
+    }
     
     // Calculate filtered statistics
     final orderTypeCounts = {
