@@ -764,7 +764,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         title: Text(
           _selectionMode
               ? '${_selectedOrderIds.length} selected'
-              : 'Manage Orders',
+              : _selectedUserName != null
+                  ? 'Orders - $_selectedUserName'
+                  : 'Manage Orders',
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 20),
         ),
         bottom: PreferredSize(
@@ -1260,6 +1262,88 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             ],
             onChanged: onChanged,
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPartyDropdownField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Party/Customer',
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: _loadingUsers
+              ? Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppConstants.primaryColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Loading customers...'),
+                    ],
+                  ),
+                )
+              : DropdownButtonFormField<String>(
+                  value: _selectedUserId,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text(
+                        'All Customers',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                    ..._allUsers.map(
+                      (user) => DropdownMenuItem<String>(
+                        value: user.id,
+                        child: Text(
+                          '${user.name} (${user.email})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedUserId = value;
+                      _selectedUserName = value != null
+                          ? _allUsers.firstWhere((u) => u.id == value).name
+                          : null;
+                    });
+                    _loadData(); // Reload data from API with new user filter
+                  },
+                ),
         ),
       ],
     );
