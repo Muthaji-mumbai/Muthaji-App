@@ -18,11 +18,15 @@ import 'update_order_screen.dart';
 class ManageOrdersScreen extends StatefulWidget {
   final OrderStatus? initialStatus;
   final String? initialOrderType;
+  final String? initialUserId;
+  final String? initialUserName;
   
   const ManageOrdersScreen({
     super.key,
     this.initialStatus,
     this.initialOrderType,
+    this.initialUserId,
+    this.initialUserName,
   });
 
   @override
@@ -82,6 +86,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     // Set initial filter values from widget parameters
     _selectedStatus = widget.initialStatus;
     _selectedOrderType = widget.initialOrderType;
+    _selectedUserId = widget.initialUserId;
+    _selectedUserName = widget.initialUserName;
     
     _filterAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -182,10 +188,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       final token = AuthService.currentToken;
       if (token != null) {
         final users = await UserService.getAllUsers(token);
-        // Filter to only show customers for party selection
-        final customers = users.where((user) => user.role == UserRole.customer).toList();
+        // Show all users for party selection (customers, employees, admins)
         setState(() {
-          _allUsers = customers;
+          _allUsers = users;
           _loadingUsers = false;
         });
       }
@@ -1320,7 +1325,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     const DropdownMenuItem<String>(
                       value: null,
                       child: Text(
-                        'All Customers',
+                        'All Parties',
                         style: TextStyle(color: Colors.grey),
                       ),
                     ),

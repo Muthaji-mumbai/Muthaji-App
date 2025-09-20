@@ -83,6 +83,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
   List<FlSpot> _totalOrdersData = [];
   List<Map<String, dynamic>> _graphData = [];
 
+  // Party/User filtering for reports
+  String? _selectedUserId;
+  String? _selectedUserName;
+  List<User> _allUsers = [];
+  bool _loadingUsers = false;
+
   // Navigation bar for switching views
   Widget _buildNavigationBar() {
     return Container(
@@ -191,6 +197,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     super.initState();
     _loadDashboardData();
     _loadGraphData();
+    _loadUsers(); // Load users for party filtering
   }
 
   Future<void> _loadGraphData() async {
@@ -328,6 +335,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
     setState(() {
       _isLoading = false;
     });
+  }
+
+  Future<void> _loadUsers() async {
+    setState(() => _loadingUsers = true);
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final token = authProvider.currentUser?.token;
+      if (token != null) {
+        final users = await UserService.getAllUsers(token);
+        // Show all users for party selection (customers, employees, admins)
+        setState(() {
+          _allUsers = users;
+          _loadingUsers = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _loadingUsers = false);
+      // Silently fail for user loading as it's not critical
+    }
   }
 
   @override
@@ -1363,6 +1389,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildPartySelectionSection(), // Party selection for filtering reports
+        const SizedBox(height: AppConstants.spacingL),
         _buildDetailedStatistics(), // Moved detailed stats higher for priority
         const SizedBox(height: AppConstants.spacingL),
         _buildTypePieChartsSection(),
@@ -1374,8 +1402,113 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  Widget _buildPartySelectionSection() {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+        boxShadow: AppConstants.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.people_outline,
+                color: AppConstants.primaryColor,
+                size: 20,
+              ),
+              const SizedBox(width: AppConstants.spacingS),
+              Text(
+                'Party Selection',
+                style: AppConstants.headingSmall.copyWith(
+                  color: AppConstants.primaryColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.spacingM),
+          _loadingUsers
+              ? Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppConstants.primaryColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Loading customers...'),
+                    ],
+                  ),
+                )
+              : Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedUserId,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      hintText: 'Select a party to filter reports',
+                    ),
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text(
+                          'All Parties',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                      ..._allUsers.map(
+                        (user) => DropdownMenuItem<String>(
+                          value: user.id,
+                          child: Text(
+                            '${user.name} (${user.email})',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedUserId = value;
+                        _selectedUserName = value != null
+                            ? _allUsers.firstWhere((u) => u.id == value).name
+                            : null;
+                      });
+                      // The pie charts will automatically update since they use _allOrders
+                      // which will be filtered by the selected user in the chart calculation
+                    },
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTypePieChartsSection() {
-    // Compute per type status counts from _allOrders
+    // Filter orders by selected party if any
+    final filteredOrders = _selectedUserId != null
+        ? _allOrders.where((order) => order.clientId == _selectedUserId).toList()
+        : _allOrders;
+    
+    // Compute per type status counts from filtered orders
     int singlePending = 0,
         singleInProgress = 0,
         singleCompleted = 0,
@@ -1393,7 +1526,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         bulkDue = 0,
         bulkPartialDelivery = 0;
     
-    for (final o in _allOrders) {
+    for (final o in filteredOrders) {
       final isSingle = (o.orderType ?? '').toLowerCase().contains('single');
       final isBulk = (o.orderType ?? '').toLowerCase().contains('bulk');
       if (!isSingle && !isBulk) continue; // skip unknown types
@@ -1540,7 +1673,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildTypeStatusBarCharts() {
-    // Compute per type status counts from _allOrders
+    // Filter orders by selected party if any
+    final filteredOrders = _selectedUserId != null
+        ? _allOrders.where((order) => order.clientId == _selectedUserId).toList()
+        : _allOrders;
+    
+    // Compute per type status counts from filtered orders
     int singlePending = 0,
         singleInProgress = 0,
         singleCompleted = 0,
@@ -1557,7 +1695,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         int bulkDelay = 0,
         bulkDue = 0,
         bulkPartialDelivery = 0;
-    for (final o in _allOrders) {
+    for (final o in filteredOrders) {
       final isSingle = (o.orderType ?? '').toLowerCase().contains('single');
       final isBulk = (o.orderType ?? '').toLowerCase().contains('bulk');
       if (!isSingle && !isBulk) continue; // skip unknown types
@@ -1771,15 +1909,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildPieChartsSection() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
-    final orderTypeCounts =
-        _dashboardStats['orderTypeCounts'] ??
-        {'single': 0, 'bulk': 0, 'total': 0};
-    // Use real order performance data for status distribution
+    
+    // Filter orders by selected party if any
+    final filteredOrders = _selectedUserId != null
+        ? _allOrders.where((order) => order.clientId == _selectedUserId).toList()
+        : _allOrders;
+    
+    // Calculate filtered statistics
+    final orderTypeCounts = {
+      'single': filteredOrders.where((o) => (o.orderType ?? '').toLowerCase().contains('single')).length,
+      'bulk': filteredOrders.where((o) => (o.orderType ?? '').toLowerCase().contains('bulk')).length,
+      'total': filteredOrders.length,
+    };
+    
     final statusCounts = {
-      'pending': (_orderStats['pendingOrders'] ?? 0),
-      'inProgress': (_orderStats['inProgressOrders'] ?? 0),
-      'completed': (_orderStats['completedOrders'] ?? 0),
-      'cancelled': (_orderStats['cancelledOrders'] ?? 0),
+      'pending': filteredOrders.where((o) => o.status == OrderStatus.pending).length,
+      'inProgress': filteredOrders.where((o) => o.status == OrderStatus.inProgress).length,
+      'completed': filteredOrders.where((o) => o.status == OrderStatus.completed).length,
+      'cancelled': filteredOrders.where((o) => o.status == OrderStatus.cancelled).length,
     };
 
     return Column(
@@ -1795,22 +1942,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   data: [
                     {
                       'label': 'Pending',
-                      'value': statusCounts['pending'].toDouble(),
+                      'value': statusCounts['pending']!.toDouble(),
                       'color': AppConstants.warningColor,
                     },
                     {
                       'label': 'In Progress',
-                      'value': statusCounts['inProgress'].toDouble(),
+                      'value': statusCounts['inProgress']!.toDouble(),
                       'color': AppConstants.secondaryColor,
                     },
                     {
                       'label': 'Completed',
-                      'value': statusCounts['completed'].toDouble(),
+                      'value': statusCounts['completed']!.toDouble(),
                       'color': AppConstants.successColor,
                     },
                     {
                       'label': 'Cancelled',
-                      'value': statusCounts['cancelled'].toDouble(),
+                      'value': statusCounts['cancelled']!.toDouble(),
                       'color': AppConstants.errorColor,
                     },
                   ],
@@ -1822,13 +1969,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   data: [
                     {
                       'label': 'Single Orders',
-                      'value': orderTypeCounts['single'].toDouble(),
+                      'value': orderTypeCounts['single']!.toDouble(),
                       'color': AppConstants.primaryColor,
                     },
                     {
                       'label': 'Bulk Orders',
-                      'value': orderTypeCounts['bulk'].toDouble(),
-                      'color': AppConstants.accentColor,
+                      'value': orderTypeCounts['bulk']!.toDouble(),
+                        'color': AppConstants.accentColor,
                     },
                   ],
                   onItemTap: _onOrderTypeItemTap,
@@ -1844,22 +1991,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     data: [
                       {
                         'label': 'Pending',
-                        'value': statusCounts['pending'].toDouble(),
+                        'value': statusCounts['pending']!.toDouble(),
                         'color': AppConstants.warningColor,
                       },
                       {
                         'label': 'In Progress',
-                        'value': statusCounts['inProgress'].toDouble(),
+                        'value': statusCounts['inProgress']!.toDouble(),
                         'color': AppConstants.secondaryColor,
                       },
                       {
                         'label': 'Completed',
-                        'value': statusCounts['completed'].toDouble(),
+                        'value': statusCounts['completed']!.toDouble(),
                         'color': AppConstants.successColor,
                       },
                       {
                         'label': 'Cancelled',
-                        'value': statusCounts['cancelled'].toDouble(),
+                        'value': statusCounts['cancelled']!.toDouble(),
                         'color': AppConstants.errorColor,
                       },
                     ],
@@ -1873,12 +2020,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     data: [
                       {
                         'label': 'Single Orders',
-                        'value': orderTypeCounts['single'].toDouble(),
+                        'value': orderTypeCounts['single']!.toDouble(),
                         'color': AppConstants.primaryColor,
                       },
                       {
                         'label': 'Bulk Orders',
-                        'value': orderTypeCounts['bulk'].toDouble(),
+                        'value': orderTypeCounts['bulk']!.toDouble(),
                         'color': AppConstants.accentColor,
                       },
                     ],
@@ -2607,13 +2754,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
         status = null;
     }
     
-    // Navigate to ManageOrdersScreen with both status and Single order type filters
+    // Navigate to ManageOrdersScreen with status, Single order type, and party filters
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ManageOrdersScreen(
           initialStatus: status,
           initialOrderType: 'Single',
+          initialUserId: _selectedUserId,
+          initialUserName: _selectedUserName,
         ),
       ),
     );
@@ -2650,13 +2799,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
         status = null;
     }
     
-    // Navigate to ManageOrdersScreen with both status and Bulk order type filters
+    // Navigate to ManageOrdersScreen with status, Bulk order type, and party filters
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ManageOrdersScreen(
           initialStatus: status,
           initialOrderType: 'Bulk',
+          initialUserId: _selectedUserId,
+          initialUserName: _selectedUserName,
         ),
       ),
     );
