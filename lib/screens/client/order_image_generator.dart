@@ -744,7 +744,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
 
       await Share.shareXFiles(
         files,
-        text: 'Order Details - ${widget.order.orderNo},${widget.order.clientName}(All Ornaments)',
+        text: 'Order Details - ${widget.order.orderNo},${widget.order.clientName}',
       );
 
       if (mounted) {
