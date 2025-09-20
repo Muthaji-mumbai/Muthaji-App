@@ -115,16 +115,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 .map(
                   (d) => {
                     'name': d['categoryId'],
-                    if ((d['size'] as String?) != null &&
-                        (d['size'] as String).isNotEmpty)
-                      'size': d['size'],
-                    'unit': _getUnitForDetail(d),
-                    'weight': d['weight'],
+                    // For employee bulk orders, pass empty strings for hidden fields
+                    'size': _isEmployeeBulkOrder() ? '' : (d['size'] ?? ''),
+                    'unit': _isEmployeeBulkOrder() ? '' : _getUnitForDetail(d),
+                    'weight': _isEmployeeBulkOrder() ? 0.0 : d['weight'],
                     'purity': d['purity'],
                     'quantity': d['quantity'],
-                    'colorstone': d['colorstone'] ?? 'Same as image',
-                    'rhodium': d['rhodium'] ?? 'Same as image',
-                    'dull': d['dull'] ?? 'Same as image',
+                    'colorstone': _isEmployeeBulkOrder() ? '' : (d['colorstone'] ?? 'Same as image'),
+                    'rhodium': _isEmployeeBulkOrder() ? '' : (d['rhodium'] ?? 'Same as image'),
+                    'dull': _isEmployeeBulkOrder() ? '' : (d['dull'] ?? 'Same as image'),
                     if ((d['remarks'] as String).isNotEmpty)
                       'remarks': d['remarks'],
                     if (d['deliverycount'] != null)
@@ -384,16 +383,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             final d = _ornamentDetails[i];
             final map = <String, dynamic>{
               'name': d['categoryId'], // Send category ID as name
-              if ((d['size'] as String?) != null &&
-                  (d['size'] as String).isNotEmpty)
-                'size': d['size'],
-              'unit': _getUnitForDetail(d),
-              'weight': d['weight'],
+              // For employee bulk orders, pass empty strings for hidden fields
+              'size': _isEmployeeBulkOrder() ? '' : (d['size'] ?? ''),
+              'unit': _isEmployeeBulkOrder() ? '' : _getUnitForDetail(d),
+              'weight': _isEmployeeBulkOrder() ? 0.0 : d['weight'],
               'purity': d['purity'],
               'quantity': d['quantity'],
-              'colorstone': d['colorstone'] ?? 'Same as image',
-              'rhodium': d['rhodium'] ?? 'Same as image',
-              'dull': d['dull'] ?? 'Same as image',
+              'colorstone': _isEmployeeBulkOrder() ? '' : (d['colorstone'] ?? 'Same as image'),
+              'rhodium': _isEmployeeBulkOrder() ? '' : (d['rhodium'] ?? 'Same as image'),
+              'dull': _isEmployeeBulkOrder() ? '' : (d['dull'] ?? 'Same as image'),
             };
             if ((d['remarks'] as String).isNotEmpty) {
               map['remarks'] = d['remarks'];
@@ -474,6 +472,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     return currentUser != null &&
         (currentUser.role == UserRole.admin ||
             currentUser.role == UserRole.employee);
+  }
+
+  bool _isEmployeeBulkOrder() {
+    final currentUser = context.read<AuthProvider>().currentUser;
+    return currentUser != null &&
+        currentUser.role == UserRole.employee &&
+        _selectedOrderType == 'Bulk';
   }
 
   Future<void> _selectDate() async {
@@ -1063,59 +1068,64 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           _buildCategoryDropdown(index, detail),
           const SizedBox(height: AppConstants.spacingM),
 
-          // Size and Unit Row
-          Row(
-            children: [
-              Expanded(flex: 3, child: _buildSizeDropdown(index, detail)),
-              const SizedBox(width: AppConstants.spacingM),
-              Expanded(flex: 2, child: _buildUnitDropdown(index, detail)),
-            ],
-          ),
-          const SizedBox(height: AppConstants.spacingM),
+          // Size and Unit Row - Hide for employee bulk orders
+          if (!_isEmployeeBulkOrder()) ...[
+            Row(
+              children: [
+                Expanded(flex: 3, child: _buildSizeDropdown(index, detail)),
+                const SizedBox(width: AppConstants.spacingM),
+                Expanded(flex: 2, child: _buildUnitDropdown(index, detail)),
+              ],
+            ),
+            const SizedBox(height: AppConstants.spacingM),
+          ],
 
-          // Weight, Purity, Quantity Row
+          // Weight, Purity, Quantity Row - Weight hidden for employee bulk orders
           Row(
             children: [
-              Expanded(
-                child: TextFormField(
-                  key: ValueKey('weight_$index'),
-                  initialValue: detail['weight'].toString(),
-                  decoration: InputDecoration(
-                    labelText: 'Weight (${_getUnitForDetail(detail)})',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
+              // Weight field - Hide for employee bulk orders
+              if (!_isEmployeeBulkOrder()) ...[
+                Expanded(
+                  child: TextFormField(
+                    key: ValueKey('weight_$index'),
+                    initialValue: detail['weight'].toString(),
+                    decoration: InputDecoration(
+                      labelText: 'Weight (${_getUnitForDetail(detail)})',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacingS,
+                        vertical: AppConstants.spacingS,
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingS,
-                      vertical: AppConstants.spacingS,
-                    ),
+                    keyboardType: TextInputType.number,
+                    onTap: () {
+                      // Auto-select all text when tapped for easy editing
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        final controller = TextEditingController(
+                          text: detail['weight'].toString(),
+                        );
+                        controller.selection = TextSelection(
+                          baseOffset: 0,
+                          extentOffset: controller.text.length,
+                        );
+                      });
+                    },
+                    onChanged:
+                        (value) => setState(() {
+                          _ornamentDetails[index]['weight'] =
+                              double.tryParse(value) ?? 0.0;
+                        }),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Enter weight';
+                      if (double.tryParse(value) == null) return 'Invalid';
+                      return null;
+                    },
                   ),
-                  keyboardType: TextInputType.number,
-                  onTap: () {
-                    // Auto-select all text when tapped for easy editing
-                    Future.delayed(const Duration(milliseconds: 100), () {
-                      final controller = TextEditingController(
-                        text: detail['weight'].toString(),
-                      );
-                      controller.selection = TextSelection(
-                        baseOffset: 0,
-                        extentOffset: controller.text.length,
-                      );
-                    });
-                  },
-                  onChanged:
-                      (value) => setState(() {
-                        _ornamentDetails[index]['weight'] =
-                            double.tryParse(value) ?? 0.0;
-                      }),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Enter weight';
-                    if (double.tryParse(value) == null) return 'Invalid';
-                    return null;
-                  },
                 ),
-              ),
-              const SizedBox(width: AppConstants.spacingS),
+                const SizedBox(width: AppConstants.spacingS),
+              ],
               Expanded(
                 flex: 3,
                 child: DropdownButtonFormField<String>(
@@ -1200,8 +1210,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           ),
           const SizedBox(height: AppConstants.spacingM),
 
-          // Colorstone and Rhodium Row
-          Row(
+          // Colorstone and Rhodium Row - Hide for employee bulk orders
+          if (!_isEmployeeBulkOrder()) ...[
+            Row(
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
@@ -1275,11 +1286,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: AppConstants.spacingM),
+            ),
+            const SizedBox(height: AppConstants.spacingM),
 
-          // Dull Row
-          DropdownButtonFormField<String>(
+            // Dull Row
+            DropdownButtonFormField<String>(
             decoration: InputDecoration(
               labelText: 'Dull',
               border: OutlineInputBorder(
@@ -1307,8 +1318,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 (value) => setState(() {
                   _ornamentDetails[index]['dull'] = value ?? 'Same as image';
                 }),
-          ),
-          const SizedBox(height: AppConstants.spacingM),
+            ),
+            const SizedBox(height: AppConstants.spacingM),
+          ],
+
+          // Remarks field - Always show
           TextFormField(
             initialValue: detail['remarks'],
             decoration: InputDecoration(
