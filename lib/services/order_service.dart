@@ -16,6 +16,7 @@ class OrderService {
     OrderStatus? status,
     DateTime? startDate,
     DateTime? endDate,
+    String? userId, // Add user-based filtering
   }) async {
     try {
       // Build query parameters
@@ -31,6 +32,10 @@ class OrderService {
       
       if (endDate != null) {
         queryParams['endDate'] = DateFormat('yyyy-MM-dd').format(endDate);
+      }
+      
+      if (userId != null && userId.isNotEmpty) {
+        queryParams['userid'] = userId;
       }
       
       // Build endpoint with query parameters
@@ -60,27 +65,23 @@ class OrderService {
     }
   }
 
-  // Get orders by client ID
+  // Get orders by client ID with optional date filtering
   static Future<List<Order>> getOrdersByClient(
     String clientId,
-    String? token,
-  ) async {
+    String? token, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
-      final allOrders = await getAllOrders(token);
-      // Diagnostics: count and sample IDs
-      developer.log('Total orders fetched: ${allOrders.length}');
-      if (allOrders.isNotEmpty) {
-        developer.log(
-          'First order clientId: ${allOrders.first.clientId}, current clientId: $clientId',
-        );
-      }
-      final normalizedClientId = clientId.trim();
-      final result =
-          allOrders
-              .where((order) => (order.clientId.trim()) == normalizedClientId)
-              .toList();
-      developer.log('Orders after client filter: ${result.length}');
-      return result;
+      // Use API-level filtering with userid parameter
+      final orders = await getAllOrders(
+        token,
+        userId: clientId,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      developer.log('Orders fetched for client $clientId: ${orders.length}');
+      return orders;
     } catch (e) {
       throw Exception('Error fetching client orders: $e');
     }

@@ -10,6 +10,8 @@ import 'package:soloshine/screens/client/create_order_screen.dart';
 import '../../models/order.dart';
 import '../../services/order_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/user_service.dart';
+import '../../models/user.dart';
 import '../../constants/app_constants.dart';
 import 'update_order_screen.dart';
 
@@ -62,6 +64,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     {'value': 'description', 'label': 'Description'},
   ];
 
+  // Party/User filtering variables
+  String? _selectedUserId;
+  String? _selectedUserName;
+  List<User> _allUsers = [];
+  bool _loadingUsers = false;
+
   bool _isLoading = true;
   bool _showFilters = false;
   late AnimationController _filterAnimationController;
@@ -84,6 +92,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       curve: Curves.easeInOut,
     );
     _loadData();
+    _loadUsers(); // Load users for party filtering
     _searchController.addListener(() {
       _searchQuery = _searchController.text;
       _applyFilters();
@@ -136,6 +145,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           status: _selectedStatus,
           startDate: apiStartDate,
           endDate: apiEndDate,
+          userId: _selectedUserId, // Pass selected user ID for filtering
         );
 
         setState(() {
@@ -163,6 +173,25 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           ),
         );
       }
+    }
+  }
+
+  Future<void> _loadUsers() async {
+    setState(() => _loadingUsers = true);
+    try {
+      final token = AuthService.currentToken;
+      if (token != null) {
+        final users = await UserService.getAllUsers(token);
+        // Filter to only show customers for party selection
+        final customers = users.where((user) => user.role == UserRole.customer).toList();
+        setState(() {
+          _allUsers = customers;
+          _loadingUsers = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _loadingUsers = false);
+      // Silently fail for user loading as it's not critical
     }
   }
 
@@ -998,6 +1027,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               nullText: 'All Types',
             ),
             const SizedBox(height: 12),
+            _buildPartyDropdownField(),
+            const SizedBox(height: 12),
             _buildDateRangeField(),
             const SizedBox(height: 12),
             _buildDropdownField<String>(
@@ -1087,6 +1118,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     nullText: 'All Types',
                   ),
                 ),
+                const SizedBox(width: 16),
+                Expanded(child: _buildPartyDropdownField()),
                 const SizedBox(width: 16),
                 Expanded(child: _buildDateRangeField()),
                 const SizedBox(width: 16),
@@ -2328,7 +2361,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         _selectedRange != 'All time' ||
         _searchQuery.isNotEmpty ||
         _sortBy != 'orderDate' ||
-        _sortAscending != false; // Default is descending
+        _sortAscending != false || // Default is descending
+        _selectedUserId != null; // Include user filter
   }
 
   void _clearAllFilters() {
@@ -2342,6 +2376,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       _endDate = null;
       _sortBy = 'orderDate';
       _sortAscending = false; // Reset to default descending
+      _selectedUserId = null; // Clear user filter
+      _selectedUserName = null;
     });
     _loadData(); // Reload data from API with cleared filters
   }

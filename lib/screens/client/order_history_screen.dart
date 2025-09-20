@@ -165,10 +165,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       final token = AuthService.currentToken;
 
       if (currentUser != null && token != null) {
-        // First try client-filtered orders
+        // Use API-level filtering with date parameters
         final clientOrders = await OrderService.getOrdersByClient(
           currentUser.id,
           token,
+          startDate: _fromDate,
+          endDate: _toDate,
         );
 
         List<Order> effectiveOrders = clientOrders;
@@ -227,7 +229,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
               break;
           }
 
-          // Apply search filter
+          // Apply search filter (client-side for immediate responsiveness)
           if (_searchQuery.isNotEmpty) {
             final query = _searchQuery.toLowerCase();
             return order.description.toLowerCase().contains(query) ||
@@ -236,28 +238,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                 order.statusText.toLowerCase().contains(query);
           }
 
-          // Apply date range filter (by createdAt)
-          if (_fromDate != null) {
-            final from = DateTime(
-              _fromDate!.year,
-              _fromDate!.month,
-              _fromDate!.day,
-            );
-            if (order.createdAt.isBefore(from)) return false;
-          }
-          if (_toDate != null) {
-            final to = DateTime(
-              _toDate!.year,
-              _toDate!.month,
-              _toDate!.day,
-              23,
-              59,
-              59,
-              999,
-            );
-            if (order.createdAt.isAfter(to)) return false;
-          }
-
+          // Date filtering is now handled at API level
           return true;
         }).toList();
 
@@ -309,28 +290,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     );
   }
 
-  // Status chip used in the ExpansionTile trailing when expanded
-  Widget _buildStatusChip(Order order) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.spacingL,
-        vertical: AppConstants.spacingXS,
-      ),
-      decoration: BoxDecoration(
-        color: order.statusColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(AppConstants.radiusS),
-        border: Border.all(color: order.statusColor.withOpacity(0.3)),
-      ),
-      child: Text(
-        order.statusText,
-        style: AppConstants.bodySmall.copyWith(
-          color: order.statusColor,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
+ 
   Widget _buildSearchAndFilterSection() {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingM),
@@ -460,51 +420,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             _fromDate = _toDate;
           }
         }
-        _applyFilters();
+        _loadOrders(); // Reload data from API with new date filters
       });
     }
   }
-
-  // Header row for the table-like layout
-  // Widget _buildTableHeader() {
-  //   return Container(
-  //     padding: const EdgeInsets.symmetric(
-  //       horizontal: AppConstants.spacingM,
-  //       vertical: AppConstants.spacingS,
-  //     ),
-  //     decoration: BoxDecoration(
-  //       color: AppConstants.surfaceColor,
-  //       borderRadius: BorderRadius.circular(AppConstants.radiusM),
-  //       boxShadow: AppConstants.cardShadow,
-  //     ),
-  //     child: Row(
-  //       children: [
-  //         const SizedBox(
-  //           width: 48,
-  //           child: Text('Image', style: TextStyle(fontWeight: FontWeight.w700)),
-  //         ),
-  //         Expanded(
-  //           flex: 4,
-  //           child: Text(
-  //             'Order No',
-  //             style: AppConstants.bodySmall.copyWith(
-  //               fontWeight: FontWeight.w700,
-  //             ),
-  //           ),
-  //         ),
-  //         Expanded(
-  //           flex: 3,
-  //           child: Text(
-  //             'Order date',
-  //             style: AppConstants.bodySmall.copyWith(
-  //               fontWeight: FontWeight.w700,
-  //             ),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 
   // Collapsible row with summary and expandable details
   Widget _buildOrderTile(int index, Order order) {
@@ -816,36 +735,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       ),
       // Status ribbon positioned on the right
       
-    ],
-  );
-}
-
-Widget _buildOrderHeader(Order order) {
-  return Row(
-    children: [
-      // Order status chip
-      Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppConstants.spacingM,
-          vertical: AppConstants.spacingXS,
-        ),
-        decoration: BoxDecoration(
-          color: _getStatusColor(order.status).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: _getStatusColor(order.status),
-            width: 1,
-          ),
-        ),
-        child: Text(
-          order.status.toString().split('.').last.toUpperCase(),
-          style: AppConstants.bodySmall.copyWith(
-            color: _getStatusColor(order.status),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-
     ],
   );
 }
@@ -1417,20 +1306,6 @@ Widget _buildActionButtonsSection(Order order) {
   );
 }
 
-Color _getStatusColor(OrderStatus status) {
-  switch (status) {
-    case OrderStatus.pending:
-      return Colors.orange;
-    case OrderStatus.confirmed:
-      return Colors.blue;
-    case OrderStatus.completed:
-      return Colors.green;
-    case OrderStatus.cancelled:
-      return Colors.red;
-    default:
-      return Colors.grey;
-  }
-}
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -1497,27 +1372,6 @@ Color _getStatusColor(OrderStatus status) {
     if (diff == 0) return 'Today';
     if (diff == -1) return 'Yesterday';
     return _formatDate(date);
-  }
-
-  String _getStatusText(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return 'Pending';
-      case OrderStatus.confirmed:
-        return 'Confirmed';
-      case OrderStatus.inProgress:
-        return 'In Progress';
-      case OrderStatus.completed:
-        return 'Completed';
-      case OrderStatus.cancelled:
-        return 'Cancelled';
-      case OrderStatus.delay:
-        return 'Delay';
-      case OrderStatus.due:
-        return 'Due';
-      case OrderStatus.partialDelivery:
-        return 'Partial Delivery';
-    }
   }
 
   // Color _getStatusColor(OrderStatus status) {
