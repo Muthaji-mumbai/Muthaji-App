@@ -1382,14 +1382,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
         singleCancelled = 0,
         singleConfirmed = 0;
     int singleDelay = 0,
-        singleDue = 0;
+        singleDue = 0,
+        singlePartialDelivery = 0;
     int bulkPending = 0,
         bulkInProgress = 0,
         bulkCompleted = 0,
         bulkCancelled = 0,
         bulkConfirmed = 0;
     int bulkDelay = 0,
-        bulkDue = 0;
+        bulkDue = 0,
+        bulkPartialDelivery = 0;
     
     for (final o in _allOrders) {
       final isSingle = (o.orderType ?? '').toLowerCase().contains('single');
@@ -1418,6 +1420,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             break;
           case OrderStatus.due:
             toSingle ? singleDue++ : bulkDue++;
+            break;
+          case OrderStatus.partialDelivery:
+            toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
             break;
         }
       }
@@ -1480,6 +1485,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'value': bulkCancelled.toDouble(),
         'color': AppConstants.errorColor,
       },
+      {
+        'label': 'Partial Delivery',
+        'value': bulkPartialDelivery.toDouble(),
+        'color': AppConstants.partialDeliveryColor,
+      },
     ];
 
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
@@ -1537,14 +1547,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
         singleCancelled = 0,
         singleConfirmed = 0;
         int singleDelay = 0,
-        singleDue = 0;
+        singleDue = 0,
+        singlePartialDelivery = 0;
     int bulkPending = 0,
         bulkInProgress = 0,
         bulkCompleted = 0,
         bulkCancelled = 0,
         bulkConfirmed = 0;
         int bulkDelay = 0,
-        bulkDue = 0;
+        bulkDue = 0,
+        bulkPartialDelivery = 0;
     for (final o in _allOrders) {
       final isSingle = (o.orderType ?? '').toLowerCase().contains('single');
       final isBulk = (o.orderType ?? '').toLowerCase().contains('bulk');
@@ -1572,6 +1584,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             break;
           case OrderStatus.due:
             toSingle ? singleDue++ : bulkDue++;
+            break;
+          case OrderStatus.partialDelivery:
+            toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
             break;
         }
       }

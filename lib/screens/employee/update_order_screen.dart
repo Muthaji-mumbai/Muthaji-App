@@ -696,6 +696,8 @@ class _UpdateOrderScreenState extends State<UpdateOrderScreen> {
         return 'Delay';
       case OrderStatus.due:
         return 'Due';
+      case OrderStatus.partialDelivery:
+        return 'Partial Delivery';
     }
   }
 }

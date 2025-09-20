@@ -262,7 +262,7 @@ class OrderService {
   }) async {
     try {
       final updateData = <String, dynamic>{
-        'status': newStatus.toString().split('.').last,
+        'status': Order.statusToApiString(newStatus),
       };
 
       if (assignedEmployeeId != null) {

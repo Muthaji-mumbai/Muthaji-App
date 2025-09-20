@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:soloshine/constants/app_constants.dart';
 
-enum OrderStatus { pending, confirmed, inProgress, completed, cancelled,delay, due}
+enum OrderStatus { pending, confirmed, inProgress, completed, cancelled,delay, due,partialDelivery}
 
 class OrnamentDetail {
   final String id;
@@ -18,6 +19,7 @@ class OrnamentDetail {
   final String? colorstone; // colorstone option
   final String? rhodium; // rhodium option
   final String? dull; // dull option
+  final int? deliverycount; // delivery count for partial delivery
 
   OrnamentDetail({
     required this.id,
@@ -34,6 +36,7 @@ class OrnamentDetail {
     this.colorstone,
     this.rhodium,
     this.dull,
+    this.deliverycount,
   });
 
   factory OrnamentDetail.fromJson(Map<String, dynamic> json) {
@@ -74,6 +77,9 @@ class OrnamentDetail {
       colorstone: json['colorstone']?.toString(),
       rhodium: json['rhodium']?.toString(),
       dull: json['dull']?.toString(),
+      deliverycount: json['deliverycount'] != null 
+          ? int.tryParse(json['deliverycount'].toString()) 
+          : null,
     );
   }
 
@@ -92,6 +98,7 @@ class OrnamentDetail {
       if (colorstone != null) 'colorstone': colorstone,
       if (rhodium != null) 'rhodium': rhodium,
       if (dull != null) 'dull': dull,
+      if (deliverycount != null) 'deliverycount': deliverycount,
     };
   }
 }
@@ -232,8 +239,37 @@ class Order {
       case 'cancelled':
       case 'canceled':
         return OrderStatus.cancelled;
+      case 'delay':
+        return OrderStatus.delay;
+      case 'due':
+        return OrderStatus.due;
+      case 'partialdelivery': // handles "partial delivery", "partial_delivery"
+      case 'partiallydelivered':
+        return OrderStatus.partialDelivery;
       default:
         return OrderStatus.pending;
+    }
+  }
+
+  // Convert OrderStatus enum to API string format
+  static String statusToApiString(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return 'pending';
+      case OrderStatus.confirmed:
+        return 'confirmed';
+      case OrderStatus.inProgress:
+        return 'in progress';
+      case OrderStatus.completed:
+        return 'completed';
+      case OrderStatus.cancelled:
+        return 'cancelled';
+      case OrderStatus.delay:
+        return 'delay';
+      case OrderStatus.due:
+        return 'due';
+      case OrderStatus.partialDelivery:
+        return 'Partial Delivery';
     }
   }
 
@@ -244,7 +280,7 @@ class Order {
       'clientName': clientName,
       'description': description,
       'amount': amount,
-      'status': status.toString().split('.').last,
+      'status': statusToApiString(status),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
       'notes': notes,
@@ -315,6 +351,8 @@ class Order {
         return 'Delay';
       case OrderStatus.due:
         return 'Due';
+      case OrderStatus.partialDelivery:
+        return 'Partial Delivery';
     }
   }
 
@@ -334,6 +372,8 @@ class Order {
         return Colors.red;
       case OrderStatus.due:
         return Colors.red;
+      case OrderStatus.partialDelivery:
+        return AppConstants.partialDeliveryColor;
     }
   }
 }

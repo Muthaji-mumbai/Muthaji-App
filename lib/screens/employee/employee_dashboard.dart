@@ -1311,6 +1311,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         return const Color(0xFFF44336); // Red
       case OrderStatus.due:
         return const Color(0xFFF44336); // Red
+      case OrderStatus.partialDelivery:
+        return AppConstants.partialDeliveryColor;
     }
   }
 }

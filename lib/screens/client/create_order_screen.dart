@@ -55,6 +55,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       'rhodium': 'Same as image',
       'dull': 'Same as image',
       'remarks': '',
+      'deliverycount': null,
     },
   ];
   List<List<PlatformFile>> _ornamentImages = [[]];
@@ -126,6 +127,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     'dull': d['dull'] ?? 'Same as image',
                     if ((d['remarks'] as String).isNotEmpty)
                       'remarks': d['remarks'],
+                    if (d['deliverycount'] != null)
+                      'deliverycount': d['deliverycount'],
                   },
                 )
                 .toList();
@@ -140,7 +143,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         };
         // Include status in update only for admin/employee users
         if (_selectedStatus != null && _shouldShowOrderTypeSelection()) {
-          updateData['status'] = _selectedStatus!.toString().split('.').last;
+          updateData['status'] = Order.statusToApiString(_selectedStatus!);
         }
         print("ORDER PRIORTY=========>$_selectedPriority");
         final updated = await OrderService.updateOrder(
@@ -230,6 +233,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   'rhodium': d.rhodium ?? 'Same as image',
                   'dull': d.dull ?? 'Same as image',
                   'remarks': d.remarks ?? '',
+                  'deliverycount': d.deliverycount,
                 },
               )
               .toList();
@@ -285,6 +289,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         'rhodium': 'Same as image',
         'dull': 'Same as image',
         'remarks': '',
+        'deliverycount': null,
       });
       _ornamentImages.add([]);
     });
@@ -392,6 +397,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             };
             if ((d['remarks'] as String).isNotEmpty) {
               map['remarks'] = d['remarks'];
+            }
+            if (d['deliverycount'] != null) {
+              map['deliverycount'] = d['deliverycount'];
             }
             // If cloning, include existing image URLs per item so backend saves them without multipart
             if (widget.cloneFromOrder) {
@@ -1319,6 +1327,53 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 }),
           ),
           const SizedBox(height: AppConstants.spacingM),
+          
+          // Delivery Count field - only show when status is partialDelivery
+          if (_isEditMode && _selectedStatus == OrderStatus.partialDelivery) ...[
+            TextFormField(
+              initialValue: detail['deliverycount']?.toString() ?? '',
+              decoration: InputDecoration(
+                labelText: 'Delivery Count',
+                hintText: 'Enter delivered quantity',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingS,
+                  vertical: AppConstants.spacingS,
+                ),
+                suffixIcon: Icon(
+                  Icons.local_shipping_outlined,
+                  color: AppConstants.primaryColor,
+                ),
+              ),
+              keyboardType: TextInputType.number,
+              onChanged: (value) => setState(() {
+                _ornamentDetails[index]['deliverycount'] = 
+                    value.isEmpty ? null : int.tryParse(value);
+              }),
+              validator: (value) {
+                if (_selectedStatus == OrderStatus.partialDelivery) {
+                  if (value == null || value.isEmpty) {
+                    return 'Enter delivery count for partial delivery';
+                  }
+                  final deliveryCount = int.tryParse(value);
+                  if (deliveryCount == null) {
+                    return 'Enter valid number';
+                  }
+                  final quantity = detail['quantity'] as int;
+                  if (deliveryCount > quantity) {
+                    return 'Cannot exceed total quantity ($quantity)';
+                  }
+                  if (deliveryCount <= 0) {
+                    return 'Must be greater than 0';
+                  }
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: AppConstants.spacingM),
+          ],
           Align(
             alignment: Alignment.centerLeft,
             child: Wrap(

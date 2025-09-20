@@ -1515,6 +1515,8 @@ Color _getStatusColor(OrderStatus status) {
         return 'Delay';
       case OrderStatus.due:
         return 'Due';
+      case OrderStatus.partialDelivery:
+        return 'Partial Delivery';
     }
   }
 
