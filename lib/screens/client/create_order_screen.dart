@@ -115,15 +115,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 .map(
                   (d) => {
                     'name': d['categoryId'],
-                    // For employee bulk orders, pass empty strings for hidden fields
-                    'size': _isEmployeeBulkOrder() ? '' : (d['size'] ?? ''),
-                    'unit': _isEmployeeBulkOrder() ? '' : _getUnitForDetail(d),
-                    'weight': _isEmployeeBulkOrder() ? 0.0 : d['weight'],
+                    // For bulk orders, pass empty strings for hidden fields
+                    'size': _isBulkOrderSimplifiedForm() ? '' : (d['size'] ?? ''),
+                    'unit': _isBulkOrderSimplifiedForm() ? '' : _getUnitForDetail(d),
+                    'weight': _isBulkOrderSimplifiedForm() ? 0.0 : d['weight'],
                     'purity': d['purity'],
                     'quantity': d['quantity'],
-                    'colorstone': _isEmployeeBulkOrder() ? '' : (d['colorstone'] ?? 'Same as image'),
-                    'rhodium': _isEmployeeBulkOrder() ? '' : (d['rhodium'] ?? 'Same as image'),
-                    'dull': _isEmployeeBulkOrder() ? '' : (d['dull'] ?? 'Same as image'),
+                    'colorstone': _isBulkOrderSimplifiedForm() ? '' : (d['colorstone'] ?? 'Same as image'),
+                    'rhodium': _isBulkOrderSimplifiedForm() ? '' : (d['rhodium'] ?? 'Same as image'),
+                    'dull': _isBulkOrderSimplifiedForm() ? '' : (d['dull'] ?? 'Same as image'),
                     if ((d['remarks'] as String).isNotEmpty)
                       'remarks': d['remarks'],
                     if (d['deliverycount'] != null)
@@ -383,15 +383,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             final d = _ornamentDetails[i];
             final map = <String, dynamic>{
               'name': d['categoryId'], // Send category ID as name
-              // For employee bulk orders, pass empty strings for hidden fields
-              'size': _isEmployeeBulkOrder() ? '' : (d['size'] ?? ''),
-              'unit': _isEmployeeBulkOrder() ? '' : _getUnitForDetail(d),
-              'weight': _isEmployeeBulkOrder() ? 0.0 : d['weight'],
+              // For bulk orders, pass empty strings for hidden fields
+              'size': _isBulkOrderSimplifiedForm() ? '' : (d['size'] ?? ''),
+              'unit': _isBulkOrderSimplifiedForm() ? '' : _getUnitForDetail(d),
+              'weight': _isBulkOrderSimplifiedForm() ? 0.0 : d['weight'],
               'purity': d['purity'],
               'quantity': d['quantity'],
-              'colorstone': _isEmployeeBulkOrder() ? '' : (d['colorstone'] ?? 'Same as image'),
-              'rhodium': _isEmployeeBulkOrder() ? '' : (d['rhodium'] ?? 'Same as image'),
-              'dull': _isEmployeeBulkOrder() ? '' : (d['dull'] ?? 'Same as image'),
+              'colorstone': _isBulkOrderSimplifiedForm() ? '' : (d['colorstone'] ?? 'Same as image'),
+              'rhodium': _isBulkOrderSimplifiedForm() ? '' : (d['rhodium'] ?? 'Same as image'),
+              'dull': _isBulkOrderSimplifiedForm() ? '' : (d['dull'] ?? 'Same as image'),
             };
             if ((d['remarks'] as String).isNotEmpty) {
               map['remarks'] = d['remarks'];
@@ -474,10 +474,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             currentUser.role == UserRole.employee);
   }
 
-  bool _isEmployeeBulkOrder() {
+  bool _isBulkOrderSimplifiedForm() {
     final currentUser = context.read<AuthProvider>().currentUser;
     return currentUser != null &&
-        currentUser.role == UserRole.employee &&
+        (currentUser.role == UserRole.employee || currentUser.role == UserRole.admin) &&
         _selectedOrderType == 'Bulk';
   }
 
@@ -1068,8 +1068,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           _buildCategoryDropdown(index, detail),
           const SizedBox(height: AppConstants.spacingM),
 
-          // Size and Unit Row - Hide for employee bulk orders
-          if (!_isEmployeeBulkOrder()) ...[
+          // Size and Unit Row - Hide for bulk orders
+          if (!_isBulkOrderSimplifiedForm()) ...[
             Row(
               children: [
                 Expanded(flex: 3, child: _buildSizeDropdown(index, detail)),
@@ -1080,11 +1080,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             const SizedBox(height: AppConstants.spacingM),
           ],
 
-          // Weight, Purity, Quantity Row - Weight hidden for employee bulk orders
+          // Weight, Purity, Quantity Row - Weight hidden for bulk orders
           Row(
             children: [
-              // Weight field - Hide for employee bulk orders
-              if (!_isEmployeeBulkOrder()) ...[
+              // Weight field - Hide for bulk orders
+              if (!_isBulkOrderSimplifiedForm()) ...[
                 Expanded(
                   child: TextFormField(
                     key: ValueKey('weight_$index'),
@@ -1210,8 +1210,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           ),
           const SizedBox(height: AppConstants.spacingM),
 
-          // Colorstone and Rhodium Row - Hide for employee bulk orders
-          if (!_isEmployeeBulkOrder()) ...[
+          // Colorstone and Rhodium Row - Hide for bulk orders
+          if (!_isBulkOrderSimplifiedForm()) ...[
             Row(
             children: [
               Expanded(
