@@ -1333,7 +1333,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                       (user) => DropdownMenuItem<String>(
                         value: user.id,
                         child: Text(
-                          '${user.name} (${user.email})',
+                          '${user.name}',
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1552,7 +1552,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                '${entry.key.toString().split('.').last}: ${entry.value}',
+                                '${_getStatusText(entry.key)}: ${entry.value}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: _getStatusColor(entry.key),
@@ -1760,7 +1760,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             ),
                           ),
                           child: Text(
-                            order.status.toString().split('.').last,
+                            _getStatusText(order.status),
                             style: TextStyle(
                               color: _getStatusColor(order.status),
                               fontSize: 12,
@@ -1801,40 +1801,19 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     const SizedBox(height: 8),
                     Text(
                       order.description,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        if (order.orderType != null) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.blue.shade200),
-                            ),
-                            child: Text(
-                              order.orderType!,
-                              style: TextStyle(
-                                color: Colors.blue.shade700,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                       
-                       
+                        Icon(
+                          Icons.access_time_rounded,
+                          size: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                        const SizedBox(width: 4),
                         Text(
                           _formatDate(order.orderDate!),
                           style: TextStyle(
@@ -1842,7 +1821,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             fontSize: 12,
                           ),
                         ),
-                       SizedBox(width: 8),
+                        const Spacer(),
                         if (order.images.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -1875,6 +1854,91 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           ),
                       ],
                     ),
+                    if (order.updatedBy != null && order.updatedAt != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.edit_rounded,
+                            size: 14,
+                            color: Colors.grey.shade500,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Status updated by ${order.updatedBy} on ${_formatDate(order.updatedAt!)}',
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (order.orderType != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          if (order.orderType != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Text(
+                                order.orderType!,
+                                style: TextStyle(
+                                  color: Colors.blue.shade700,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          // Show party name for bulk orders
+                          if (order.orderType == 'Bulk' && order.partynameDisplay != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.purple.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.purple.shade200),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.group_outlined,
+                                    size: 12,
+                                    color: Colors.purple.shade700,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    order.partynameDisplay!,
+                                    style: TextStyle(
+                                      color: Colors.purple.shade700,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                        ],
+                      ),
+                    ],
                     if (_selectionMode) ...[
                       const SizedBox(height: 12),
                       Row(
@@ -2495,6 +2559,27 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         return const Color(0xFFF44336); // Red
       case OrderStatus.partialDelivery:
         return AppConstants.partialDeliveryColor;
+    }
+  }
+
+  String _getStatusText(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return 'Pending';
+      case OrderStatus.confirmed:
+        return 'Confirmed';
+      case OrderStatus.inProgress:
+        return 'In Progress';
+      case OrderStatus.completed:
+        return 'Completed';
+      case OrderStatus.cancelled:
+        return 'Cancelled';
+      case OrderStatus.delay:
+        return 'Delay';
+      case OrderStatus.due:
+        return 'Due';
+      case OrderStatus.partialDelivery:
+        return 'Partial Delivery';
     }
   }
 }

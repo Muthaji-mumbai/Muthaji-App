@@ -131,6 +131,7 @@ class OrderService {
     String? orderpriority, // "Regular" | "Urgent"
     required List<Map<String, dynamic>> ornamentDetails,
     List<List<PlatformFile>>? ornamentImages, // per-ornament images group
+    String? partyname, // Party ID for bulk orders
     String? token,
   }) async {
    
@@ -147,6 +148,8 @@ class OrderService {
         'orderpriority': ((orderpriority ?? 'Regular')),
         // API expects camelCase key per screenshot
         'ornamentDetails': jsonEncode(ornamentDetails),
+        // Include party ID for bulk orders
+        if (partyname != null) 'partyname': partyname,
       };
       developer.log('Sending create order fields: $fields');
 

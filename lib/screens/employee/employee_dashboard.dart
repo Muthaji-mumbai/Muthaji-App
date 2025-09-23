@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:soloshine/screens/client/pdfview.dart';
-import 'package:soloshine/screens/employee/update_order_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../widgets/custom_button.dart';
@@ -14,6 +13,7 @@ import '../dashboard_screen.dart';
 import 'manage_orders_screen.dart';
 import '../client/create_order_screen.dart';
 import 'order_detailed_screen.dart' show OrderDetailsScreen;
+import 'package:intl/intl.dart';
 
 class EmployeeDashboard extends StatefulWidget {
   const EmployeeDashboard({super.key});
@@ -54,10 +54,52 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadOrders();
+  String _getStatusText(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return 'Pending';
+      case OrderStatus.confirmed:
+        return 'Confirmed';
+      case OrderStatus.inProgress:
+        return 'In Progress';
+      case OrderStatus.completed:
+        return 'Completed';
+      case OrderStatus.cancelled:
+        return 'Cancelled';
+      case OrderStatus.delay:
+        return 'Delay';
+      case OrderStatus.due:
+        return 'Due';
+      case OrderStatus.partialDelivery:
+        return 'Partial Delivery';
+    }
+  }
+
+  Color _getStatusColor(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return const Color(0xFFFF9800); // Orange
+      case OrderStatus.confirmed:
+        return const Color(0xFF2196F3); // Blue
+      case OrderStatus.inProgress:
+        return const Color(0xFF9C27B0); // Purple
+      case OrderStatus.completed:
+        return const Color(0xFF4CAF50); // Green
+      case OrderStatus.cancelled:
+        return const Color(0xFFF44336); // Red
+      case OrderStatus.delay:
+        return const Color(0xFFF44336); // Red
+      case OrderStatus.due:
+        return const Color(0xFFF44336); // Red
+      case OrderStatus.partialDelivery:
+        return AppConstants.partialDeliveryColor;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final timeFormat = DateFormat('h:mm:ss a'); // 12-hour format with AM/PM
+    return '${dateFormat.format(date)} ${timeFormat.format(date)}';
   }
 
   Future<void> _loadOrders() async {
@@ -360,323 +402,353 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                 );
               },
               child: ExpansionTile(
-            tilePadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 8,
-            ),
-            childrenPadding: const EdgeInsets.all(20),
-            leading: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _getStatusColor(order.status).withOpacity(0.3),
-                  width: 2,
+                tilePadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
                 ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child:
-                    order.images.isNotEmpty
-                        ? Image.network(
-                          order.images.first,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (context, error, stackTrace) => Container(
-                                color: _getStatusColor(
-                                  order.status,
-                                ).withOpacity(0.1),
-                                child: Icon(
-                                  Icons.image_not_supported_rounded,
-                                  color: _getStatusColor(order.status),
-                                  size: 24,
+                childrenPadding: const EdgeInsets.all(20),
+                leading: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _getStatusColor(order.status).withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child:
+                        order.images.isNotEmpty
+                            ? Image.network(
+                              order.images.first,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (context, error, stackTrace) => Container(
+                                    color: _getStatusColor(
+                                      order.status,
+                                    ).withOpacity(0.1),
+                                    child: Icon(
+                                      Icons.image_not_supported_rounded,
+                                      color: _getStatusColor(order.status),
+                                      size: 24,
+                                    ),
+                                  ),
+                            )
+                            : Container(
+                              color: _getStatusColor(order.status).withOpacity(0.1),
+                              child: Icon(
+                                Icons.shopping_bag_outlined,
+                                color: _getStatusColor(order.status),
+                                size: 24,
+                              ),
+                            ),
+                  ),
+                ),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            order.orderNo ?? order.id,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(order.status).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: _getStatusColor(order.status).withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            _getStatusText(order.status),
+                            style: TextStyle(
+                              color: _getStatusColor(order.status),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline_rounded,
+                          size: 16,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            order.clientName,
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      order.description,
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_rounded,
+                          size: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatDate(order.createdAt),
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (order.images.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.photo_library_outlined,
+                                  size: 12,
+                                  color: Colors.green.shade600,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${order.images.length}',
+                                  style: TextStyle(
+                                    color: Colors.green.shade600,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (order.updatedBy != null && order.updatedAt != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.edit_rounded,
+                            size: 14,
+                            color: Colors.grey.shade500,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Updated by ${order.updatedBy} on ${_formatDate(order.updatedAt!)}',
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (order.orderType != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          if (order.orderType != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Text(
+                                order.orderType!,
+                                style: TextStyle(
+                                  color: Colors.blue.shade700,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                        )
-                        : Container(
-                          color: _getStatusColor(order.status).withOpacity(0.1),
-                          child: Icon(
-                            Icons.shopping_bag_outlined,
-                            color: _getStatusColor(order.status),
-                            size: 24,
-                          ),
-                        ),
-              ),
-            ),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        order.orderNo ?? order.id,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(order.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _getStatusColor(order.status).withOpacity(0.3),
-                        ),
-                      ),
-                      child: Text(
-                        order.status.toString().split('.').last,
-                        style: TextStyle(
-                          color: _getStatusColor(order.status),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline_rounded,
-                      size: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        order.clientName,
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                Text(
-                  order.description,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (order.orderType != null) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.blue.shade200),
-                        ),
-                        child: Text(
-                          order.orderType!,
-                          style: TextStyle(
-                            color: Colors.blue.shade700,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                     ],
-                    Icon(
-                      Icons.access_time_rounded,
-                      size: 14,
-                      color: Colors.grey.shade500,
+                  ],
+                ),
+                trailing: PopupMenuButton<String>(
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _formatDate(order.createdAt),
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 12,
-                      ),
+                    child: const Icon(
+                      Icons.more_vert_rounded,
+                      size: 18,
+                      color: Colors.grey,
                     ),
-                    const Spacer(),
-                    if (order.images.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => CreateOrderScreen(orderToEdit: order),
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(4),
+                      ).then((_) => _loadOrders());
+                    } else if (value == 'status') {
+                      _showStatusUpdateDialog(order);
+                    } else if (value == 'delete') {
+                      _deleteOrder(order.id);
+                    } else if (value == 'full_details') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OrderDetailsScreen(order: order),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.photo_library_outlined,
-                              size: 12,
-                              color: Colors.green.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${order.images.length}',
-                              style: TextStyle(
-                                color: Colors.green.shade600,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
+                      );
+                    } else if (value == 'pdf') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PDFViewerScreen(order: order),
+                        ),
+                      );
+                    }
+                  },
+                  itemBuilder:
+                      (context) => [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.edit_outlined,
+                                size: 18,
+                                color: Colors.grey.shade600,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 12),
+                              const Text('Edit Order'),
+                            ],
+                          ),
                         ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-            trailing: PopupMenuButton<String>(
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(
-                  Icons.more_vert_rounded,
-                  size: 18,
-                  color: Colors.grey,
-                ),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              onSelected: (value) {
-                if (value == 'edit') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => CreateOrderScreen(orderToEdit: order),
-                    ),
-                  ).then((_) => _loadOrders());
-                } else if (value == 'status') {
-                  _showStatusUpdateDialog(order);
-                } else if (value == 'delete') {
-                  _deleteOrder(order.id);
-                } else if (value == 'full_details') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => OrderDetailsScreen(order: order),
-                    ),
-                  );
-                } else if (value == 'pdf') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PDFViewerScreen(order: order),
-                    ),
-                  );
-                }
-              },
-              itemBuilder:
-                  (context) => [
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.edit_outlined,
-                            size: 18,
-                            color: Colors.grey.shade600,
+                        PopupMenuItem(
+                          value: 'status',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.sync_alt_rounded,
+                                size: 18,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Update Status'),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          const Text('Edit Order'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'status',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.sync_alt_rounded,
-                            size: 18,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 12),
-                          const Text('Update Status'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'full_details',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.visibility_outlined,
-                            size: 18,
-                            color: Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 12),
-                          const Text('Full Details'),
-                        ],
-                      ),
-                    ),
-                    if (order.orderType == 'Single')
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.delete_outline_rounded,
-                              size: 18,
-                              color: Colors.red.shade600,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Delete Order',
-                              style: TextStyle(color: Colors.red.shade600),
-                            ),
-                          ],
                         ),
-                      ),
-                    PopupMenuItem(
-                      value: 'pdf',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.picture_as_pdf_outlined,
-                            size: 18,
-                            color: Colors.grey.shade600,
+                        PopupMenuItem(
+                          value: 'full_details',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.visibility_outlined,
+                                size: 18,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Full Details'),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          const Text('Generate PDF'),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                        if (order.orderType == 'Single')
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 18,
+                                  color: Colors.red.shade600,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Delete Order',
+                                  style: TextStyle(color: Colors.red.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
+                        PopupMenuItem(
+                          value: 'pdf',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.picture_as_pdf_outlined,
+                                size: 18,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Generate PDF'),
+                            ],
+                          ),
+                        ),
+                      ],
+                ),
+                children: [_buildExpandedContent(order)],
+              ),
             ),
-            children: [_buildExpandedContent(order)],
           ),
-        ),),),
+        ),
         if (order.status == OrderStatus.pending)
           Positioned(top: 0, right: 0, child: _buildPendingRibbon()),
         if (_isUrgent(order))
@@ -1288,31 +1360,6 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           ),
         );
       }
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-  }
-
-  Color _getStatusColor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return const Color(0xFFFF9800); // Orange
-      case OrderStatus.confirmed:
-        return const Color(0xFF2196F3); // Blue
-      case OrderStatus.inProgress:
-        return const Color(0xFF9C27B0); // Purple
-      case OrderStatus.completed:
-        return const Color(0xFF4CAF50); // Green
-      case OrderStatus.cancelled:
-        return const Color(0xFFF44336); // Red
-      case OrderStatus.delay:
-        return const Color(0xFFF44336); // Red
-      case OrderStatus.due:
-        return const Color(0xFFF44336); // Red
-      case OrderStatus.partialDelivery:
-        return AppConstants.partialDeliveryColor;
     }
   }
 }

@@ -166,6 +166,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                               _chip('Order Date', _formatDate(widget.order.orderDate!), Icons.calendar_today_outlined),
                             if (widget.order.orderType != null)
                               _chip('Type', widget.order.orderType!, Icons.category_outlined),
+                            // Show party name for bulk orders
+                            if (widget.order.orderType == 'Bulk' && widget.order.partynameDisplay != null)
+                              _chip('Party', widget.order.partynameDisplay!, Icons.group_outlined),
                           ],
                         ),
                         if (widget.order.notes != null && widget.order.notes!.isNotEmpty) ...[

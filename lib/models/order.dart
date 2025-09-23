@@ -114,12 +114,15 @@ class Order {
   final DateTime? updatedAt;
   final String? notes;
   final String? assignedEmployeeId;
+  final String? updatedBy;
 
   // New fields from API
   final String? orderType; // server may set it to "Single"
   final String? orderNo; // orderno (new)
   final DateTime? orderDate;
   final String? orderPriority; // "Regular" | "Urgent"
+  final String? partyname; // Party ID for bulk orders
+  final String? partynameDisplay; // Party name for display
   final List<OrnamentDetail> ornamentDetails;
   final List<String>
   images; // kept for backward compatibility if order-level images exist
@@ -136,10 +139,13 @@ class Order {
     this.updatedAt,
     this.notes,
     this.assignedEmployeeId,
+    this.updatedBy,
     this.orderType,
     this.orderNo,
     this.orderDate,
     this.orderPriority,
+    this.partyname,
+    this.partynameDisplay,
     this.ornamentDetails = const [],
     this.images = const [],
     this.pdfs = const [],
@@ -209,11 +215,14 @@ class Order {
           json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
       notes: json['notes'],
       assignedEmployeeId: json['assignedEmployeeId'],
+      updatedBy: _parseUpdatedBy(json['updatedby']),
       orderType: json['ordertype'],
       orderNo: json['orderno']?.toString(),
       orderDate:
           json['orderdate'] != null ? DateTime.parse(json['orderdate']) : null,
       orderPriority: (json['orderpriority'] ?? json['priority'])?.toString(),
+      partyname: _parsePartyId(json['partyname']),
+      partynameDisplay: _parsePartyName(json['partyname']),
       ornamentDetails: ornamentDetails,
       images: images,
       pdfs: pdfs,
@@ -251,6 +260,36 @@ class Order {
     }
   }
 
+  // Parse party ID from partyname field (can be string or object)
+  static String? _parsePartyId(dynamic partyname) {
+    if (partyname == null) return null;
+    if (partyname is String) return partyname;
+    if (partyname is Map<String, dynamic>) {
+      return (partyname['_id'] ?? partyname['id'])?.toString();
+    }
+    return partyname.toString();
+  }
+
+  // Parse party name from partyname field (can be string or object)
+  static String? _parsePartyName(dynamic partyname) {
+    if (partyname == null) return null;
+    if (partyname is String) return null; // If it's just ID, we don't have the name
+    if (partyname is Map<String, dynamic>) {
+      return partyname['name']?.toString();
+    }
+    return null;
+  }
+
+  // Parse updated by from updatedby field (can be string or object)
+  static String? _parseUpdatedBy(dynamic updatedby) {
+    if (updatedby == null) return null;
+    if (updatedby is String) return updatedby;
+    if (updatedby is Map<String, dynamic>) {
+      return updatedby['name']?.toString();
+    }
+    return updatedby.toString();
+  }
+
   // Convert OrderStatus enum to API string format
   static String statusToApiString(OrderStatus status) {
     switch (status) {
@@ -259,7 +298,7 @@ class Order {
       case OrderStatus.confirmed:
         return 'confirmed';
       case OrderStatus.inProgress:
-        return 'in progress';
+        return 'inProgress';
       case OrderStatus.completed:
         return 'completed';
       case OrderStatus.cancelled:
@@ -269,7 +308,7 @@ class Order {
       case OrderStatus.due:
         return 'due';
       case OrderStatus.partialDelivery:
-        return 'Partial Delivery';
+        return 'partialDelivery';
     }
   }
 
@@ -289,6 +328,8 @@ class Order {
       'orderNo': orderNo,
       'orderDate': orderDate?.toIso8601String(),
       if (orderPriority != null) 'orderpriority': orderPriority,
+      if (partyname != null) 'partyname': partyname,
+      if (partynameDisplay != null) 'partynameDisplay': partynameDisplay,
       'ornamentDetails': ornamentDetails.map((d) => d.toJson()).toList(),
       'images': images,
       'pdfs': pdfs,
@@ -306,10 +347,13 @@ class Order {
     DateTime? updatedAt,
     String? notes,
     String? assignedEmployeeId,
+    String? updatedBy,
     String? orderType,
     String? orderNo,
     DateTime? orderDate,
     String? orderPriority,
+    String? partyname,
+    String? partynameDisplay,
     List<OrnamentDetail>? ornamentDetails,
     List<String>? images,
     List<String>? pdfs,
@@ -325,10 +369,13 @@ class Order {
       updatedAt: updatedAt ?? this.updatedAt,
       notes: notes ?? this.notes,
       assignedEmployeeId: assignedEmployeeId ?? this.assignedEmployeeId,
+      updatedBy: updatedBy ?? this.updatedBy,
       orderType: orderType ?? this.orderType,
       orderNo: orderNo ?? this.orderNo,
       orderDate: orderDate ?? this.orderDate,
       orderPriority: orderPriority ?? this.orderPriority,
+      partyname: partyname ?? this.partyname,
+      partynameDisplay: partynameDisplay ?? this.partynameDisplay,
       ornamentDetails: ornamentDetails ?? this.ornamentDetails,
       images: images ?? this.images,
       pdfs: pdfs ?? this.pdfs,

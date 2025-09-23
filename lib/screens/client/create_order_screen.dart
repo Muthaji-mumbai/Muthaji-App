@@ -14,6 +14,7 @@ import '../../services/order_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/category.dart';
 import '../../services/category_service.dart';
+import '../../services/user_service.dart';
 import '../../models/user.dart';
 
 class CreateOrderScreen extends StatefulWidget {
@@ -66,6 +67,16 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   List<Datum> _categories = [];
   bool _loadingCategories = true;
   String? _categoriesError;
+  
+  // Party selection for bulk orders
+  List<User> _allUsers = [];
+  List<User> _filteredParties = [];
+  bool _loadingParties = false;
+  String? _partiesError;
+  String? _selectedPartyId;
+  String? _selectedPartyName;
+  UserRole _selectedPartyRole = UserRole.customer; // Default to customer
+  String _partySearchQuery = '';
   static const List<String> _purityOptions = [
     '18K Yellow gold',
     '18K Rose gold',
@@ -139,6 +150,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           'ordertype': _selectedOrderType,
           'ornamentDetails': detailsPayload,
           'orderpriority': _selectedPriority,
+          // Include party ID for bulk orders
+          if (_selectedOrderType == 'Bulk' && _selectedPartyId != null)
+            'partyname': _selectedPartyId,
         };
         // Include status in update only for admin/employee users
         if (_selectedStatus != null && _shouldShowOrderTypeSelection()) {
@@ -187,6 +201,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       _orderDateController.text = _formatDateDDMMYYYY(_selectedOrderDate!);
     }
     _fetchCategories();
+    // Load parties for bulk orders
+    if (_shouldShowOrderTypeSelection()) {
+      _fetchParties();
+    }
   }
 
   @override
@@ -214,6 +232,26 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     _selectedOrderType = order.orderType ?? 'Single';
     _selectedStatus = order.status;
     _selectedPriority = order.orderPriority ?? 'Regular';
+    
+    // Handle party information for bulk orders
+    if (order.partyname != null && order.orderType == 'Bulk') {
+      _selectedPartyId = order.partyname;
+      // Load parties to get the party name
+      if (_shouldShowOrderTypeSelection()) {
+        _fetchParties().then((_) {
+          // Find and set the party name after parties are loaded
+          final party = _allUsers.where((p) => p.id == order.partyname).firstOrNull;
+          if (party != null) {
+            setState(() {
+              _selectedPartyName = party.name;
+              // Set the correct role filter based on the party's role
+              _selectedPartyRole = party.role;
+              _filterParties();
+            });
+          }
+        });
+      }
+    }
 
     // Map ornament details
     if (order.ornamentDetails.isNotEmpty) {
@@ -272,6 +310,54 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         ).showSnackBar(SnackBar(content: Text('Error loading categories: $e')));
       }
     }
+  }
+
+  Future<void> _fetchParties() async {
+    setState(() {
+      _loadingParties = true;
+      _partiesError = null;
+    });
+    
+    try {
+      final token = AuthService.currentToken;
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Get all users
+      final allUsers = await UserService.getAllUsers(token);
+      setState(() {
+        _allUsers = allUsers;
+        _loadingParties = false;
+        _filterParties(); // Apply initial filtering
+      });
+    } catch (e) {
+      setState(() {
+        _loadingParties = false;
+        _partiesError = 'Failed to load parties: $e';
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading parties: $e')));
+      }
+    }
+  }
+
+  void _filterParties() {
+    var filtered = _allUsers.where((user) => user.role == _selectedPartyRole).toList();
+    
+    if (_partySearchQuery.isNotEmpty) {
+      final query = _partySearchQuery.toLowerCase();
+      filtered = filtered.where((user) {
+        return user.name.toLowerCase().contains(query) ||
+               user.email.toLowerCase().contains(query);
+      }).toList();
+    }
+    
+    setState(() {
+      _filteredParties = filtered;
+    });
   }
 
   void _addOrnamentDetail() {
@@ -424,6 +510,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             ornamentDetails: detailsPayload,
             // In clone mode, do not send files; backend should use provided URL arrays
             ornamentImages: widget.cloneFromOrder ? null : _ornamentImages,
+            // Include party ID for bulk orders
+            partyname: (_selectedOrderType == 'Bulk' && _selectedPartyId != null) ? _selectedPartyId : null,
             token: token,
           );
 
@@ -768,6 +856,156 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     return units.isNotEmpty ? units.first : 'g';
   }
 
+  // Build party selection dropdown for bulk orders
+  Widget _buildPartySelectionField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Select Party',
+          style: AppConstants.bodyMedium.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppConstants.spacingS),
+        
+        // Role filter tabs
+        Row(
+          children: [
+            _buildRoleFilterChip('Customer', UserRole.customer),
+            const SizedBox(width: AppConstants.spacingS),
+            _buildRoleFilterChip('Employee', UserRole.employee),
+            const SizedBox(width: AppConstants.spacingS),
+            _buildRoleFilterChip('Admin', UserRole.admin),
+          ],
+        ),
+        const SizedBox(height: AppConstants.spacingS),
+        
+        _loadingParties
+            ? const Center(child: CircularProgressIndicator())
+            : _partiesError != null
+                ? Column(
+                    children: [
+                      Text(
+                        _partiesError!,
+                        style: TextStyle(color: AppConstants.errorColor),
+                      ),
+                      const SizedBox(height: AppConstants.spacingS),
+                      ElevatedButton(
+                        onPressed: _fetchParties,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      // Search field
+                      TextField(
+                        decoration: InputDecoration(
+                          labelText: 'Search by name or email',
+                          hintText: 'Type to search...',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.spacingS,
+                            vertical: AppConstants.spacingS,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _partySearchQuery = value;
+                          });
+                          _filterParties();
+                        },
+                      ),
+                      const SizedBox(height: AppConstants.spacingS),
+                      
+                      // Party dropdown
+                      DropdownButtonFormField<String>(
+                        value: _selectedPartyId,
+                        decoration: InputDecoration(
+                          labelText: 'Party Name',
+                          hintText: 'Select a party',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.spacingS,
+                            vertical: AppConstants.spacingS,
+                          ),
+                        ),
+                        items: _filteredParties
+                            .map(
+                              (party) => DropdownMenuItem<String>(
+                                value: party.id,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      party.name,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                    Text(
+                                      party.email,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedPartyId = value;
+                            _selectedPartyName = value != null
+                                ? _filteredParties.firstWhere((p) => p.id == value).name
+                                : null;
+                          });
+                        },
+                        validator: (value) {
+                          if (_selectedOrderType == 'Bulk' && (value == null || value.isEmpty)) {
+                            return 'Please select a party for bulk orders';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+      ],
+    );
+  }
+  
+  Widget _buildRoleFilterChip(String label, UserRole role) {
+    final isSelected = _selectedPartyRole == role;
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          _selectedPartyRole = role;
+          _selectedPartyId = null; // Clear selection when changing role
+          _selectedPartyName = null;
+        });
+        _filterParties();
+      },
+      backgroundColor: AppConstants.surfaceColor,
+      selectedColor: AppConstants.primaryColor.withOpacity(0.2),
+      checkmarkColor: AppConstants.primaryColor,
+      labelStyle: TextStyle(
+        color: isSelected ? AppConstants.primaryColor : AppConstants.textPrimaryColor,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+    );
+  }
+
   // Helpers to determine file type for preview and editing
   bool _isImageFile(PlatformFile file) {
     final ext = file.extension?.toLowerCase();
@@ -907,6 +1145,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               onChanged:
                   (val) => setState(() => _selectedPriority = val ?? 'Regular'),
             ),
+            // Show party selection for bulk orders
+            if (_shouldShowOrderTypeSelection() && _selectedOrderType == 'Bulk') ...[
+              const SizedBox(height: AppConstants.spacingM),
+              _buildPartySelectionField(),
+            ],
             // Show order type selection only for admin and employee users
             if (_shouldShowOrderTypeSelection()) ...[
               const SizedBox(height: AppConstants.spacingM),
@@ -928,6 +1171,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         onSelected: (selected) {
                           setState(() {
                             _selectedOrderType = type;
+                            // Load parties when switching to bulk orders
+                            if (type == 'Bulk' && _allUsers.isEmpty && !_loadingParties) {
+                              _fetchParties();
+                            }
+                            // Clear party selection when switching to single orders
+                            if (type == 'Single') {
+                              _selectedPartyId = null;
+                              _selectedPartyName = null;
+                            }
                           });
                         },
                         backgroundColor: AppConstants.surfaceColor,

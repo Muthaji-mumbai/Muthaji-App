@@ -299,6 +299,16 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                         color: Colors.grey[600],
                       ),
                     ),
+                    // Show party name for bulk orders
+                    if (widget.order.orderType == 'Bulk' && widget.order.partynameDisplay != null)
+                      Text(
+                        'Party: ${widget.order.partynameDisplay}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.purple[700],
+                        ),
+                      ),
                   ],
                 ),
               ),
