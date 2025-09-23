@@ -294,21 +294,21 @@ class Order {
   static String statusToApiString(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
-        return 'pending';
+        return 'Pending';
       case OrderStatus.confirmed:
-        return 'confirmed';
+        return 'Confirmed';
       case OrderStatus.inProgress:
-        return 'inProgress';
+        return 'InProgress';
       case OrderStatus.completed:
-        return 'completed';
+        return 'Completed';
       case OrderStatus.cancelled:
-        return 'cancelled';
+        return 'Cancelled';
       case OrderStatus.delay:
-        return 'delay';
+        return 'Delay';
       case OrderStatus.due:
-        return 'due';
+        return 'Due';
       case OrderStatus.partialDelivery:
-        return 'partialDelivery';
+        return 'Partial Delivery';
     }
   }
 

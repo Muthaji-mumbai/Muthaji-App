@@ -23,7 +23,7 @@ class OrderService {
       final queryParams = <String, String>{};
       
       if (status != null) {
-        queryParams['status'] = status.toString().split('.').last;
+        queryParams['status'] = Order.statusToApiString(status);
       }
       
       if (startDate != null) {
