@@ -159,6 +159,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           _isLoading = false;
         });
 
+        // Check for orders that should be automatically marked as delivered
+        await _checkAndUpdateDeliveredOrders(token);
+
         // Apply additional client-side filters (search, order type, sorting)
         _applyFilters();
       } else {
@@ -178,6 +181,55 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           ),
         );
       }
+    }
+  }
+
+  Future<void> _checkAndUpdateDeliveredOrders(String token) async {
+    try {
+      final ordersToUpdate =
+          _allOrders.where((order) => order.shouldBeDelivered).toList();
+
+      if (ordersToUpdate.isNotEmpty) {
+        for (final order in ordersToUpdate) {
+          try {
+            await OrderService.updateOrderStatus(
+              orderId: order.id,
+              newStatus: OrderStatus.DC, // Mark as delivered
+              token: token,
+            );
+          } catch (e) {
+            // Log error but continue with other orders
+            print('Error updating order ${order.id} to delivered: $e');
+          }
+        }
+
+        // Reload data to reflect the changes
+        await _loadData();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  Text(
+                    '${ordersToUpdate.length} orders automatically marked as delivered',
+                  ),
+                ],
+              ),
+              backgroundColor: AppConstants.successColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Silently handle errors for auto-update
+      print('Error in auto-update delivered orders: $e');
     }
   }
 
@@ -827,25 +879,27 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 onSelected: (st) => _bulkChangeStatus(st),
                 itemBuilder:
                     (context) => [
-                      ...OrderStatus.values.map(
-                        (s) => PopupMenuItem(
-                          value: s,
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 12,
-                                height: 12,
-                                margin: const EdgeInsets.only(right: 12),
-                                decoration: BoxDecoration(
-                                  color: _getStatusColor(s),
-                                  shape: BoxShape.circle,
-                                ),
+                      ...OrderStatus.values
+                          .where((s) => s != OrderStatus.partialDelivery)
+                          .map(
+                            (s) => PopupMenuItem(
+                              value: s,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 12,
+                                    height: 12,
+                                    margin: const EdgeInsets.only(right: 12),
+                                    decoration: BoxDecoration(
+                                      color: _getStatusColor(s),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  Text(_getStatusText(s)),
+                                ],
                               ),
-                              Text(_getStatusText(s)),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
                     ],
               ),
             ),
@@ -1969,6 +2023,66 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                         ],
                       ),
                     ],
+                    // Show delivery count for partial delivery orders
+                    if (order.status == OrderStatus.partialDelivery) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppConstants.partialDeliveryColor.withOpacity(
+                            0.1,
+                          ),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: AppConstants.partialDeliveryColor
+                                .withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.local_shipping_outlined,
+                              size: 14,
+                              color: AppConstants.partialDeliveryColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Delivered: ${order.totalDeliveryCount}/${order.totalQuantity}',
+                              style: TextStyle(
+                                color: AppConstants.partialDeliveryColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (order.shouldBeDelivered) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'READY FOR COMPLETION',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                     if (_selectionMode) ...[
                       const SizedBox(height: 12),
                       Row(
@@ -2467,6 +2581,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           value: selectedStatus,
                           items:
                               OrderStatus.values
+                                  .where(
+                                    (status) =>
+                                        status != OrderStatus.partialDelivery,
+                                  )
                                   .map(
                                     (status) => DropdownMenuItem(
                                       value: status,

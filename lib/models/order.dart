@@ -434,4 +434,31 @@ class Order {
         return AppConstants.partialDeliveryColor;
     }
   }
+
+  // Check if order should be automatically marked as delivered
+  bool get shouldBeDelivered {
+    if (status != OrderStatus.partialDelivery) return false;
+
+    // Check if all ornament details have delivery count >= quantity
+    for (final detail in ornamentDetails) {
+      if (detail.deliverycount == null ||
+          detail.deliverycount! < detail.quantity) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Get total delivery count across all ornament details
+  int get totalDeliveryCount {
+    return ornamentDetails.fold(
+      0,
+      (sum, detail) => sum + (detail.deliverycount ?? 0),
+    );
+  }
+
+  // Get total quantity across all ornament details
+  int get totalQuantity {
+    return ornamentDetails.fold(0, (sum, detail) => sum + detail.quantity);
+  }
 }
