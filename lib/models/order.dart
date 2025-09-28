@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:soloshine/constants/app_constants.dart';
 
-enum OrderStatus { pending, confirmed, inProgress, completed, cancelled,delay, due,partialDelivery}
+enum OrderStatus {
+  pending,
+  Casted,
+  Wax,
+  DC,
+  cancelled,
+  delay,
+  due,
+  partialDelivery,
+}
 
 class OrnamentDetail {
   final String id;
@@ -77,9 +86,10 @@ class OrnamentDetail {
       colorstone: json['colorstone']?.toString(),
       rhodium: json['rhodium']?.toString(),
       dull: json['dull']?.toString(),
-      deliverycount: json['deliverycount'] != null 
-          ? int.tryParse(json['deliverycount'].toString()) 
-          : null,
+      deliverycount:
+          json['deliverycount'] != null
+              ? int.tryParse(json['deliverycount'].toString())
+              : null,
     );
   }
 
@@ -238,13 +248,13 @@ class Order {
     switch (s) {
       case 'pending':
         return OrderStatus.pending;
-      case 'confirmed':
-        return OrderStatus.confirmed;
-      case 'inprogress': // handles "in progress", "in_progress"
+      case 'casted':
+        return OrderStatus.Casted;
+      case 'wax': // handles "Wax", "in_progress"
       case 'processing':
-        return OrderStatus.inProgress;
-      case 'completed':
-        return OrderStatus.completed;
+        return OrderStatus.Wax;
+      case 'dc':
+        return OrderStatus.DC;
       case 'cancelled':
       case 'canceled':
         return OrderStatus.cancelled;
@@ -273,7 +283,8 @@ class Order {
   // Parse party name from partyname field (can be string or object)
   static String? _parsePartyName(dynamic partyname) {
     if (partyname == null) return null;
-    if (partyname is String) return null; // If it's just ID, we don't have the name
+    if (partyname is String)
+      return null; // If it's just ID, we don't have the name
     if (partyname is Map<String, dynamic>) {
       return partyname['name']?.toString();
     }
@@ -295,12 +306,12 @@ class Order {
     switch (status) {
       case OrderStatus.pending:
         return 'Pending';
-      case OrderStatus.confirmed:
-        return 'Confirmed';
-      case OrderStatus.inProgress:
-        return 'InProgress';
-      case OrderStatus.completed:
-        return 'Completed';
+      case OrderStatus.Casted:
+        return 'Casted';
+      case OrderStatus.Wax:
+        return 'Wax';
+      case OrderStatus.DC:
+        return 'DC';
       case OrderStatus.cancelled:
         return 'Cancelled';
       case OrderStatus.delay:
@@ -386,12 +397,12 @@ class Order {
     switch (status) {
       case OrderStatus.pending:
         return 'Pending';
-      case OrderStatus.confirmed:
-        return 'Confirmed';
-      case OrderStatus.inProgress:
-        return 'In Progress';
-      case OrderStatus.completed:
-        return 'Completed';
+      case OrderStatus.Casted:
+        return 'Casted';
+      case OrderStatus.Wax:
+        return 'Wax';
+      case OrderStatus.DC:
+        return 'DC';
       case OrderStatus.cancelled:
         return 'Cancelled';
       case OrderStatus.delay:
@@ -407,11 +418,11 @@ class Order {
     switch (status) {
       case OrderStatus.pending:
         return Colors.orange;
-      case OrderStatus.confirmed:
+      case OrderStatus.Casted:
         return Colors.blue;
-      case OrderStatus.inProgress:
+      case OrderStatus.Wax:
         return Colors.purple;
-      case OrderStatus.completed:
+      case OrderStatus.DC:
         return Colors.green;
       case OrderStatus.cancelled:
         return Colors.red;

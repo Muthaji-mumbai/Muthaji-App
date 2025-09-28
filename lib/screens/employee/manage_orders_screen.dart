@@ -13,7 +13,6 @@ import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import '../../models/user.dart';
 import '../../constants/app_constants.dart';
-import 'update_order_screen.dart';
 
 class ManageOrdersScreen extends StatefulWidget {
   final OrderStatus? initialStatus;
@@ -486,7 +485,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     if (token == null || _selectedOrderIds.isEmpty) return;
 
     // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
+    final Casted = await showDialog<bool>(
       context: context,
       builder:
           (context) => AlertDialog(
@@ -517,7 +516,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Are you sure you want to update ${_selectedOrderIds.length} orders to "${status.toString().split('.').last}"?',
+                  'Are you sure you want to update ${_selectedOrderIds.length} orders to "${_getStatusText(status)}"?',
                   style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 12),
@@ -539,7 +538,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'New Status: ${status.toString().split('.').last}',
+                        'New Status: ${_getStatusText(status)}',
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                     ],
@@ -577,7 +576,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           ),
     );
 
-    if (confirmed != true) return;
+    if (Casted != true) return;
 
     // Show loading indicator
     showDialog(
@@ -656,7 +655,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   }
 
   Future<void> _deleteOrder(String orderId) async {
-    final confirmed = await showDialog<bool>(
+    final Casted = await showDialog<bool>(
       context: context,
       builder:
           (context) => AlertDialog(
@@ -708,7 +707,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           ),
     );
 
-    if (confirmed == true) {
+    if (Casted == true) {
       try {
         final token = AuthService.currentToken;
         if (token != null) {
@@ -842,7 +841,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                   shape: BoxShape.circle,
                                 ),
                               ),
-                              Text(s.toString().split('.').last),
+                              Text(_getStatusText(s)),
                             ],
                           ),
                         ),
@@ -1014,7 +1013,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                   .map(
                     (s) => DropdownMenuItem<OrderStatus>(
                       value: s,
-                      child: Text(s.toString().split('.').last),
+                      child: Text(_getStatusText(s)),
                     ),
                   )
                   .toList(),
@@ -1103,7 +1102,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                         .map(
                           (s) => DropdownMenuItem<OrderStatus>(
                             value: s,
-                            child: Text(s.toString().split('.').last),
+                            child: Text(_getStatusText(s)),
                           ),
                         )
                         .toList(),
@@ -2432,7 +2431,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                 ),
                               ),
                               child: Text(
-                                order.status.toString().split('.').last,
+                                _getStatusText(order.status),
                                 style: TextStyle(
                                   color: _getStatusColor(order.status),
                                   fontSize: 12,
@@ -2484,9 +2483,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                               shape: BoxShape.circle,
                                             ),
                                           ),
-                                          Text(
-                                            status.toString().split('.').last,
-                                          ),
+                                          Text(_getStatusText(status)),
                                         ],
                                       ),
                                     ),
@@ -2576,11 +2573,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     switch (status) {
       case OrderStatus.pending:
         return const Color(0xFFFF9800); // Orange
-      case OrderStatus.confirmed:
+      case OrderStatus.Casted:
         return const Color(0xFF2196F3); // Blue
-      case OrderStatus.inProgress:
+      case OrderStatus.Wax:
         return const Color(0xFF9C27B0); // Purple
-      case OrderStatus.completed:
+      case OrderStatus.DC:
         return const Color(0xFF4CAF50); // Green
       case OrderStatus.cancelled:
         return const Color(0xFFF44336); // Red
@@ -2597,12 +2594,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     switch (status) {
       case OrderStatus.pending:
         return 'Pending';
-      case OrderStatus.confirmed:
-        return 'Confirmed';
-      case OrderStatus.inProgress:
-        return 'In Progress';
-      case OrderStatus.completed:
-        return 'Completed';
+      case OrderStatus.Casted:
+        return 'Casted';
+      case OrderStatus.Wax:
+        return 'Wax';
+      case OrderStatus.DC:
+        return 'DC';
       case OrderStatus.cancelled:
         return 'Cancelled';
       case OrderStatus.delay:

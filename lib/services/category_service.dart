@@ -7,19 +7,48 @@ class CategoryService {
   // Get all categories
   static Future<Category> getAllCategories(String token) async {
     try {
+      // Validate token
+      if (token.isEmpty) {
+        throw Exception('Authentication token is required');
+      }
+
       final response = await ApiService.get(
         AppConstants.categoriesEndpoint,
         token: token,
       );
 
-      // The API returns the full Category structure directly
+      // Validate response structure
       if (response['success'] == true && response['data'] != null) {
-        return Category.fromJson(response);
+        try {
+          return Category.fromJson(response);
+        } catch (e) {
+          throw Exception('Failed to parse category data: ${e.toString()}');
+        }
       } else {
-        throw Exception(response['message'] ?? 'Failed to fetch categories');
+        final errorMessage =
+            response['message'] ?? 'Failed to fetch categories';
+        throw Exception(errorMessage);
+      }
+    } on Exception catch (e) {
+      final errorMessage = e.toString();
+      if (errorMessage.contains('Network error')) {
+        throw Exception(
+          'Network connection failed. Please check your internet connection.',
+        );
+      } else if (errorMessage.contains('timeout')) {
+        throw Exception('Request timed out. Please try again.');
+      } else if (errorMessage.contains('401') ||
+          errorMessage.contains('Unauthorized')) {
+        throw Exception('Authentication failed. Please log in again.');
+      } else if (errorMessage.contains('404')) {
+        throw Exception('Categories not found.');
+      } else if (errorMessage.contains('500')) {
+        throw Exception('Server error. Please try again later.');
+      } else {
+        rethrow;
       }
     } catch (e) {
-      throw Exception('Error fetching categories: $e');
+      throw Exception('Unexpected error fetching categories: ${e.toString()}');
     }
   }
 
@@ -31,23 +60,60 @@ class CategoryService {
     String token,
   ) async {
     try {
+      // Validate input parameters
+      if (categoryName.isEmpty) {
+        throw Exception('Category name is required');
+      }
+      if (token.isEmpty) {
+        throw Exception('Authentication token is required');
+      }
+      if (size.isEmpty) {
+        throw Exception('At least one size is required');
+      }
+      if (unit.isEmpty) {
+        throw Exception('At least one unit is required');
+      }
+
       final response = await ApiService.post(
         AppConstants.categoriesEndpoint,
-        body: {
-          'categoryname': categoryName,
-          'size': size,
-          'unit': unit,
-        },
+        body: {'categoryname': categoryName.trim(), 'size': size, 'unit': unit},
         token: token,
       );
 
       if (response['success'] == true && response['data'] != null) {
-        return CategoryResponse.fromJson(response);
+        try {
+          return CategoryResponse.fromJson(response);
+        } catch (e) {
+          throw Exception(
+            'Failed to parse created category data: ${e.toString()}',
+          );
+        }
       } else {
-        throw Exception(response['message'] ?? 'Failed to create category');
+        final errorMessage = response['message'] ?? 'Failed to create category';
+        throw Exception(errorMessage);
+      }
+    } on Exception catch (e) {
+      final errorMessage = e.toString();
+      if (errorMessage.contains('Network error')) {
+        throw Exception(
+          'Network connection failed. Please check your internet connection.',
+        );
+      } else if (errorMessage.contains('timeout')) {
+        throw Exception('Request timed out. Please try again.');
+      } else if (errorMessage.contains('401') ||
+          errorMessage.contains('Unauthorized')) {
+        throw Exception('Authentication failed. Please log in again.');
+      } else if (errorMessage.contains('400')) {
+        throw Exception('Invalid category data. Please check your input.');
+      } else if (errorMessage.contains('409')) {
+        throw Exception('Category with this name already exists.');
+      } else if (errorMessage.contains('500')) {
+        throw Exception('Server error. Please try again later.');
+      } else {
+        rethrow;
       }
     } catch (e) {
-      throw Exception('Error creating category: $e');
+      throw Exception('Unexpected error creating category: ${e.toString()}');
     }
   }
 
@@ -60,29 +126,77 @@ class CategoryService {
     String token,
   ) async {
     try {
+      // Validate input parameters
+      if (categoryId.isEmpty) {
+        throw Exception('Category ID is required');
+      }
+      if (categoryName.isEmpty) {
+        throw Exception('Category name is required');
+      }
+      if (token.isEmpty) {
+        throw Exception('Authentication token is required');
+      }
+      if (size.isEmpty) {
+        throw Exception('At least one size is required');
+      }
+      if (unit.isEmpty) {
+        throw Exception('At least one unit is required');
+      }
+
       final response = await ApiService.patch(
         '${AppConstants.categoriesEndpoint}/$categoryId',
-        body: {
-          'categoryname': categoryName,
-          'size': size,
-          'unit': unit,
-        },
+        body: {'categoryname': categoryName.trim(), 'size': size, 'unit': unit},
         token: token,
       );
 
       if (response['success'] == true && response['data'] != null) {
-        return CategoryResponse.fromJson(response);
+        try {
+          return CategoryResponse.fromJson(response);
+        } catch (e) {
+          throw Exception(
+            'Failed to parse updated category data: ${e.toString()}',
+          );
+        }
       } else {
-        throw Exception(response['message'] ?? 'Failed to update category');
+        final errorMessage = response['message'] ?? 'Failed to update category';
+        throw Exception(errorMessage);
+      }
+    } on Exception catch (e) {
+      final errorMessage = e.toString();
+      if (errorMessage.contains('Network error')) {
+        throw Exception(
+          'Network connection failed. Please check your internet connection.',
+        );
+      } else if (errorMessage.contains('timeout')) {
+        throw Exception('Request timed out. Please try again.');
+      } else if (errorMessage.contains('401') ||
+          errorMessage.contains('Unauthorized')) {
+        throw Exception('Authentication failed. Please log in again.');
+      } else if (errorMessage.contains('404')) {
+        throw Exception('Category not found.');
+      } else if (errorMessage.contains('400')) {
+        throw Exception('Invalid category data. Please check your input.');
+      } else if (errorMessage.contains('500')) {
+        throw Exception('Server error. Please try again later.');
+      } else {
+        rethrow;
       }
     } catch (e) {
-      throw Exception('Error updating category: $e');
+      throw Exception('Unexpected error updating category: ${e.toString()}');
     }
   }
 
   // Delete a category
   static Future<bool> deleteCategory(String categoryId, String token) async {
     try {
+      // Validate input parameters
+      if (categoryId.isEmpty) {
+        throw Exception('Category ID is required');
+      }
+      if (token.isEmpty) {
+        throw Exception('Authentication token is required');
+      }
+
       final response = await ApiService.delete(
         '${AppConstants.categoriesEndpoint}/$categoryId',
         token: token,
@@ -91,10 +205,31 @@ class CategoryService {
       if (response['success'] == true) {
         return true;
       } else {
-        throw Exception(response['message'] ?? 'Failed to delete category');
+        final errorMessage = response['message'] ?? 'Failed to delete category';
+        throw Exception(errorMessage);
+      }
+    } on Exception catch (e) {
+      final errorMessage = e.toString();
+      if (errorMessage.contains('Network error')) {
+        throw Exception(
+          'Network connection failed. Please check your internet connection.',
+        );
+      } else if (errorMessage.contains('timeout')) {
+        throw Exception('Request timed out. Please try again.');
+      } else if (errorMessage.contains('401') ||
+          errorMessage.contains('Unauthorized')) {
+        throw Exception('Authentication failed. Please log in again.');
+      } else if (errorMessage.contains('404')) {
+        throw Exception('Category not found.');
+      } else if (errorMessage.contains('403')) {
+        throw Exception('You do not have permission to delete this category.');
+      } else if (errorMessage.contains('500')) {
+        throw Exception('Server error. Please try again later.');
+      } else {
+        rethrow;
       }
     } catch (e) {
-      throw Exception('Error deleting category: $e');
+      throw Exception('Unexpected error deleting category: ${e.toString()}');
     }
   }
 }

@@ -1332,7 +1332,7 @@ class _ClientDashboardState extends State<ClientDashboard>
                                       ),
                                       actions: [
                                         TextButton(
-                                          onPressed: 
+                                          onPressed:
                                               () => Navigator.pop(ctx, false),
                                           child: const Text('No'),
                                         ),
@@ -1635,10 +1635,9 @@ class _ClientDashboardState extends State<ClientDashboard>
     final totalOrders = _orders.length;
     final pendingOrders =
         _orders.where((o) => o.status == OrderStatus.pending).length;
-    final completedOrders =
-        _orders.where((o) => o.status == OrderStatus.completed).length;
+    final DCOrders = _orders.where((o) => o.status == OrderStatus.DC).length;
     final totalSpent = _orders
-        .where((o) => o.status == OrderStatus.completed)
+        .where((o) => o.status == OrderStatus.DC)
         .fold(0.0, (sum, order) => sum + order.amount);
 
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
