@@ -21,23 +21,23 @@ class OrderService {
     try {
       // Build query parameters
       final queryParams = <String, String>{};
-      
+
       if (status != null) {
         queryParams['status'] = Order.statusToApiString(status);
       }
-      
+
       if (startDate != null) {
         queryParams['startDate'] = DateFormat('yyyy-MM-dd').format(startDate);
       }
-      
+
       if (endDate != null) {
         queryParams['endDate'] = DateFormat('yyyy-MM-dd').format(endDate);
       }
-      
+
       if (userId != null && userId.isNotEmpty) {
         queryParams['userid'] = userId;
       }
-      
+
       // Build endpoint with query parameters
       String endpoint = AppConstants.ordersEndpoint;
       if (queryParams.isNotEmpty) {
@@ -46,11 +46,8 @@ class OrderService {
             .join('&');
         endpoint = '$endpoint?$queryString';
       }
-      
-      final response = await ApiService.get(
-        endpoint,
-        token: token,
-      );
+
+      final response = await ApiService.get(endpoint, token: token);
       developer.log('response: $response');
       if (response['success'] == true && response['data'] != null) {
         final List<dynamic> ordersData = response['data'];
@@ -134,7 +131,6 @@ class OrderService {
     String? partyname, // Party ID for bulk orders
     String? token,
   }) async {
-   
     try {
       // Prepare the request fields
       final fields = <String, String>{
@@ -143,8 +139,7 @@ class OrderService {
         if (amount != null) 'amount': amount.toString(),
         if (notes != null) 'notes': notes,
         'ordertype': orderType ?? 'Single',
-        'orderdate':
-            (orderDate ?? DateTime.now()).toIso8601String(),
+        'orderdate': (orderDate ?? DateTime.now()).toIso8601String(),
         'orderpriority': ((orderpriority ?? 'Regular')),
         // API expects camelCase key per screenshot
         'ornamentDetails': jsonEncode(ornamentDetails),
@@ -202,6 +197,7 @@ class OrderService {
     required String orderId,
     required Map<String, dynamic> updateData,
     String? token,
+    // required String userid,
   }) async {
     try {
       // Validate order ID
@@ -262,6 +258,7 @@ class OrderService {
     required String orderId,
     required OrderStatus newStatus,
     String? assignedEmployeeId,
+    String? userId,
     String? token,
   }) async {
     try {
@@ -271,6 +268,10 @@ class OrderService {
 
       if (assignedEmployeeId != null) {
         updateData['assignedEmployeeId'] = assignedEmployeeId;
+      }
+
+      if (userId != null) {
+        updateData['updatedby'] = userId;
       }
 
       developer.log('Updating order status for order ID: $orderId');

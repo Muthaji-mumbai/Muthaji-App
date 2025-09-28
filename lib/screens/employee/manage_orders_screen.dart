@@ -20,7 +20,7 @@ class ManageOrdersScreen extends StatefulWidget {
   final String? initialOrderType;
   final String? initialUserId;
   final String? initialUserName;
-  
+
   const ManageOrdersScreen({
     super.key,
     this.initialStatus,
@@ -82,13 +82,13 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   @override
   void initState() {
     super.initState();
-    
+
     // Set initial filter values from widget parameters
     _selectedStatus = widget.initialStatus;
     _selectedOrderType = widget.initialOrderType;
     _selectedUserId = widget.initialUserId;
     _selectedUserName = widget.initialUserName;
-    
+
     _filterAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -121,7 +121,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         // Calculate date range for API call
         DateTime? apiStartDate;
         DateTime? apiEndDate;
-        
+
         final now = DateTime.now();
         switch (_selectedRange) {
           case 'Today':
@@ -145,7 +145,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             // No date filtering at API level
             break;
         }
-        
+
         final orders = await OrderService.getAllOrders(
           token,
           status: _selectedStatus,
@@ -159,7 +159,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           _filteredOrders = orders;
           _isLoading = false;
         });
-        
+
         // Apply additional client-side filters (search, order type, sorting)
         _applyFilters();
       } else {
@@ -324,7 +324,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 matchesStatus = order.status == _selectedStatus;
               }
             }
-            
+
             final matchesSearch =
                 _searchQuery.isEmpty ||
                 order.clientName.toLowerCase().contains(
@@ -333,13 +333,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 order.description.toLowerCase().contains(
                   _searchQuery.toLowerCase(),
                 ) ||
-                order.id.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
+                order.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
                 (order.orderNo?.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ?? false);
-                
+                      _searchQuery.toLowerCase(),
+                    ) ??
+                    false);
+
             final matchesType =
                 _selectedOrderType == null ||
                 (_selectedOrderType == (order.orderType ?? 'Single'));
@@ -347,11 +346,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             // Date filtering is now handled at API level
             return matchesStatus && matchesSearch && matchesType;
           }).toList();
-          
+
       // Apply sorting
       _filteredOrders.sort((a, b) {
         int comparison = 0;
-        
+
         switch (_sortBy) {
           case 'orderDate':
             if (a.orderDate != null && b.orderDate != null) {
@@ -363,7 +362,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             }
             break;
           case 'clientName':
-            comparison = a.clientName.toLowerCase().compareTo(b.clientName.toLowerCase());
+            comparison = a.clientName.toLowerCase().compareTo(
+              b.clientName.toLowerCase(),
+            );
             break;
           case 'status':
             comparison = a.status.toString().compareTo(b.status.toString());
@@ -371,10 +372,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           case 'orderNo':
             final aOrderNo = a.orderNo ?? a.id;
             final bOrderNo = b.orderNo ?? b.id;
-            comparison = aOrderNo.toLowerCase().compareTo(bOrderNo.toLowerCase());
+            comparison = aOrderNo.toLowerCase().compareTo(
+              bOrderNo.toLowerCase(),
+            );
             break;
           case 'description':
-            comparison = a.description.toLowerCase().compareTo(b.description.toLowerCase());
+            comparison = a.description.toLowerCase().compareTo(
+              b.description.toLowerCase(),
+            );
             break;
           default:
             // Default to order date
@@ -382,7 +387,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               comparison = a.orderDate!.compareTo(b.orderDate!);
             }
         }
-        
+
         // Reverse if descending
         return _sortAscending ? comparison : -comparison;
       });
@@ -392,10 +397,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   Future<void> _updateOrderStatus(Order order, OrderStatus newStatus) async {
     try {
       final token = AuthService.currentToken;
+      final currentUser = AuthService.currentUser;
       if (token != null) {
         await OrderService.updateOrderStatus(
           orderId: order.id,
           newStatus: newStatus,
+          userId: currentUser?.id,
           token: token,
         );
         _loadData();
@@ -770,8 +777,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           _selectionMode
               ? '${_selectedOrderIds.length} selected'
               : _selectedUserName != null
-                  ? 'Orders - $_selectedUserName'
-                  : 'Manage Orders',
+              ? 'Orders - $_selectedUserName'
+              : 'Manage Orders',
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 20),
         ),
         bottom: PreferredSize(
@@ -1291,64 +1298,68 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.grey.shade300),
           ),
-          child: _loadingUsers
-              ? Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppConstants.primaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('Loading customers...'),
-                    ],
-                  ),
-                )
-              : DropdownButtonFormField<String>(
-                  value: _selectedUserId,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+          child:
+              _loadingUsers
+                  ? Container(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
                     ),
-                  ),
-                  items: [
-                    const DropdownMenuItem<String>(
-                      value: null,
-                      child: Text(
-                        'All Parties',
-                        style: TextStyle(color: Colors.grey),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppConstants.primaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Loading customers...'),
+                      ],
+                    ),
+                  )
+                  : DropdownButtonFormField<String>(
+                    value: _selectedUserId,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
                       ),
                     ),
-                    ..._allUsers.map(
-                      (user) => DropdownMenuItem<String>(
-                        value: user.id,
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
                         child: Text(
-                          '${user.name}',
-                          overflow: TextOverflow.ellipsis,
+                          'All Parties',
+                          style: TextStyle(color: Colors.grey),
                         ),
                       ),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedUserId = value;
-                      _selectedUserName = value != null
-                          ? _allUsers.firstWhere((u) => u.id == value).name
-                          : null;
-                    });
-                    _loadData(); // Reload data from API with new user filter
-                  },
-                ),
+                      ..._allUsers.map(
+                        (user) => DropdownMenuItem<String>(
+                          value: user.id,
+                          child: Text(
+                            '${user.name}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedUserId = value;
+                        _selectedUserName =
+                            value != null
+                                ? _allUsers
+                                    .firstWhere((u) => u.id == value)
+                                    .name
+                                : null;
+                      });
+                      _loadData(); // Reload data from API with new user filter
+                    },
+                  ),
         ),
       ],
     );
@@ -1471,14 +1482,16 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: _selectedStatus == null 
-                            ? AppConstants.primaryColor.withOpacity(0.2)
-                            : Colors.grey.withOpacity(0.1),
+                        color:
+                            _selectedStatus == null
+                                ? AppConstants.primaryColor.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: _selectedStatus == null
-                              ? AppConstants.primaryColor
-                              : Colors.grey.withOpacity(0.3),
+                          color:
+                              _selectedStatus == null
+                                  ? AppConstants.primaryColor
+                                  : Colors.grey.withOpacity(0.3),
                           width: _selectedStatus == null ? 2 : 1,
                         ),
                       ),
@@ -1489,9 +1502,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             width: 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: _selectedStatus == null 
-                                  ? AppConstants.primaryColor 
-                                  : Colors.grey,
+                              color:
+                                  _selectedStatus == null
+                                      ? AppConstants.primaryColor
+                                      : Colors.grey,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -1500,10 +1514,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             'All: ${_allOrders.length}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: _selectedStatus == null 
-                                  ? AppConstants.primaryColor 
-                                  : Colors.grey,
-                              fontWeight: _selectedStatus == null ? FontWeight.w600 : FontWeight.w500,
+                              color:
+                                  _selectedStatus == null
+                                      ? AppConstants.primaryColor
+                                      : Colors.grey,
+                              fontWeight:
+                                  _selectedStatus == null
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
                             ),
                           ),
                         ],
@@ -1512,58 +1530,65 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                   ),
                   // Status-specific buttons
                   ...statusCounts.entries.map((entry) {
-                      final isSelected = _selectedStatus == entry.key;
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            // Toggle filter: if already selected, clear it; otherwise set it
-                            _selectedStatus = isSelected ? null : entry.key;
-                          });
-                          _loadData(); // Reload data from API
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 12),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected 
-                                ? _getStatusColor(entry.key).withOpacity(0.2)
-                                : _getStatusColor(entry.key).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected
-                                  ? _getStatusColor(entry.key)
-                                  : _getStatusColor(entry.key).withOpacity(0.3),
-                              width: isSelected ? 2 : 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: _getStatusColor(entry.key),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${_getStatusText(entry.key)}: ${entry.value}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: _getStatusColor(entry.key),
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                    final isSelected = _selectedStatus == entry.key;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          // Toggle filter: if already selected, clear it; otherwise set it
+                          _selectedStatus = isSelected ? null : entry.key;
+                        });
+                        _loadData(); // Reload data from API
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              isSelected
+                                  ? _getStatusColor(entry.key).withOpacity(0.2)
+                                  : _getStatusColor(entry.key).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color:
+                                isSelected
+                                    ? _getStatusColor(entry.key)
+                                    : _getStatusColor(
+                                      entry.key,
+                                    ).withOpacity(0.3),
+                            width: isSelected ? 2 : 1,
                           ),
                         ),
-                      );
-                    }).toList(),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: _getStatusColor(entry.key),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${_getStatusText(entry.key)}: ${entry.value}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _getStatusColor(entry.key),
+                                fontWeight:
+                                    isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ],
               ),
             ),
@@ -1801,7 +1826,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     const SizedBox(height: 8),
                     Text(
                       order.description,
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1903,7 +1931,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             const SizedBox(width: 8),
                           ],
                           // Show party name for bulk orders
-                          if (order.orderType == 'Bulk' && order.partynameDisplay != null) ...[
+                          if (order.orderType == 'Bulk' &&
+                              order.partynameDisplay != null) ...[
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 6,
@@ -1912,7 +1941,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                               decoration: BoxDecoration(
                                 color: Colors.purple.shade50,
                                 borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: Colors.purple.shade200),
+                                border: Border.all(
+                                  color: Colors.purple.shade200,
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
