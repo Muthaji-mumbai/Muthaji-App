@@ -27,6 +27,15 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   List<Order> _pendingOrders = [];
   bool _isLoading = true;
 
+  @override
+  void initState() {
+    super.initState();
+    // Defer to after first frame so Provider context is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadOrders();
+    });
+  }
+
   bool _isUrgent(Order order) {
     final p = (order.orderPriority ?? '').toLowerCase().trim();
     return p == 'urgent' || p.contains('urgent');
@@ -115,9 +124,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         return const Color(0xFFF44336); // Red
       case OrderStatus.partialDelivery:
         return AppConstants.partialDeliveryColor;
-        case OrderStatus.PendingDisp:
+      case OrderStatus.PendingDisp:
         return AppConstants.PendingDisp;
-
     }
   }
 
@@ -192,7 +200,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildWelcomeSection(currentUser!),
+                      if (currentUser != null)
+                        _buildWelcomeSection(currentUser),
                       const SizedBox(height: AppConstants.spacingL),
                       _buildQuickActions(),
                       const SizedBox(height: AppConstants.spacingL),
