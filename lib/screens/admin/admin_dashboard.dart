@@ -1837,7 +1837,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
             break;
 
-case OrderStatus.PendingDisp:
+          case OrderStatus.PendingDisp:
             toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
             break;
         }
@@ -3041,14 +3041,29 @@ case OrderStatus.PendingDisp:
       case 'pending':
         status = OrderStatus.pending;
         break;
-      case 'Wax':
+      case 'casted':
+        status = OrderStatus.Casted;
+        break;
+      case 'wax':
         status = OrderStatus.Wax;
         break;
-      case 'DC':
+      case 'dc':
         status = OrderStatus.DC;
         break;
       case 'cancelled':
         status = OrderStatus.cancelled;
+        break;
+      case 'delay':
+        status = OrderStatus.delay;
+        break;
+      case 'due':
+        status = OrderStatus.due;
+        break;
+      case 'partial delivery':
+        status = OrderStatus.partialDelivery;
+        break;
+      case 'pendingdisp':
+        status = OrderStatus.PendingDisp;
         break;
       default:
         status = null;
@@ -3096,13 +3111,13 @@ case OrderStatus.PendingDisp:
       case 'pending':
         status = OrderStatus.pending;
         break;
-      case 'Casted':
+      case 'casted':
         status = OrderStatus.Casted;
         break;
-      case 'Wax':
+      case 'wax':
         status = OrderStatus.Wax;
         break;
-      case 'DC':
+      case 'dc':
         status = OrderStatus.DC;
         break;
       case 'cancelled':
@@ -3113,6 +3128,12 @@ case OrderStatus.PendingDisp:
         break;
       case 'due':
         status = OrderStatus.due;
+        break;
+      case 'partial delivery':
+        status = OrderStatus.partialDelivery;
+        break;
+      case 'pendingdisp':
+        status = OrderStatus.PendingDisp;
         break;
       default:
         status = null;
@@ -3142,13 +3163,13 @@ case OrderStatus.PendingDisp:
       case 'pending':
         status = OrderStatus.pending;
         break;
-      case 'Casted':
+      case 'casted':
         status = OrderStatus.Casted;
         break;
-      case 'Wax':
+      case 'wax':
         status = OrderStatus.Wax;
         break;
-      case 'DC':
+      case 'dc':
         status = OrderStatus.DC;
         break;
       case 'cancelled':
@@ -3159,6 +3180,12 @@ case OrderStatus.PendingDisp:
         break;
       case 'due':
         status = OrderStatus.due;
+        break;
+      case 'partial delivery':
+        status = OrderStatus.partialDelivery;
+        break;
+      case 'pendingdisp':
+        status = OrderStatus.PendingDisp;
         break;
       default:
         status = null;
