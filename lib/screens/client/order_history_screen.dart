@@ -717,18 +717,29 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             const SizedBox(width: AppConstants.spacingM),
             Expanded(
               flex: 4,
-              child: Text(
-                order.orderNo?.isNotEmpty == true
-                    ? order.orderNo!
-                    : order.id.substring(0, 8),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppConstants.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppConstants.primaryColor,
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      order.orderNo?.isNotEmpty == true
+                          ? order.orderNo!
+                          : order.id.substring(0, 8),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppConstants.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppConstants.primaryColor,
+                      ),
+                    ),
+                  ),
+                  if (order.orderType != null) ...[
+                    const SizedBox(width: 8),
+                    _buildOrderTypeChip(order.orderType!),
+                  ],
+                ],
               ),
             ),
+            SizedBox(width: 5),
             Expanded(
               flex: 3,
               child: Text(
@@ -788,6 +799,36 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
 
         // Status ribbon positioned on the right
       ],
+    );
+  }
+
+  Widget _buildOrderTypeChip(String type) {
+    final isBulk = type.toLowerCase() == 'bulk';
+    final bg = isBulk ? Colors.purple.shade50 : Colors.blue.shade50;
+    final fg = isBulk ? Colors.purple.shade700 : Colors.blue.shade700;
+    final border = isBulk ? Colors.purple.shade200 : Colors.blue.shade200;
+    final icon = isBulk ? Icons.groups_2_outlined : Icons.person_outline;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: fg),
+          const SizedBox(width: 4),
+          Text(
+            type,
+            style: AppConstants.bodySmall.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
