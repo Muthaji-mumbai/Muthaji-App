@@ -249,6 +249,8 @@ class Order {
     switch (s) {
       case 'pending':
         return OrderStatus.pending;
+      case 'pendingdisp':
+        return OrderStatus.PendingDisp;
       case 'casted':
         return OrderStatus.Casted;
       case 'wax': // handles "Wax", "in_progress"
@@ -417,7 +419,7 @@ class Order {
       case OrderStatus.PendingDisp:
         return 'PendingDisp';
     }
-  } 
+  }
 
   Color get statusColor {
     switch (status) {
