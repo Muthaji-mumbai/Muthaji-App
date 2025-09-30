@@ -17,6 +17,8 @@ class OrderService {
     DateTime? startDate,
     DateTime? endDate,
     String? userId, // Add user-based filtering
+    String? orderType, // 'Single' | 'Bulk'
+    String? partyId, // For APIs that expect partyname instead of userid
   }) async {
     try {
       // Validate token
@@ -46,6 +48,15 @@ class OrderService {
 
       if (userId != null && userId.isNotEmpty) {
         queryParams['userid'] = userId;
+      }
+
+      if (orderType != null && orderType.isNotEmpty) {
+        queryParams['ordertype'] = orderType;
+      }
+
+      // Some endpoints expect partyname for client-scoped lookups
+      if (partyId != null && partyId.isNotEmpty) {
+        queryParams['partyname'] = partyId;
       }
 
       // Build endpoint with query parameters
@@ -109,14 +120,19 @@ class OrderService {
     String? token, {
     DateTime? startDate,
     DateTime? endDate,
+    String? orderType,
   }) async {
     try {
-      // Use API-level filtering with userid parameter
+      // Mapping rules (per API requirements):
+      // - All types: partyname=<clientId>
+      // - Bulk: partyname=<clientId>&ordertype=Bulk
+      // - Single: partyname=<clientId>&ordertype=Single
       final orders = await getAllOrders(
         token,
-        userId: clientId,
+        partyId: clientId,
         startDate: startDate,
         endDate: endDate,
+        orderType: orderType,
       );
       developer.log('Orders fetched for client $clientId: ${orders.length}');
       return orders;

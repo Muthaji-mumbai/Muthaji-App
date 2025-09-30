@@ -28,6 +28,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   final Set<int> _expanded = <int>{};
   late TabController _tabController;
 
+  // New filters
+  OrderStatus? _selectedStatus; // enum-based status filter
+  String? _orderType; // 'Single' | 'Bulk'
+
   bool _isUrgent(Order order) {
     final p = (order.orderPriority ?? '').toLowerCase().trim();
     return p == 'urgent' || p.contains('urgent');
@@ -127,23 +131,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 1, vsync: this);
     _loadOrders();
   }
 
-  // Helper to build a Tab with an icon and a small text label underneath
-  Widget _buildIconTextTab(IconData icon, String label) {
-    return Tab(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(height: 2),
-          Text(label, style: AppConstants.bodySmall.copyWith(fontSize: 7)),
-        ],
-      ),
-    );
-  }
+  // removed legacy tab builder (not used)
 
   @override
   void dispose() {
@@ -167,6 +159,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           token,
           startDate: _fromDate,
           endDate: _toDate,
+          orderType: _orderType,
         );
 
         List<Order> effectiveOrders = clientOrders;
@@ -208,32 +201,28 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   void _applyFilters() {
     _filteredOrders =
         _allOrders.where((order) {
-          // Apply tab filter
-          switch (_tabController.index) {
-            case 1: // Pending
-              if (order.status != OrderStatus.pending) return false;
-              break;
-            case 2: // Wax
-              if (order.status != OrderStatus.Wax) return false;
-              break;
-            case 3: // DC
-              if (order.status != OrderStatus.DC) return false;
-              break;
-            case 4: // Cancelled
-              if (order.status != OrderStatus.cancelled) return false;
-              break;
+          // Status filter (enum-based)
+          if (_selectedStatus != null && order.status != _selectedStatus) {
+            return false;
           }
 
-          // Apply search filter (client-side for immediate responsiveness)
+          // Order type filter (Single/Bulk)
+          if (_orderType != null &&
+              (order.orderType ?? 'Single') != _orderType) {
+            return false;
+          }
+
+          // Search filter
           if (_searchQuery.isNotEmpty) {
             final query = _searchQuery.toLowerCase();
-            return order.description.toLowerCase().contains(query) ||
+            final matches =
+                order.description.toLowerCase().contains(query) ||
                 order.id.toLowerCase().contains(query) ||
                 (order.orderNo?.toLowerCase().contains(query) ?? false) ||
                 order.statusText.toLowerCase().contains(query);
+            if (!matches) return false;
           }
 
-          // Date filtering is now handled at API level
           return true;
         }).toList();
 
@@ -333,24 +322,75 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
 
           const SizedBox(height: AppConstants.spacingM),
 
-          // Filters header and Tabs
-          TabBar(
-            controller: _tabController,
-            labelColor: AppConstants.primaryColor,
-            unselectedLabelColor: AppConstants.textSecondaryColor,
-            indicatorColor: AppConstants.primaryColor,
-            tabs: [
-              const Tab(text: 'All'),
-              _buildIconTextTab(Icons.hourglass_empty, 'Pending'),
-              _buildIconTextTab(Icons.autorenew, 'Wax'),
-              _buildIconTextTab(Icons.check_circle, 'DC'),
-              _buildIconTextTab(Icons.cancel, 'Cancelled'),
+          // Filters row (Status, Order Type, Date Range)
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<OrderStatus?>(
+                  value: _selectedStatus,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  items: [
+                    const DropdownMenuItem<OrderStatus?>(
+                      value: null,
+                      child: Text('All Statuses'),
+                    ),
+                    ...OrderStatus.values.map(
+                      (s) => DropdownMenuItem<OrderStatus?>(
+                        value: s,
+                        child: Text(_statusLabel(s)),
+                      ),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedStatus = val;
+                      _applyFilters();
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: AppConstants.spacingM),
+              Expanded(
+                child: DropdownButtonFormField<String?>(
+                  value: _orderType,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Order Type',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  items: const [
+                    DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('All Types'),
+                    ),
+                    DropdownMenuItem<String?>(
+                      value: 'Single',
+                      child: Text('Single'),
+                    ),
+                    DropdownMenuItem<String?>(
+                      value: 'Bulk',
+                      child: Text('Bulk'),
+                    ),
+                  ],
+                  onChanged: (val) async {
+                    setState(() => _orderType = val);
+                    await _loadOrders();
+                  },
+                ),
+              ),
             ],
-            onTap: (index) {
-              setState(() {
-                _applyFilters();
-              });
-            },
           ),
 
           const SizedBox(height: AppConstants.spacingM),
@@ -388,6 +428,29 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         ],
       ),
     );
+  }
+
+  String _statusLabel(OrderStatus s) {
+    switch (s) {
+      case OrderStatus.pending:
+        return 'Pending';
+      case OrderStatus.Casted:
+        return 'Casted';
+      case OrderStatus.Wax:
+        return 'Wax';
+      case OrderStatus.DC:
+        return 'DC';
+      case OrderStatus.cancelled:
+        return 'Cancelled';
+      case OrderStatus.delay:
+        return 'Delay';
+      case OrderStatus.due:
+        return 'Due';
+      case OrderStatus.partialDelivery:
+        return 'Partial Delivery';
+      case OrderStatus.PendingDisp:
+        return 'PendingDisp';
+    }
   }
 
   Future<void> _pickDate({required bool isFrom}) async {

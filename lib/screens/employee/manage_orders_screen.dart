@@ -2705,7 +2705,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         return const Color(0xFFF44336); // Red
       case OrderStatus.partialDelivery:
         return AppConstants.partialDeliveryColor;
-        case OrderStatus.PendingDisp:
+      case OrderStatus.PendingDisp:
         return AppConstants.PendingDisp;
     }
   }
@@ -2728,7 +2728,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         return 'Due';
       case OrderStatus.partialDelivery:
         return 'Partial Delivery';
-        case OrderStatus.PendingDisp:
+      case OrderStatus.PendingDisp:
         return 'PendingDisp';
     }
   }
