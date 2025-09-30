@@ -10,6 +10,7 @@ enum OrderStatus {
   delay,
   due,
   partialDelivery,
+  PendingDisp,
 }
 
 class OrnamentDetail {
@@ -320,6 +321,8 @@ class Order {
         return 'Due';
       case OrderStatus.partialDelivery:
         return 'Partial Delivery';
+      case OrderStatus.PendingDisp:
+        return 'PendingDisp';
     }
   }
 
@@ -411,8 +414,10 @@ class Order {
         return 'Due';
       case OrderStatus.partialDelivery:
         return 'Partial Delivery';
+      case OrderStatus.PendingDisp:
+        return 'PendingDisp';
     }
-  }
+  } 
 
   Color get statusColor {
     switch (status) {
@@ -432,6 +437,8 @@ class Order {
         return Colors.red;
       case OrderStatus.partialDelivery:
         return AppConstants.partialDeliveryColor;
+      case OrderStatus.PendingDisp:
+        return AppConstants.PendingDisp;
     }
   }
 

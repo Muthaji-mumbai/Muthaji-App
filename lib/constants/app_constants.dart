@@ -19,9 +19,8 @@ class AppConstants {
     65,
     66,
     59,
-  ); // Red; // Green 600
-
-  // Dark mode palette
+  ); 
+  static const Color PendingDisp = Color.fromARGB(255, 130, 102, 151);
   static const Color darkBackgroundColor = Color(0xFF0B1220); // Deep navy
   static const Color darkSurfaceColor = Color(0xFF111827); // Gray 900
   static const Color darkTextPrimaryColor = Color(0xFFF3F4F6); // Gray 100

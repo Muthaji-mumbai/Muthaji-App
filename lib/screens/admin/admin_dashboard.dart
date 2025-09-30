@@ -1836,6 +1836,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
           case OrderStatus.partialDelivery:
             toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
             break;
+
+case OrderStatus.PendingDisp:
+            toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
+            break;
         }
       }
 
@@ -2027,6 +2031,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             toSingle ? singleDue++ : bulkDue++;
             break;
           case OrderStatus.partialDelivery:
+            toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
+            break;
+          case OrderStatus.PendingDisp:
             toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
             break;
         }
