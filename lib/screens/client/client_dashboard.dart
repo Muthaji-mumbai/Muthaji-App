@@ -649,16 +649,6 @@ class _ClientDashboardState extends State<ClientDashboard>
                             ),
                           ),
                           const PopupMenuItem(
-                            value: 'pdf',
-                            child: Row(
-                              children: [
-                                Icon(Icons.picture_as_pdf_outlined, size: 18),
-                                SizedBox(width: 8),
-                                Text('Generate PDF'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem(
                             value: 'image',
                             child: Row(
                               children: [
@@ -901,17 +891,6 @@ class _ClientDashboardState extends State<ClientDashboard>
                     () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => PDFViewerScreen(order: order),
-                      ),
-                    ),
-                icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                label: const Text('Generate PDF'),
-              ),
-              OutlinedButton.icon(
-                onPressed:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
                         builder: (context) => OrderImageGenerator(order: order),
                       ),
                     ),
@@ -966,14 +945,6 @@ class _ClientDashboardState extends State<ClientDashboard>
           ),
         );
         if (created == true) _loadOrders();
-        break;
-      case 'pdf':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PDFViewerScreen(order: order),
-          ),
-        );
         break;
       case 'image':
         Navigator.push(
@@ -1486,32 +1457,6 @@ class _ClientDashboardState extends State<ClientDashboard>
                     padding: const EdgeInsets.only(top: AppConstants.spacingM),
                     child: Row(
                       children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed:
-                                () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) =>
-                                            PDFViewerScreen(order: order),
-                                  ),
-                                ),
-                            icon: const Icon(Icons.picture_as_pdf_outlined),
-                            label: const Text('Generate PDF'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppConstants.primaryColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: AppConstants.spacingM,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppConstants.spacingM),
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed:

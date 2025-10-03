@@ -67,7 +67,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   List<Datum> _categories = [];
   bool _loadingCategories = true;
   String? _categoriesError;
-  
+
   // Party selection for bulk orders
   List<User> _allUsers = [];
   List<User> _filteredParties = [];
@@ -127,14 +127,27 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   (d) => {
                     'name': d['categoryId'],
                     // For bulk orders, pass empty strings for hidden fields
-                    'size': _isBulkOrderSimplifiedForm() ? '' : (d['size'] ?? ''),
-                    'unit': _isBulkOrderSimplifiedForm() ? '' : _getUnitForDetail(d),
+                    'size':
+                        _isBulkOrderSimplifiedForm() ? '' : (d['size'] ?? ''),
+                    'unit':
+                        _isBulkOrderSimplifiedForm()
+                            ? ''
+                            : _getUnitForDetail(d),
                     'weight': _isBulkOrderSimplifiedForm() ? 0.0 : d['weight'],
                     'purity': d['purity'],
                     'quantity': d['quantity'],
-                    'colorstone': _isBulkOrderSimplifiedForm() ? '' : (d['colorstone'] ?? 'Same as image'),
-                    'rhodium': _isBulkOrderSimplifiedForm() ? '' : (d['rhodium'] ?? 'Same as image'),
-                    'dull': _isBulkOrderSimplifiedForm() ? '' : (d['dull'] ?? 'Same as image'),
+                    'colorstone':
+                        _isBulkOrderSimplifiedForm()
+                            ? ''
+                            : (d['colorstone'] ?? 'Same as image'),
+                    'rhodium':
+                        _isBulkOrderSimplifiedForm()
+                            ? ''
+                            : (d['rhodium'] ?? 'Same as image'),
+                    'dull':
+                        _isBulkOrderSimplifiedForm()
+                            ? ''
+                            : (d['dull'] ?? 'Same as image'),
                     if ((d['remarks'] as String).isNotEmpty)
                       'remarks': d['remarks'],
                     if (d['deliverycount'] != null)
@@ -144,9 +157,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 .toList();
 
         final updateData = <String, dynamic>{
-          'orderdate':
-              (_selectedOrderDate ?? DateTime.now())
-                  .toIso8601String(),
+          'orderdate': (_selectedOrderDate ?? DateTime.now()).toIso8601String(),
           'ordertype': _selectedOrderType,
           'ornamentDetails': detailsPayload,
           'orderpriority': _selectedPriority,
@@ -232,7 +243,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     _selectedOrderType = order.orderType ?? 'Single';
     _selectedStatus = order.status;
     _selectedPriority = order.orderPriority ?? 'Regular';
-    
+
     // Handle party information for bulk orders
     if (order.partyname != null && order.orderType == 'Bulk') {
       _selectedPartyId = order.partyname;
@@ -240,7 +251,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       if (_shouldShowOrderTypeSelection()) {
         _fetchParties().then((_) {
           // Find and set the party name after parties are loaded
-          final party = _allUsers.where((p) => p.id == order.partyname).firstOrNull;
+          final party =
+              _allUsers.where((p) => p.id == order.partyname).firstOrNull;
           if (party != null) {
             setState(() {
               _selectedPartyName = party.name;
@@ -317,7 +329,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       _loadingParties = true;
       _partiesError = null;
     });
-    
+
     try {
       final token = AuthService.currentToken;
       if (token == null) {
@@ -345,16 +357,18 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   }
 
   void _filterParties() {
-    var filtered = _allUsers.where((user) => user.role == _selectedPartyRole).toList();
-    
+    var filtered =
+        _allUsers.where((user) => user.role == _selectedPartyRole).toList();
+
     if (_partySearchQuery.isNotEmpty) {
       final query = _partySearchQuery.toLowerCase();
-      filtered = filtered.where((user) {
-        return user.name.toLowerCase().contains(query) ||
-               user.email.toLowerCase().contains(query);
-      }).toList();
+      filtered =
+          filtered.where((user) {
+            return user.name.toLowerCase().contains(query) ||
+                user.email.toLowerCase().contains(query);
+          }).toList();
     }
-    
+
     setState(() {
       _filteredParties = filtered;
     });
@@ -475,9 +489,18 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               'weight': _isBulkOrderSimplifiedForm() ? 0.0 : d['weight'],
               'purity': d['purity'],
               'quantity': d['quantity'],
-              'colorstone': _isBulkOrderSimplifiedForm() ? '' : (d['colorstone'] ?? 'Same as image'),
-              'rhodium': _isBulkOrderSimplifiedForm() ? '' : (d['rhodium'] ?? 'Same as image'),
-              'dull': _isBulkOrderSimplifiedForm() ? '' : (d['dull'] ?? 'Same as image'),
+              'colorstone':
+                  _isBulkOrderSimplifiedForm()
+                      ? ''
+                      : (d['colorstone'] ?? 'Same as image'),
+              'rhodium':
+                  _isBulkOrderSimplifiedForm()
+                      ? ''
+                      : (d['rhodium'] ?? 'Same as image'),
+              'dull':
+                  _isBulkOrderSimplifiedForm()
+                      ? ''
+                      : (d['dull'] ?? 'Same as image'),
             };
             if ((d['remarks'] as String).isNotEmpty) {
               map['remarks'] = d['remarks'];
@@ -511,7 +534,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             // In clone mode, do not send files; backend should use provided URL arrays
             ornamentImages: widget.cloneFromOrder ? null : _ornamentImages,
             // Include party ID for bulk orders
-            partyname: (_selectedOrderType == 'Bulk' && _selectedPartyId != null) ? _selectedPartyId : null,
+            partyname:
+                (_selectedOrderType == 'Bulk' && _selectedPartyId != null)
+                    ? _selectedPartyId
+                    : null,
             token: token,
           );
 
@@ -565,7 +591,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   bool _isBulkOrderSimplifiedForm() {
     final currentUser = context.read<AuthProvider>().currentUser;
     return currentUser != null &&
-        (currentUser.role == UserRole.employee || currentUser.role == UserRole.admin) &&
+        (currentUser.role == UserRole.employee ||
+            currentUser.role == UserRole.admin) &&
         _selectedOrderType == 'Bulk';
   }
 
@@ -840,7 +867,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         });
       },
       validator:
-          (val) => (units.isNotEmpty && (val == null || val.isEmpty)) ? 'Select unit' : null,
+          (val) =>
+              (units.isNotEmpty && (val == null || val.isEmpty))
+                  ? 'Select unit'
+                  : null,
     );
   }
 
@@ -863,12 +893,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       children: [
         Text(
           'Select Party',
-          style: AppConstants.bodyMedium.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: AppConstants.spacingS),
-        
+
         // Role filter tabs
         Row(
           children: [
@@ -880,109 +908,116 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           ],
         ),
         const SizedBox(height: AppConstants.spacingS),
-        
+
         _loadingParties
             ? const Center(child: CircularProgressIndicator())
             : _partiesError != null
-                ? Column(
-                    children: [
-                      Text(
-                        _partiesError!,
-                        style: TextStyle(color: AppConstants.errorColor),
-                      ),
-                      const SizedBox(height: AppConstants.spacingS),
-                      ElevatedButton(
-                        onPressed: _fetchParties,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  )
-                : Column(
-                    children: [
-                      // Search field
-                      TextField(
-                        decoration: InputDecoration(
-                          labelText: 'Search by name or email',
-                          hintText: 'Type to search...',
-                          prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.spacingS,
-                            vertical: AppConstants.spacingS,
-                          ),
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            _partySearchQuery = value;
-                          });
-                          _filterParties();
-                        },
-                      ),
-                      const SizedBox(height: AppConstants.spacingS),
-                      
-                      // Party dropdown
-                      DropdownButtonFormField<String>(
-                        value: _selectedPartyId,
-                        decoration: InputDecoration(
-                          labelText: 'Party Name',
-                          hintText: 'Select a party',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.spacingS,
-                            vertical: AppConstants.spacingS,
-                          ),
-                        ),
-                        items: _filteredParties
-                            .map(
-                              (party) => DropdownMenuItem<String>(
-                                value: party.id,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      party.name,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontWeight: FontWeight.w600),
-                                    ),
-                                    Text(
-                                      party.email,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedPartyId = value;
-                            _selectedPartyName = value != null
-                                ? _filteredParties.firstWhere((p) => p.id == value).name
-                                : null;
-                          });
-                        },
-                        validator: (value) {
-                          if (_selectedOrderType == 'Bulk' && (value == null || value.isEmpty)) {
-                            return 'Please select a party for bulk orders';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
+            ? Column(
+              children: [
+                Text(
+                  _partiesError!,
+                  style: TextStyle(color: AppConstants.errorColor),
+                ),
+                const SizedBox(height: AppConstants.spacingS),
+                ElevatedButton(
+                  onPressed: _fetchParties,
+                  child: const Text('Retry'),
+                ),
+              ],
+            )
+            : Column(
+              children: [
+                // Search field
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: 'Search by name or email',
+                    hintText: 'Type to search...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingS,
+                      vertical: AppConstants.spacingS,
+                    ),
                   ),
+                  onChanged: (value) {
+                    setState(() {
+                      _partySearchQuery = value;
+                    });
+                    _filterParties();
+                  },
+                ),
+                const SizedBox(height: AppConstants.spacingS),
+
+                // Party dropdown
+                DropdownButtonFormField<String>(
+                  value: _selectedPartyId,
+                  decoration: InputDecoration(
+                    labelText: 'Party Name',
+                    hintText: 'Select a party',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingS,
+                      vertical: AppConstants.spacingS,
+                    ),
+                  ),
+                  items:
+                      _filteredParties
+                          .map(
+                            (party) => DropdownMenuItem<String>(
+                              value: party.id,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    party.name,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    party.email,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                          .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedPartyId = value;
+                      _selectedPartyName =
+                          value != null
+                              ? _filteredParties
+                                  .firstWhere((p) => p.id == value)
+                                  .name
+                              : null;
+                    });
+                  },
+                  validator: (value) {
+                    if (_selectedOrderType == 'Bulk' &&
+                        (value == null || value.isEmpty)) {
+                      return 'Please select a party for bulk orders';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
       ],
     );
   }
-  
+
   Widget _buildRoleFilterChip(String label, UserRole role) {
     final isSelected = _selectedPartyRole == role;
     return FilterChip(
@@ -1000,7 +1035,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       selectedColor: AppConstants.primaryColor.withOpacity(0.2),
       checkmarkColor: AppConstants.primaryColor,
       labelStyle: TextStyle(
-        color: isSelected ? AppConstants.primaryColor : AppConstants.textPrimaryColor,
+        color:
+            isSelected
+                ? AppConstants.primaryColor
+                : AppConstants.textPrimaryColor,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
     );
@@ -1010,7 +1048,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   bool _isImageFile(PlatformFile file) {
     final ext = file.extension?.toLowerCase();
     const imgExts = {
-      'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'heic', 'heif',
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'bmp',
+      'webp',
+      'heic',
+      'heif',
     };
     return ext != null && imgExts.contains(ext);
   }
@@ -1146,7 +1191,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   (val) => setState(() => _selectedPriority = val ?? 'Regular'),
             ),
             // Show party selection for bulk orders
-            if (_shouldShowOrderTypeSelection() && _selectedOrderType == 'Bulk') ...[
+            if (_shouldShowOrderTypeSelection() &&
+                _selectedOrderType == 'Bulk') ...[
               const SizedBox(height: AppConstants.spacingM),
               _buildPartySelectionField(),
             ],
@@ -1172,7 +1218,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                           setState(() {
                             _selectedOrderType = type;
                             // Load parties when switching to bulk orders
-                            if (type == 'Bulk' && _allUsers.isEmpty && !_loadingParties) {
+                            if (type == 'Bulk' &&
+                                _allUsers.isEmpty &&
+                                !_loadingParties) {
                               _fetchParties();
                             }
                             // Clear party selection when switching to single orders
@@ -1344,7 +1392,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     decoration: InputDecoration(
                       labelText: 'Weight (${_getUnitForDetail(detail)})',
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusS,
+                        ),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: AppConstants.spacingS,
@@ -1396,31 +1446,34 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       (detail['purity'] as String?)?.isNotEmpty == true
                           ? detail['purity'] as String
                           : null,
-                  items: _purityOptions
-                      .map(
-                        (option) => DropdownMenuItem<String>(
-                          value: option,
-                          child: Text(
-                            option,
-                            style: const TextStyle(fontSize: 12),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  selectedItemBuilder: (context) => _purityOptions
-                      .map(
-                        (option) => Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            option,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  items:
+                      _purityOptions
+                          .map(
+                            (option) => DropdownMenuItem<String>(
+                              value: option,
+                              child: Text(
+                                option,
+                                style: const TextStyle(fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                  selectedItemBuilder:
+                      (context) =>
+                          _purityOptions
+                              .map(
+                                (option) => Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    option,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              )
+                              .toList(),
                   onChanged:
                       (value) => setState(() {
                         _ornamentDetails[index]['purity'] = value ?? '';
@@ -1465,111 +1518,115 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           // Colorstone and Rhodium Row - Hide for bulk orders
           if (!_isBulkOrderSimplifiedForm()) ...[
             Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: 'Colorstone',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      labelText: 'Colorstone',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusS,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacingS,
+                        vertical: AppConstants.spacingS,
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingS,
-                      vertical: AppConstants.spacingS,
-                    ),
-                  ),
-                  value:
-                      (detail['colorstone'] as String?)?.isNotEmpty == true
-                          ? detail['colorstone'] as String
-                          : 'Same as image',
-                  items:
-                      _colorstoneOptions
-                          .map(
-                            (option) => DropdownMenuItem<String>(
-                              value: option,
-                              child: Text(
-                                option,
-                                style: const TextStyle(fontSize: 12),
+                    value:
+                        (detail['colorstone'] as String?)?.isNotEmpty == true
+                            ? detail['colorstone'] as String
+                            : 'Same as image',
+                    items:
+                        _colorstoneOptions
+                            .map(
+                              (option) => DropdownMenuItem<String>(
+                                value: option,
+                                child: Text(
+                                  option,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
                               ),
-                            ),
-                          )
-                          .toList(),
-                  onChanged:
-                      (value) => setState(() {
-                        _ornamentDetails[index]['colorstone'] =
-                            value ?? 'Same as image';
-                      }),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacingS),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: 'Rhodium',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingS,
-                      vertical: AppConstants.spacingS,
-                    ),
+                            )
+                            .toList(),
+                    onChanged:
+                        (value) => setState(() {
+                          _ornamentDetails[index]['colorstone'] =
+                              value ?? 'Same as image';
+                        }),
                   ),
-                  value:
-                      (detail['rhodium'] as String?)?.isNotEmpty == true
-                          ? detail['rhodium'] as String
-                          : 'Same as image',
-                  items:
-                      _rhodiumOptions
-                          .map(
-                            (option) => DropdownMenuItem<String>(
-                              value: option,
-                              child: Text(
-                                option,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                  onChanged:
-                      (value) => setState(() {
-                        _ornamentDetails[index]['rhodium'] =
-                            value ?? 'Same as image';
-                      }),
                 ),
-              ),
-            ],
+                const SizedBox(width: AppConstants.spacingS),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      labelText: 'Rhodium',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusS,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacingS,
+                        vertical: AppConstants.spacingS,
+                      ),
+                    ),
+                    value:
+                        (detail['rhodium'] as String?)?.isNotEmpty == true
+                            ? detail['rhodium'] as String
+                            : 'Same as image',
+                    items:
+                        _rhodiumOptions
+                            .map(
+                              (option) => DropdownMenuItem<String>(
+                                value: option,
+                                child: Text(
+                                  option,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                    onChanged:
+                        (value) => setState(() {
+                          _ornamentDetails[index]['rhodium'] =
+                              value ?? 'Same as image';
+                        }),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: AppConstants.spacingM),
 
             // Dull Row
             DropdownButtonFormField<String>(
-            decoration: InputDecoration(
-              labelText: 'Dull',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppConstants.radiusS),
+              decoration: InputDecoration(
+                labelText: 'Dull',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingS,
+                  vertical: AppConstants.spacingS,
+                ),
               ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingS,
-                vertical: AppConstants.spacingS,
-              ),
-            ),
-            value:
-                (detail['dull'] as String?)?.isNotEmpty == true
-                    ? detail['dull'] as String
-                    : 'Same as image',
-            items:
-                _dullOptions
-                    .map(
-                      (option) => DropdownMenuItem<String>(
-                        value: option,
-                        child: Text(option),
-                      ),
-                    )
-                    .toList(),
-            onChanged:
-                (value) => setState(() {
-                  _ornamentDetails[index]['dull'] = value ?? 'Same as image';
-                }),
+              value:
+                  (detail['dull'] as String?)?.isNotEmpty == true
+                      ? detail['dull'] as String
+                      : 'Same as image',
+              items:
+                  _dullOptions
+                      .map(
+                        (option) => DropdownMenuItem<String>(
+                          value: option,
+                          child: Text(option),
+                        ),
+                      )
+                      .toList(),
+              onChanged:
+                  (value) => setState(() {
+                    _ornamentDetails[index]['dull'] = value ?? 'Same as image';
+                  }),
             ),
             const SizedBox(height: AppConstants.spacingM),
           ],
@@ -1593,9 +1650,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 }),
           ),
           const SizedBox(height: AppConstants.spacingM),
-          
+
           // Delivery Count field - only show when status is partialDelivery
-          if (_isEditMode && _selectedStatus == OrderStatus.partialDelivery) ...[
+          if (_isEditMode &&
+              _selectedStatus == OrderStatus.partialDelivery) ...[
             TextFormField(
               initialValue: detail['deliverycount']?.toString() ?? '',
               decoration: InputDecoration(
@@ -1614,10 +1672,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 ),
               ),
               keyboardType: TextInputType.number,
-              onChanged: (value) => setState(() {
-                _ornamentDetails[index]['deliverycount'] = 
-                    value.isEmpty ? null : int.tryParse(value);
-              }),
+              onChanged:
+                  (value) => setState(() {
+                    _ornamentDetails[index]['deliverycount'] =
+                        value.isEmpty ? null : int.tryParse(value);
+                  }),
               validator: (value) {
                 if (_selectedStatus == OrderStatus.partialDelivery) {
                   if (value == null || value.isEmpty) {
@@ -1722,39 +1781,48 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         child: SizedBox(
                           width: 90,
                           height: 90,
-                          child: _isPdfFile(file)
-                              ? Container(
-                                  color: Colors.grey.shade100,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(Icons.picture_as_pdf, color: Colors.red),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                                        child: Text(
-                                          (file.name),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 10),
+                          child:
+                              _isPdfFile(file)
+                                  ? Container(
+                                    color: Colors.grey.shade100,
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.picture_as_pdf,
+                                          color: Colors.red,
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : (bytes != null
-                                  ? Image.memory(
-                                      bytes,
-                                      width: 90,
-                                      height: 90,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Container(
-                                      color: Colors.grey.shade100,
-                                      child: Icon(
-                                        Icons.image,
-                                        color: Colors.grey.shade400,
-                                      ),
-                                    )),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4.0,
+                                          ),
+                                          child: Text(
+                                            (file.name),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                  : (bytes != null
+                                      ? Image.memory(
+                                        bytes,
+                                        width: 90,
+                                        height: 90,
+                                        fit: BoxFit.cover,
+                                      )
+                                      : Container(
+                                        color: Colors.grey.shade100,
+                                        child: Icon(
+                                          Icons.image,
+                                          color: Colors.grey.shade400,
+                                        ),
+                                      )),
                         ),
                       ),
                       Positioned(

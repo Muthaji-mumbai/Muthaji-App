@@ -3191,7 +3191,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         status = null;
     }
 
-    // Navigate to ManageOrdersScreen with status, Bulk order type, and party filters
+
     Navigator.push(
       context,
       MaterialPageRoute(

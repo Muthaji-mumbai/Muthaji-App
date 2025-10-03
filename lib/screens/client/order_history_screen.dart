@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart'; // For loading asset images
-import 'package:soloshine/screens/client/pdfview.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
 import '../../providers/auth_provider.dart';
@@ -31,6 +30,30 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   // New filters
   OrderStatus? _selectedStatus; // enum-based status filter
   String? _orderType; // 'Single' | 'Bulk'
+
+  // Tab definitions
+  late List<String> _tabs;
+  int _selectedTabIndex = 0;
+
+  // Helper: Map backend status to UI status
+  String _mapOrderToUiStatus(Order order) {
+    // Bulk orders: allow Partial Delivery tab
+    final isBulk = (order.orderType?.toLowerCase() == 'bulk');
+    switch (order.status) {
+      case OrderStatus.pending:
+        return 'Pending';
+      case OrderStatus.partialDelivery:
+        return isBulk ? 'Partially Delivered' : 'In Progress';
+      case OrderStatus.cancelled:
+        return 'Cancelled';
+      // Delivered: treat DC as delivered
+      case OrderStatus.DC:
+        return 'Delivered';
+      // In Progress: all other statuses
+      default:
+        return 'In Progress';
+    }
+  }
 
   bool _isUrgent(Order order) {
     final p = (order.orderPriority ?? '').toLowerCase().trim();
@@ -131,7 +154,15 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 1, vsync: this);
+    // Tabs: All, Pending, In Progress, Delivered, Cancelled (+ Partially Delivered for bulk)
+    _tabs = ['All', 'Pending', 'In Progress', 'Delivered', 'Cancelled'];
+    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController.addListener(() {
+      setState(() {
+        _selectedTabIndex = _tabController.index;
+        _applyFilters();
+      });
+    });
     _loadOrders();
   }
 
@@ -199,19 +230,29 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   }
 
   void _applyFilters() {
+    // Filter by tab
+    String? tabStatus;
+    if (_selectedTabIndex > 0) {
+      tabStatus = _tabs[_selectedTabIndex];
+    }
     _filteredOrders =
         _allOrders.where((order) {
-          // Status filter (enum-based)
+          final uiStatus = _mapOrderToUiStatus(order);
+          // Tab filter
+          if (tabStatus != null &&
+              tabStatus != 'All' &&
+              uiStatus != tabStatus) {
+            return false;
+          }
+          // Status dropdown filter (legacy, can be removed if not needed)
           if (_selectedStatus != null && order.status != _selectedStatus) {
             return false;
           }
-
-          // Order type filter (Single/Bulk)
+          // Order type filter
           if (_orderType != null &&
               (order.orderType ?? 'Single') != _orderType) {
             return false;
           }
-
           // Search filter
           if (_searchQuery.isNotEmpty) {
             final query = _searchQuery.toLowerCase();
@@ -222,10 +263,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                 order.statusText.toLowerCase().contains(query);
             if (!matches) return false;
           }
-
           return true;
         }).toList();
-
     // Sort by creation date (newest first)
     _filteredOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
@@ -242,34 +281,45 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadOrders),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabs: _tabs.map((t) => Tab(text: t)).toList(),
+        ),
       ),
-      body: Column(
-        children: [
-          // Search and Filter Section with Tabs
-          _buildSearchAndFilterSection(),
-
-          // Orders List
-          Expanded(
-            child:
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _filteredOrders.isEmpty
-                    ? _buildEmptyState()
-                    : RefreshIndicator(
-                      onRefresh: () async => _loadOrders(),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(AppConstants.spacingM),
-                        itemCount: _filteredOrders.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index == 0) return const SizedBox.shrink();
-                          final rowIndex = index - 1;
-                          final order = _filteredOrders[rowIndex];
-                          return _buildOrderTile(rowIndex, order);
-                        },
-                      ),
-                    ),
-          ),
-        ],
+      body: TabBarView(
+        controller: _tabController,
+        children: List.generate(_tabs.length, (tabIdx) {
+          // Only show the filtered list for the selected tab
+          if (_selectedTabIndex != tabIdx) return const SizedBox.shrink();
+          return Column(
+            children: [
+              _buildSearchAndFilterSection(),
+              Expanded(
+                child:
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _filteredOrders.isEmpty
+                        ? _buildEmptyState()
+                        : RefreshIndicator(
+                          onRefresh: () async => _loadOrders(),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(
+                              AppConstants.spacingM,
+                            ),
+                            itemCount: _filteredOrders.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == 0) return const SizedBox.shrink();
+                              final rowIndex = index - 1;
+                              final order = _filteredOrders[rowIndex];
+                              return _buildOrderTile(rowIndex, order);
+                            },
+                          ),
+                        ),
+              ),
+            ],
+          );
+        }),
       ),
     );
   }
@@ -326,39 +376,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<OrderStatus?>(
-                  value: _selectedStatus,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Status',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                  items: [
-                    const DropdownMenuItem<OrderStatus?>(
-                      value: null,
-                      child: Text('All Statuses'),
-                    ),
-                    ...OrderStatus.values.map(
-                      (s) => DropdownMenuItem<OrderStatus?>(
-                        value: s,
-                        child: Text(_statusLabel(s)),
-                      ),
-                    ),
-                  ],
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedStatus = val;
-                      _applyFilters();
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacingM),
-              Expanded(
                 child: DropdownButtonFormField<String?>(
                   value: _orderType,
                   isExpanded: true,
@@ -389,39 +406,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                     await _loadOrders();
                   },
                 ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: AppConstants.spacingM),
-
-          // Date range filter (bordered fields)
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => _pickDate(isFrom: true),
-                  child: _buildDateField(label: 'From Date', date: _fromDate),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacingM),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => _pickDate(isFrom: false),
-                  child: _buildDateField(label: 'To Date', date: _toDate),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacingM),
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _fromDate = null;
-                    _toDate = null;
-                    _applyFilters();
-                  });
-                },
-                icon: const Icon(Icons.clear),
-                label: const Text('Clear'),
               ),
             ],
           ),
@@ -1175,6 +1159,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   }
 
   Widget _buildActionButtonsSection(Order order) {
+    final isBulk = (order.orderType?.toLowerCase() == 'bulk');
+    final isSingle = !isBulk;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1185,183 +1171,43 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             color: AppConstants.primaryColor,
           ),
         ),
-
         const SizedBox(height: AppConstants.spacingS),
-
         Wrap(
           spacing: AppConstants.spacingS,
           runSpacing: AppConstants.spacingS,
           children: [
-            // Edit
-            OutlinedButton.icon(
-              onPressed:
-                  order.status == OrderStatus.pending
-                      ? () async {
-                        final updated = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) =>
-                                    CreateOrderScreen(orderToEdit: order),
-                          ),
-                        );
-                        if (updated == true) _loadOrders();
-                      }
-                      : null,
-              icon: const Icon(Icons.edit_outlined, size: 18),
-              label: const Text('Edit'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingM,
-                  vertical: AppConstants.spacingS,
-                ),
-              ),
-            ),
-
-            // Clone
-            OutlinedButton.icon(
-              onPressed: () async {
-                final created = await Navigator.push<bool>(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) => CreateOrderScreen(
-                          orderToEdit: order,
-                          cloneFromOrder: true,
-                        ),
-                  ),
-                );
-                if (created == true) {
-                  _loadOrders();
-                }
-              },
-              icon: const Icon(Icons.content_copy_outlined, size: 18),
-              label: const Text('Clone'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingM,
-                  vertical: AppConstants.spacingS,
-                ),
-              ),
-            ),
-
-            // Cancel
-            OutlinedButton.icon(
-              onPressed: () async {
-                final confirm =
-                    await showDialog<bool>(
-                      context: context,
+            if (isSingle)
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final created = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
                       builder:
-                          (ctx) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            title: const Text('Cancel Order?'),
-                            content: const Text(
-                              'Are you sure you want to cancel this order? This action cannot be undone.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                child: const Text('No'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () => Navigator.pop(ctx, true),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppConstants.errorColor,
-                                ),
-                                child: const Text('Yes'),
-                              ),
-                            ],
+                          (context) => CreateOrderScreen(
+                            orderToEdit: order,
+                            cloneFromOrder: true,
                           ),
-                    ) ??
-                    false;
-
-                if (!confirm) return;
-
-                final token = AuthService.currentToken;
-                if (token == null) return;
-
-                try {
-                  await OrderService.updateOrderStatus(
-                    orderId: order.id,
-                    newStatus: OrderStatus.cancelled,
-                    token: token,
+                    ),
                   );
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Order cancelled successfully'),
-                        backgroundColor: AppConstants.successColor,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    );
+                  if (created == true) {
+                    _loadOrders();
                   }
-                  _loadOrders();
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to cancel order: $e'),
-                        backgroundColor: AppConstants.errorColor,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    );
-                  }
-                }
-              },
-              icon: const Icon(Icons.cancel_outlined, size: 18),
-              label: const Text('Cancel'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppConstants.errorColor,
-                side: BorderSide(
-                  color: AppConstants.errorColor.withOpacity(0.5),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingM,
-                  vertical: AppConstants.spacingS,
+                },
+                icon: const Icon(Icons.content_copy_outlined, size: 18),
+                label: const Text('Clone'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingM,
+                    vertical: AppConstants.spacingS,
+                  ),
                 ),
               ),
-            ),
+            // No edit/cancel for single, nothing for bulk
           ],
         ),
-
         const SizedBox(height: AppConstants.spacingM),
-
         Row(
           children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PDFViewerScreen(order: order),
-                      ),
-                    ),
-                icon: const Icon(Icons.picture_as_pdf_outlined),
-                label: const Text('Generate PDF'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppConstants.spacingM,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(width: AppConstants.spacingM),
-
             Expanded(
               child: ElevatedButton.icon(
                 onPressed:
