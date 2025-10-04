@@ -165,6 +165,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           if (_selectedOrderType == 'Bulk' && _selectedPartyId != null)
             'partyname': _selectedPartyId,
         };
+        
         // Include status in update only for admin/employee users
         if (_selectedStatus != null && _shouldShowOrderTypeSelection()) {
           updateData['status'] = Order.statusToApiString(_selectedStatus!);
@@ -518,7 +519,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             detailsPayload.add(map);
           }
 
-          // For customers, always use 'Single' order type regardless of selection
           final orderType =
               currentUser.role == UserRole.customer
                   ? 'Single'
@@ -531,13 +531,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             orderType: orderType,
             orderpriority: _selectedPriority,
             ornamentDetails: detailsPayload,
-            // In clone mode, do not send files; backend should use provided URL arrays
+
             ornamentImages: widget.cloneFromOrder ? null : _ornamentImages,
             // Include party ID for bulk orders
             partyname:
-                (_selectedOrderType == 'Bulk' && _selectedPartyId != null)
+                (_selectedOrderType == 'Bulk' || (_selectedOrderType == 'Single' && _selectedPartyId != null))
                     ? _selectedPartyId
-                    : null,
+                    : currentUser.id,
             token: token,
           );
 
