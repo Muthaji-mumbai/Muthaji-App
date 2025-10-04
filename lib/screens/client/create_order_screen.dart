@@ -162,9 +162,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           'ornamentDetails': detailsPayload,
           'orderpriority': _selectedPriority,
           // Include party ID for bulk orders
-          if (_selectedOrderType == 'Bulk' && _selectedPartyId != null)
-            'partyname': _selectedPartyId,
+          if (_selectedOrderType == 'Bulk' ||_selectedOrderType == 'Single' && _selectedPartyId != null)
+          'partyname': _selectedPartyId,
+
         };
+       
+        
         
         // Include status in update only for admin/employee users
         if (_selectedStatus != null && _shouldShowOrderTypeSelection()) {

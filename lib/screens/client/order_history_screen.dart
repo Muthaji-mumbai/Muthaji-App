@@ -155,7 +155,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   void initState() {
     super.initState();
     // Tabs: All, Pending, In Progress, Delivered, Cancelled (+ Partially Delivered for bulk)
-    _tabs = ['All', 'Pending', 'In Progress', 'Delivered', 'Cancelled'];
+    _tabs = _updateTabs();
     _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(() {
       setState(() {
@@ -164,6 +164,15 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       });
     });
     _loadOrders();
+  }
+  _updateTabs() {
+
+    if (_orderType?.toLowerCase() == 'bulk') {
+      _tabs = ['All', 'Pending', 'In Progress', 'Partially Delivered', 'Delivered', 'Cancelled'];
+    } else {
+      _tabs = ['All', 'Pending', 'In Progress', 'Delivered', 'Cancelled'];
+    }
+    return _tabs;
   }
 
   // removed legacy tab builder (not used)
@@ -628,8 +637,19 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                   ),
                 ],
               ),
-              child: Text(
-                order.statusText.toUpperCase(),
+              child: 
+                ([OrderStatus.Casted, OrderStatus.DC, OrderStatus.PendingDisp, OrderStatus.Wax].contains(order.status))
+              ? Text(
+               "In Progress",
+                style: AppConstants.bodySmall.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                  letterSpacing: 0.5,
+                ),
+              ) :
+               Text(
+               order.statusText.toUpperCase(),
                 style: AppConstants.bodySmall.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
