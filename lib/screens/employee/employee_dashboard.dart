@@ -15,6 +15,9 @@ import '../client/create_order_screen.dart';
 import 'order_detailed_screen.dart' show OrderDetailsScreen;
 import 'package:intl/intl.dart';
 
+// Add enum for sort options
+enum OrderSortOption { dateDesc, dateAsc, priority }
+
 class EmployeeDashboard extends StatefulWidget {
   const EmployeeDashboard({super.key});
 
@@ -26,6 +29,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   List<Order> _assignedOrders = [];
   List<Order> _pendingOrders = [];
   bool _isLoading = true;
+  OrderSortOption _pendingSortOption = OrderSortOption.dateDesc;
 
   @override
   void initState() {
@@ -175,6 +179,28 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         );
       }
     }
+  }
+
+  // Helper to get sorted pending orders
+  List<Order> get _sortedPendingOrders {
+    List<Order> sorted = List.from(_pendingOrders);
+    switch (_pendingSortOption) {
+      case OrderSortOption.dateDesc:
+        sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case OrderSortOption.dateAsc:
+        sorted.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+      case OrderSortOption.priority:
+        sorted.sort((a, b) {
+          final aUrgent = _isUrgent(a) ? 0 : 1;
+          final bUrgent = _isUrgent(b) ? 0 : 1;
+          if (aUrgent != bUrgent) return aUrgent - bUrgent;
+          return b.createdAt.compareTo(a.createdAt);
+        });
+        break;
+    }
+    return sorted;
   }
 
   @override
@@ -368,15 +394,45 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Pending Orders', style: AppConstants.headingSmall),
-            TextButton(
-              onPressed:
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ManageOrdersScreen(),
+            Row(
+              children: [
+                DropdownButton<OrderSortOption>(
+                  value: _pendingSortOption,
+                  underline: SizedBox.shrink(),
+                  style: TextStyle(color: Colors.black, fontSize: 13),
+                  items: const [
+                    DropdownMenuItem(
+                      value: OrderSortOption.dateDesc,
+                      child: Text('Newest'),
                     ),
-                  ),
-              child: const Text('View All'),
+                    DropdownMenuItem(
+                      value: OrderSortOption.dateAsc,
+                      child: Text('Oldest'),
+                    ),
+                    DropdownMenuItem(
+                      value: OrderSortOption.priority,
+                      child: Text('Urgent First'),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _pendingSortOption = val;
+                      });
+                    }
+                  },
+                ),
+                TextButton(
+                  onPressed:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ManageOrdersScreen(),
+                        ),
+                      ),
+                  child: const Text('View All'),
+                ),
+              ],
             ),
           ],
         ),
@@ -402,7 +458,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               ],
             ),
           ),
-        ..._pendingOrders.take(3).map((order) => _buildOrderCard(order)),
+        ..._sortedPendingOrders.map((order) => _buildOrderCard(order)),
       ],
     );
   }
@@ -702,14 +758,15 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                               (context) => OrderDetailsScreen(order: order),
                         ),
                       );
-                    } else if (value == 'pdf') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PDFViewerScreen(order: order),
-                        ),
-                      );
                     }
+                    //  else if (value == 'pdf') {
+                    //   Navigator.push(
+                    //     context,
+                    //     MaterialPageRoute(
+                    //       builder: (context) => PDFViewerScreen(order: order),
+                    //     ),
+                    //   );
+                    // }
                   },
                   itemBuilder:
                       (context) => [
@@ -773,20 +830,20 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                               ],
                             ),
                           ),
-                        PopupMenuItem(
-                          value: 'pdf',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.picture_as_pdf_outlined,
-                                size: 18,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 12),
-                              const Text('Generate PDF'),
-                            ],
-                          ),
-                        ),
+                        // PopupMenuItem(
+                        //   value: 'pdf',
+                        //   child: Row(
+                        //     children: [
+                        //       Icon(
+                        //         Icons.picture_as_pdf_outlined,
+                        //         size: 18,
+                        //         color: Colors.grey.shade600,
+                        //       ),
+                        //       const SizedBox(width: 12),
+                        //       const Text('Generate PDF'),
+                        //     ],
+                        //   ),
+                        // ),
                       ],
                 ),
                 children: [_buildExpandedContent(order)],
