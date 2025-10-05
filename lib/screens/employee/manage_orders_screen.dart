@@ -859,11 +859,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               icon: const Icon(Icons.deselect_rounded),
               onPressed: _selectNoneOrders,
             ),
-            IconButton(
-              tooltip: 'Clear Selection',
-              icon: const Icon(Icons.clear_all_rounded),
-              onPressed: _clearSelection,
-            ),
+            // IconButton(
+            //   tooltip: 'Clear Selection',
+            //   icon: const Icon(Icons.clear_all_rounded),
+            //   onPressed: _clearSelection,
+            // ),
             Container(
               margin: const EdgeInsets.only(right: 8),
               child: PopupMenuButton<OrderStatus>(
@@ -941,7 +941,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Search orders, clients, descriptions...',
+                  hintText: 'Search orders',
                   hintStyle: TextStyle(color: Colors.grey.shade500),
                   prefixIcon: Icon(
                     Icons.search_rounded,
@@ -1497,11 +1497,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   }
 
   Widget _buildSummaryBar() {
-    if (_filteredOrders.isEmpty && !_hasActiveFilters())
+    if (_allOrders.isEmpty && !_hasActiveFilters())
       return const SizedBox.shrink();
 
+    // Always use _allOrders for status counts
     final statusCounts = <OrderStatus, int>{};
-    for (final order in _filteredOrders) {
+    for (final order in _allOrders) {
       statusCounts[order.status] = (statusCounts[order.status] ?? 0) + 1;
     }
 
@@ -1581,7 +1582,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                       ),
                     ),
                   ),
-                  // Status-specific buttons
+                  // Status-specific buttons (always show all statuses)
                   ...statusCounts.entries.map((entry) {
                     final isSelected = _selectedStatus == entry.key;
                     return GestureDetector(
