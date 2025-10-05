@@ -2152,14 +2152,15 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                               (context) => OrderImageGenerator(order: order),
                         ),
                       );
-                    } else if (value == 'generate_pdf') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PDFViewerScreen(order: order),
-                        ),
-                      );
                     }
+                    // else if (value == 'generate_pdf') {
+                    //   Navigator.push(
+                    //     context,
+                    //     MaterialPageRoute(
+                    //       builder: (context) => PDFViewerScreen(order: order),
+                    //     ),
+                    //   );
+                    // }
                   },
 
                   itemBuilder:
@@ -2220,20 +2221,20 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             ],
                           ),
                         ),
-                        PopupMenuItem(
-                          value: 'generate_pdf',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.picture_as_pdf_outlined,
-                                size: 18,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 12),
-                              const Text('Generate PDF'),
-                            ],
-                          ),
-                        ),
+                        // PopupMenuItem(
+                        //   value: 'generate_pdf',
+                        //   child: Row(
+                        //     children: [
+                        //       Icon(
+                        //         Icons.picture_as_pdf_outlined,
+                        //         size: 18,
+                        //         color: Colors.grey.shade600,
+                        //       ),
+                        //       const SizedBox(width: 12),
+                        //       const Text('Generate PDF'),
+                        //     ],
+                        //   ),
+                        // ),
                         if (order.orderType == 'Single')
                           PopupMenuItem(
                             value: 'delete',
@@ -2796,20 +2797,20 @@ class FullScreenImageViewer extends StatelessWidget {
                       strokeWidth: 2,
                     ),
                   ),
-                  PopupMenuItem(
-                    value: 'pdf',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.picture_as_pdf_outlined,
-                          size: 18,
-                          color: Colors.grey.shade600,
-                        ),
-                        const SizedBox(width: 12),
-                        const Text('Generate PDF'),
-                      ],
-                    ),
-                  ),
+                  // PopupMenuItem(
+                  //   value: 'pdf',
+                  //   child: Row(
+                  //     children: [
+                  //       Icon(
+                  //         Icons.picture_as_pdf_outlined,
+                  //         size: 18,
+                  //         color: Colors.grey.shade600,
+                  //       ),
+                  //       const SizedBox(width: 12),
+                  //       const Text('Generate PDF'),
+                  //     ],
+                  //   ),
+                  // ),
                   const SizedBox(height: 16),
                   const Text(
                     'Loading image...',
