@@ -1796,11 +1796,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
         singleWax = 0,
         singleDC = 0,
         singleCancelled = 0,
+        singlecompleted = 0,
         singleCasted = 0;
+
     int singleDelay = 0, singleDue = 0, singlePartialDelivery = 0;
     int bulkPending = 0,
         bulkWax = 0,
         bulkDC = 0,
+        bulkcompleted = 0,
         bulkCancelled = 0,
         bulkCasted = 0;
     int bulkDelay = 0, bulkDue = 0, bulkPartialDelivery = 0;
@@ -1839,6 +1842,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
           case OrderStatus.PendingDisp:
             toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
+            break;
+          case OrderStatus.completed:
+            toSingle ? singlecompleted++ : bulkcompleted++;
             break;
         }
       }
@@ -1993,6 +1999,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     int singlePending = 0,
         singleWax = 0,
         singleDC = 0,
+        singlecompleted = 0,
         singleCancelled = 0,
         singleCasted = 0;
     int singleDelay = 0, singleDue = 0, singlePartialDelivery = 0;
@@ -2000,6 +2007,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         bulkWax = 0,
         bulkDC = 0,
         bulkCancelled = 0,
+        bulkcompleted = 0,
         bulkCasted = 0;
     int bulkDelay = 0, bulkDue = 0, bulkPartialDelivery = 0;
     for (final o in filteredOrders) {
@@ -2035,6 +2043,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             break;
           case OrderStatus.PendingDisp:
             toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
+            break;
+          case OrderStatus.completed:
+            toSingle ? singlecompleted++ : bulkcompleted++;
             break;
         }
       }
@@ -3190,7 +3201,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       default:
         status = null;
     }
-
 
     Navigator.push(
       context,

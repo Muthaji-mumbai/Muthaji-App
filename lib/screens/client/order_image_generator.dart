@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:soloshine/constants/app_constants.dart';
 import '../../models/order.dart';
 
 class OrderImageGenerator extends StatefulWidget {
@@ -963,6 +964,8 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         return 'Partial Delivery';
       case OrderStatus.PendingDisp:
         return 'PendingDisp';
+        case OrderStatus.completed:
+        return 'Completed';
     }
   }
 
@@ -979,13 +982,15 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
       case OrderStatus.cancelled:
         return const Color(0xFFF44336); // Red
       case OrderStatus.delay:
-        return const Color(0xFFF44336); // Red
+        return const ui.Color.fromARGB(255, 0, 0, 0); // Red
       case OrderStatus.due:
         return const Color(0xFFF44336); // Red
       case OrderStatus.partialDelivery:
         return Colors.teal; // fallback
       case OrderStatus.PendingDisp:
-        return Colors.amber; // fallback
+        return Colors.amber; 
+          case OrderStatus.completed:
+        return AppConstants.Completed;
     }
   }
 }

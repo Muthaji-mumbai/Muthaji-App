@@ -2701,13 +2701,15 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       case OrderStatus.cancelled:
         return const Color(0xFFF44336); // Red
       case OrderStatus.delay:
-        return const Color(0xFFF44336); // Red
+        return const Color.fromARGB(255, 0, 0, 0); // Red
       case OrderStatus.due:
         return const Color(0xFFF44336); // Red
       case OrderStatus.partialDelivery:
-        return AppConstants.partialDeliveryColor;
+        return const Color.fromARGB(255, 75, 121, 118);
       case OrderStatus.PendingDisp:
         return AppConstants.PendingDisp;
+      case OrderStatus.completed:
+        return AppConstants.Completed;
     }
   }
 
@@ -2731,6 +2733,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         return 'Partial Delivery';
       case OrderStatus.PendingDisp:
         return 'PendingDisp';
+      case OrderStatus.completed:
+        return 'Completed';
     }
   }
 }

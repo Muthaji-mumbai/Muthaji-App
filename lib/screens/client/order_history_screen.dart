@@ -470,28 +470,28 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     );
   }
 
-  String _statusLabel(OrderStatus s) {
-    switch (s) {
-      case OrderStatus.pending:
-        return 'Pending';
-      case OrderStatus.Casted:
-        return 'Casted';
-      case OrderStatus.Wax:
-        return 'Wax';
-      case OrderStatus.DC:
-        return 'DC';
-      case OrderStatus.cancelled:
-        return 'Cancelled';
-      case OrderStatus.delay:
-        return 'Delay';
-      case OrderStatus.due:
-        return 'Due';
-      case OrderStatus.partialDelivery:
-        return 'Partial Delivery';
-      case OrderStatus.PendingDisp:
-        return 'PendingDisp';
-    }
-  }
+  // String _statusLabel(OrderStatus s) {
+  //   switch (s) {
+  //     case OrderStatus.pending:
+  //       return 'Pending';
+  //     case OrderStatus.Casted:
+  //       return 'Casted';
+  //     case OrderStatus.Wax:
+  //       return 'Wax';
+  //     case OrderStatus.DC:
+  //       return 'DC';
+  //     case OrderStatus.cancelled:
+  //       return 'Cancelled';
+  //     case OrderStatus.delay:
+  //       return 'Delay';
+  //     case OrderStatus.due:
+  //       return 'Due';
+  //     case OrderStatus.partialDelivery:
+  //       return 'Partial Delivery';
+  //     case OrderStatus.PendingDisp:
+  //       return 'PendingDisp';
+  //   }
+  // }
 
   Future<void> _pickDate({required bool isFrom}) async {
     final initial =

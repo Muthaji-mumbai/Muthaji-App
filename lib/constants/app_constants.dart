@@ -14,12 +14,8 @@ class AppConstants {
   static const Color warningColor = Color(0xFFF59E0B); // Amber 500
   static const Color textPrimaryColor = Color(0xFF0F172A); // Slate 900
   static const Color textSecondaryColor = Color(0xFF475569); // Slate 600
-  static const Color partialDeliveryColor = Color.fromARGB(
-    255,
-    65,
-    66,
-    59,
-  ); 
+  static const Color partialDeliveryColor = Color.fromARGB(255, 65, 66, 59);
+  static const Color Completed = Colors.greenAccent;
   static const Color PendingDisp = Color.fromARGB(255, 130, 102, 151);
   static const Color darkBackgroundColor = Color(0xFF0B1220); // Deep navy
   static const Color darkSurfaceColor = Color(0xFF111827); // Gray 900

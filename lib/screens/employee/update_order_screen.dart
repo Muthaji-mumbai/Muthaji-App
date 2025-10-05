@@ -700,6 +700,8 @@ class _UpdateOrderScreenState extends State<UpdateOrderScreen> {
         return 'Partial Delivery';
       case OrderStatus.PendingDisp:
         return 'PendingDisp';
+             case OrderStatus.completed:
+        return '  Completed';
     }
   }
 }
