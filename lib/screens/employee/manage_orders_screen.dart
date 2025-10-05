@@ -5,7 +5,6 @@ import 'package:photo_view/photo_view_gallery.dart';
 import 'package:intl/intl.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/employee/order_detailed_screen.dart';
-import 'package:soloshine/screens/client/pdfview.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
 import '../../models/order.dart';
 import '../../services/order_service.dart';
@@ -928,7 +927,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       ),
       body: Column(
         children: [
-          // Search Bar - Always Visible
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -1500,10 +1498,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     if (_allOrders.isEmpty && !_hasActiveFilters())
       return const SizedBox.shrink();
 
-    // Always use _allOrders for status counts
+    // Always show all statuses, with counts from _allOrders
     final statusCounts = <OrderStatus, int>{};
-    for (final order in _allOrders) {
-      statusCounts[order.status] = (statusCounts[order.status] ?? 0) + 1;
+    for (final status in OrderStatus.values) {
+      statusCounts[status] =
+          _allOrders.where((order) => order.status == status).length;
     }
 
     return Container(
@@ -1583,13 +1582,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     ),
                   ),
                   // Status-specific buttons (always show all statuses)
-                  ...statusCounts.entries.map((entry) {
-                    final isSelected = _selectedStatus == entry.key;
+                  ...OrderStatus.values.map((status) {
+                    final isSelected = _selectedStatus == status;
+                    final count = statusCounts[status] ?? 0;
                     return GestureDetector(
                       onTap: () {
                         setState(() {
                           // Toggle filter: if already selected, clear it; otherwise set it
-                          _selectedStatus = isSelected ? null : entry.key;
+                          _selectedStatus = isSelected ? null : status;
                         });
                         _loadData(); // Reload data from API
                       },
@@ -1602,16 +1602,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                         decoration: BoxDecoration(
                           color:
                               isSelected
-                                  ? _getStatusColor(entry.key).withOpacity(0.2)
-                                  : _getStatusColor(entry.key).withOpacity(0.1),
+                                  ? _getStatusColor(status).withOpacity(0.2)
+                                  : _getStatusColor(status).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color:
                                 isSelected
-                                    ? _getStatusColor(entry.key)
-                                    : _getStatusColor(
-                                      entry.key,
-                                    ).withOpacity(0.3),
+                                    ? _getStatusColor(status)
+                                    : _getStatusColor(status).withOpacity(0.3),
                             width: isSelected ? 2 : 1,
                           ),
                         ),
@@ -1622,16 +1620,16 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                               width: 8,
                               height: 8,
                               decoration: BoxDecoration(
-                                color: _getStatusColor(entry.key),
+                                color: _getStatusColor(status),
                                 shape: BoxShape.circle,
                               ),
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              '${_getStatusText(entry.key)}: ${entry.value}',
+                              '${_getStatusText(status)}: $count',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: _getStatusColor(entry.key),
+                                color: _getStatusColor(status),
                                 fontWeight:
                                     isSelected
                                         ? FontWeight.w600
