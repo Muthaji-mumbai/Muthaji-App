@@ -107,7 +107,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   List<String> get _availableOrderTypes {
     final currentUser = context.read<AuthProvider>().currentUser;
     if (currentUser?.role == UserRole.employee) {
-      return ['Bulk']; // Employee can only see bulk orders
+      return _orderTypeOptions; // Employee can only see bulk orders
     }
     return _orderTypeOptions; // Admin sees all options
   }
@@ -247,7 +247,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     _selectedPriority = order.orderPriority ?? 'Regular';
 
     // Handle party information for bulk orders
-    if (order.partyname != null && order.orderType == 'Bulk') {
+    if (order.partyname != null && order.orderType == 'Bulk' ||
+        order.partyname != null && order.orderType == 'Single') {
       _selectedPartyId = order.partyname;
       // Load parties to get the party name
       if (_shouldShowOrderTypeSelection()) {
@@ -547,9 +548,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                  'Order created successfully! ',
-                ),
+                content: Text('Order created successfully! '),
                 backgroundColor: AppConstants.successColor,
               ),
             );
@@ -1005,9 +1004,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     });
                   },
                   validator: (value) {
-                    if (_selectedOrderType == 'Bulk' &&
-                        (value == null || value.isEmpty)) {
-                      return 'Please select a party for bulk orders';
+                    if (_selectedOrderType == 'Bulk' ||
+                        _selectedOrderType == 'Single' &&
+                            (value == null || value.isEmpty)) {
+                      return 'Please select a party';
                     }
                     return null;
                   },
@@ -1192,7 +1192,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             ),
             // Show party selection for bulk orders
             if (_shouldShowOrderTypeSelection() &&
-                _selectedOrderType == 'Bulk') ...[
+                    _selectedOrderType == 'Bulk' ||
+                _selectedOrderType == 'Single') ...[
               const SizedBox(height: AppConstants.spacingM),
               _buildPartySelectionField(),
             ],
@@ -1224,9 +1225,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                               _fetchParties();
                             }
                             // Clear party selection when switching to single orders
-                            if (type == 'Single') {
-                              _selectedPartyId = null;
-                              _selectedPartyName = null;
+                            if (type == 'Single' &&
+                                _allUsers.isEmpty &&
+                                !_loadingParties) {
+                              _fetchParties();
                             }
                           });
                         },

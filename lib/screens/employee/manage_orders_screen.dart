@@ -1984,8 +1984,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             const SizedBox(width: 8),
                           ],
                           // Show party name for bulk orders
-                          if (order.orderType == 'Bulk' &&
-                              order.partynameDisplay != null) ...[
+                          if (order.orderType == 'Bulk' ||
+                              order.orderType == 'Single' &&
+                                  order.partynameDisplay != null) ...[
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 6,

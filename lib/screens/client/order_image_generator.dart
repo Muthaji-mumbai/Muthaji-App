@@ -40,7 +40,8 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
 
   List<String> get _currentOrnamentImages {
     if (widget.order.ornamentDetails.isEmpty) return widget.order.images;
-    final selectedOrnament = widget.order.ornamentDetails[_currentOrnamentIndex];
+    final selectedOrnament =
+        widget.order.ornamentDetails[_currentOrnamentIndex];
     return selectedOrnament.images.isNotEmpty
         ? selectedOrnament.images
         : widget.order.images;
@@ -71,9 +72,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           key: _repaintBoundaryKey,
           child: Container(
             color: Colors.grey[50],
-            child: widget.order.ornamentDetails.isEmpty
-                ? _buildSingleOrderView()
-                : _buildMultiOrnamentView(),
+            child:
+                widget.order.ornamentDetails.isEmpty
+                    ? _buildSingleOrderView()
+                    : _buildMultiOrnamentView(),
           ),
         ),
       ),
@@ -105,6 +107,25 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
               color: Colors.grey[600],
             ),
           ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: _getStatusColor(widget.order.status).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _getStatusColor(widget.order.status).withOpacity(0.3),
+              ),
+            ),
+            child: Text(
+              _getStatusText(widget.order.status),
+              style: TextStyle(
+                color: _getStatusColor(widget.order.status),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
       actions: [
@@ -112,16 +133,17 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           padding: const EdgeInsets.only(right: 16),
           child: ElevatedButton.icon(
             onPressed: _isGeneratingImage ? null : _generateAndShareImage,
-            icon: _isGeneratingImage
-                ? SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Icon(Icons.share, size: 16),
+            icon:
+                _isGeneratingImage
+                    ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                    : Icon(Icons.share, size: 16),
             label: Text(
               _isGeneratingImage ? 'Sharing...' : 'Share',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
@@ -180,9 +202,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                 itemCount: widget.order.ornamentDetails.length,
                 itemBuilder: (context, index) {
                   final ornament = widget.order.ornamentDetails[index];
-                  final images = ornament.images.isNotEmpty
-                      ? ornament.images
-                      : widget.order.images;
+                  final images =
+                      ornament.images.isNotEmpty
+                          ? ornament.images
+                          : widget.order.images;
                   final key = _ensureOrnamentKey(index);
                   return _buildOrderPage(
                     pageKey: key,
@@ -202,7 +225,8 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                 },
               ),
             ),
-            if (widget.order.ornamentDetails.length > 1) _buildOrnamentIndicators(),
+            if (widget.order.ornamentDetails.length > 1)
+              _buildOrnamentIndicators(),
           ],
         );
       },
@@ -244,14 +268,32 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             final isCompact = constraints.maxWidth < 600;
             if (isCompact) {
               return _buildCompactLayout(
-                ornamentName, purity, weight, quantity, remarks,
-                unit, size, colorstone, rhodium, dull, images,
+                ornamentName,
+                purity,
+                weight,
+                quantity,
+                remarks,
+                unit,
+                size,
+                colorstone,
+                rhodium,
+                dull,
+                images,
                 constraints.maxWidth,
               );
             } else {
               return _buildWideLayout(
-                ornamentName, purity, weight, quantity, remarks,
-                unit, size, colorstone, rhodium, dull, images,
+                ornamentName,
+                purity,
+                weight,
+                quantity,
+                remarks,
+                unit,
+                size,
+                colorstone,
+                rhodium,
+                dull,
+                images,
                 constraints.maxWidth,
               );
             }
@@ -262,9 +304,18 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
   }
 
   Widget _buildCompactLayout(
-    String ornamentName, String purity, String weight, String quantity,
-    String remarks, String unit, String size, String colorstone,
-    String rhodium, String dull, List<String> images, double width,
+    String ornamentName,
+    String purity,
+    String weight,
+    String quantity,
+    String remarks,
+    String unit,
+    String size,
+    String colorstone,
+    String rhodium,
+    String dull,
+    List<String> images,
+    double width,
   ) {
     return Column(
       children: [
@@ -300,7 +351,8 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                       ),
                     ),
                     // Show party name for bulk orders
-                    if (widget.order.orderType == 'Bulk' && widget.order.partynameDisplay != null)
+                    if (widget.order.orderType == 'Bulk' &&
+                        widget.order.partynameDisplay != null)
                       Text(
                         'Party: ${widget.order.partynameDisplay}',
                         style: TextStyle(
@@ -341,8 +393,17 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         Padding(
           padding: const EdgeInsets.all(16),
           child: _buildDetailsGrid(
-            ornamentName, purity, weight, quantity, remarks,
-            unit, size, colorstone, rhodium, dull, width,
+            ornamentName,
+            purity,
+            weight,
+            quantity,
+            remarks,
+            unit,
+            size,
+            colorstone,
+            rhodium,
+            dull,
+            width,
           ),
         ),
         if (images.isNotEmpty) ...[
@@ -358,9 +419,18 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
   }
 
   Widget _buildWideLayout(
-    String ornamentName, String purity, String weight, String quantity,
-    String remarks, String unit, String size, String colorstone,
-    String rhodium, String dull, List<String> images, double width,
+    String ornamentName,
+    String purity,
+    String weight,
+    String quantity,
+    String remarks,
+    String unit,
+    String size,
+    String colorstone,
+    String rhodium,
+    String dull,
+    List<String> images,
+    double width,
   ) {
     return Row(
       children: [
@@ -372,7 +442,9 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.blue[50],
-                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(12)),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -395,8 +467,17 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: _buildDetailsGrid(
-                    ornamentName, purity, weight, quantity, remarks,
-                    unit, size, colorstone, rhodium, dull, width,
+                    ornamentName,
+                    purity,
+                    weight,
+                    quantity,
+                    remarks,
+                    unit,
+                    size,
+                    colorstone,
+                    rhodium,
+                    dull,
+                    width,
                   ),
                 ),
               ),
@@ -406,25 +487,57 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         Container(width: 1, color: Colors.grey[200]),
         Expanded(
           flex: 3,
-          child: images.isNotEmpty
-              ? Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _buildImagesGrid(images, width),
-                )
-              : const Center(child: _NoImagesWidget()),
+          child:
+              images.isNotEmpty
+                  ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: _buildImagesGrid(images, width),
+                  )
+                  : const Center(child: _NoImagesWidget()),
         ),
       ],
     );
   }
 
   Widget _buildDetailsGrid(
-    String ornamentName, String purity, String weight, String quantity,
-    String remarks, String unit, String size, String colorstone,
-    String rhodium, String dull, double width,
+    String ornamentName,
+    String purity,
+    String weight,
+    String quantity,
+    String remarks,
+    String unit,
+    String size,
+    String colorstone,
+    String rhodium,
+    String dull,
+    double width,
   ) {
     return SingleChildScrollView(
       child: Column(
         children: [
+          // Status chip at the top of details grid
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: _getStatusColor(widget.order.status).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _getStatusColor(widget.order.status).withOpacity(0.3),
+                ),
+              ),
+              child: Text(
+                _getStatusText(widget.order.status),
+                style: TextStyle(
+                  color: _getStatusColor(widget.order.status),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
           _buildDetailRow('Purity', purity),
           _buildDetailRow('Unit', unit),
           _buildDetailRow('Size', size),
@@ -433,9 +546,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           _buildDetailRow('Colorstone', colorstone),
           _buildDetailRow('Rhodium', rhodium),
           _buildDetailRow('Dull', dull),
-          if (remarks.isNotEmpty) ...[
-            _buildRemarksSection(remarks),
-          ],
+          if (remarks.isNotEmpty) ...[_buildRemarksSection(remarks)],
         ],
       ),
     );
@@ -585,23 +696,28 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
               ),
             );
           },
-          errorBuilder: (context, error, stackTrace) => Container(
-            color: Colors.red[50],
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.broken_image, color: Colors.red[300], size: 24),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Failed to load',
-                    style: TextStyle(fontSize: 10, color: Colors.red[600]),
-                    textAlign: TextAlign.center,
+          errorBuilder:
+              (context, error, stackTrace) => Container(
+                color: Colors.red[50],
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.broken_image,
+                        color: Colors.red[300],
+                        size: 24,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Failed to load',
+                        style: TextStyle(fontSize: 10, color: Colors.red[600]),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
         ),
       ),
     );
@@ -645,9 +761,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                     height: 6,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(3),
-                      color: index == _currentOrnamentIndex
-                          ? Colors.blue
-                          : Colors.grey[300],
+                      color:
+                          index == _currentOrnamentIndex
+                              ? Colors.blue
+                              : Colors.grey[300],
                     ),
                   ),
                 ),
@@ -671,7 +788,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
               SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(width: 12),
               Text('Preparing all ornament details for sharing...'),
@@ -688,10 +808,13 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         final index = -1;
         _ensureOrnamentKey(index);
         final key = _ornamentKeys[index]!;
-        final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+        final boundary =
+            key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
         if (boundary != null) {
           final pageImage = await boundary.toImage(pixelRatio: 3.0);
-          final pageBytes = await pageImage.toByteData(format: ui.ImageByteFormat.png);
+          final pageBytes = await pageImage.toByteData(
+            format: ui.ImageByteFormat.png,
+          );
           if (pageBytes != null) {
             pagePngs.add(pageBytes.buffer.asUint8List());
           }
@@ -711,10 +834,13 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           await _waitForBuild();
 
           final key = _ornamentKeys[i] ?? _ensureOrnamentKey(i);
-          final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+          final boundary =
+              key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
           if (boundary != null) {
             final pageImage = await boundary.toImage(pixelRatio: 3.0);
-            final pageBytes = await pageImage.toByteData(format: ui.ImageByteFormat.png);
+            final pageBytes = await pageImage.toByteData(
+              format: ui.ImageByteFormat.png,
+            );
             if (pageBytes != null) {
               pagePngs.add(pageBytes.buffer.asUint8List());
             }
@@ -737,16 +863,20 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
       final files = <XFile>[];
       if (kIsWeb) {
         for (int i = 0; i < pagePngs.length; i++) {
-          files.add(XFile.fromData(
-            pagePngs[i],
-            mimeType: 'image/png',
-            name: 'order_${widget.order.id}_page${i + 1}.png',
-          ));
+          files.add(
+            XFile.fromData(
+              pagePngs[i],
+              mimeType: 'image/png',
+              name: 'order_${widget.order.id}_page${i + 1}.png',
+            ),
+          );
         }
       } else {
         final directory = await getTemporaryDirectory();
         for (int i = 0; i < pagePngs.length; i++) {
-          final file = File('${directory.path}/order_${widget.order.id}_page${i + 1}.png');
+          final file = File(
+            '${directory.path}/order_${widget.order.id}_page${i + 1}.png',
+          );
           await file.writeAsBytes(pagePngs[i]);
           files.add(XFile(file.path));
         }
@@ -754,7 +884,8 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
 
       await Share.shareXFiles(
         files,
-        text: 'Order Details - ${widget.order.orderNo},${widget.order.clientName}',
+        text:
+            'Order Details - ${widget.order.orderNo},${widget.order.clientName}',
       );
 
       if (mounted) {
@@ -795,10 +926,67 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
 
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  // Helper to get readable status string
+  String _getStatusText(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return 'Pending';
+      case OrderStatus.Casted:
+        return 'Casted';
+      case OrderStatus.Wax:
+        return 'Wax';
+      case OrderStatus.DC:
+        return 'DC';
+      case OrderStatus.cancelled:
+        return 'Cancelled';
+      case OrderStatus.delay:
+        return 'Delay';
+      case OrderStatus.due:
+        return 'Due';
+      case OrderStatus.partialDelivery:
+        return 'Partial Delivery';
+      case OrderStatus.PendingDisp:
+        return 'PendingDisp';
+    }
+  }
+
+  Color _getStatusColor(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return const Color(0xFFFF9800); // Orange
+      case OrderStatus.Casted:
+        return const Color(0xFF2196F3); // Blue
+      case OrderStatus.Wax:
+        return const Color(0xFF9C27B0); // Purple
+      case OrderStatus.DC:
+        return const Color(0xFF4CAF50); // Green
+      case OrderStatus.cancelled:
+        return const Color(0xFFF44336); // Red
+      case OrderStatus.delay:
+        return const Color(0xFFF44336); // Red
+      case OrderStatus.due:
+        return const Color(0xFFF44336); // Red
+      case OrderStatus.partialDelivery:
+        return Colors.teal; // fallback
+      case OrderStatus.PendingDisp:
+        return Colors.amber; // fallback
+    }
   }
 }
 
@@ -834,10 +1022,7 @@ class _NoImagesWidget extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           'Images will appear here when uploaded',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[500],
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
           textAlign: TextAlign.center,
         ),
       ],
