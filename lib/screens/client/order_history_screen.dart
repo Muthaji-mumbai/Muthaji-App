@@ -155,7 +155,14 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   void initState() {
     super.initState();
     // Tabs: All, Pending, In Progress, Delivered, Cancelled (+ Partially Delivered for bulk)
-    _tabs = _updateTabs();
+    _tabs = [
+      'All',
+      'Pending',
+      'In Progress',
+      'Partially Delivered',
+      'Delivered',
+      'Cancelled',
+    ];
     _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(() {
       setState(() {
@@ -165,10 +172,17 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     });
     _loadOrders();
   }
-  _updateTabs() {
 
-    if (_orderType?.toLowerCase() == 'bulk') {
-      _tabs = ['All', 'Pending', 'In Progress', 'Partially Delivered', 'Delivered', 'Cancelled'];
+  _updateTabs() {
+    if (_orderType?.toLowerCase() == 'Bulk') {
+      _tabs = [
+        'All',
+        'Pending',
+        'In Progress',
+        'Partially Delivered',
+        'Delivered',
+        'Cancelled',
+      ];
     } else {
       _tabs = ['All', 'Pending', 'In Progress', 'Delivered', 'Cancelled'];
     }
@@ -279,6 +293,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppConstants.backgroundColor,
@@ -299,11 +314,15 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       body: TabBarView(
         controller: _tabController,
         children: List.generate(_tabs.length, (tabIdx) {
-          // Only show the filtered list for the selected tab
-          if (_selectedTabIndex != tabIdx) return const SizedBox.shrink();
+          // Apply tab filter dynamically
+          if (_selectedTabIndex == tabIdx) {
+            _applyFilters(); // Ensure filters are applied for the current tab
+          }
           return Column(
             children: [
               _buildSearchAndFilterSection(),
+              // Add date filter section
+              _buildDateFilterSection(),
               Expanded(
                 child:
                     _isLoading
@@ -329,6 +348,34 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             ],
           );
         }),
+      ),
+    );
+  }
+
+  // New method for date filter section
+  Widget _buildDateFilterSection() {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        boxShadow: AppConstants.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _pickDate(isFrom: true),
+              child: _buildDateField(label: 'From', date: _fromDate),
+            ),
+          ),
+          const SizedBox(width: AppConstants.spacingM),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _pickDate(isFrom: false),
+              child: _buildDateField(label: 'To', date: _toDate),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -478,194 +525,95 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   // Collapsible row with summary and expandable details
   Widget _buildOrderTile(int index, Order order) {
     final isOpen = _expanded.contains(index);
-    return Dismissible(
-      key: Key(order.id),
-      direction: DismissDirection.horizontal,
-      // Right swipe (startToEnd) => Edit
-      background: Container(
-        color: AppConstants.primaryColor,
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: AppConstants.spacingM),
-        child: const Icon(Icons.edit, color: Colors.white),
-      ),
-      // Left swipe (endToStart) => Cancel
-      secondaryBackground: Container(
-        color: AppConstants.errorColor,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: AppConstants.spacingM),
-        child: const Icon(Icons.cancel, color: Colors.white),
-      ),
-      confirmDismiss: (direction) async {
-        // Right swipe to Edit
-        if (direction == DismissDirection.startToEnd) {
-          if (order.status != OrderStatus.pending) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Only pending orders can be edited'),
-                  backgroundColor: AppConstants.errorColor,
-                ),
-              );
-            }
-            return false; // Do not dismiss
-          }
-          // Navigate to CreateOrderScreen in edit mode; reload on success
-          final updated = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CreateOrderScreen(orderToEdit: order),
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
+          decoration: BoxDecoration(
+            color: AppConstants.surfaceColor,
+            borderRadius: BorderRadius.circular(AppConstants.radiusM),
+            boxShadow: AppConstants.cardShadow,
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              initiallyExpanded: isOpen,
+              onExpansionChanged: (open) {
+                setState(() {
+                  if (open) {
+                    _expanded.add(index);
+                  } else {
+                    _expanded.remove(index);
+                  }
+                });
+              },
+              tilePadding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingM,
+                vertical: AppConstants.spacingS,
+              ),
+              // trailing:
+              //     isOpen ? _buildStatusChip(order) : _buildStatusChip(order),
+              title: _buildOrderSummary(index, order),
+              childrenPadding: const EdgeInsets.all(AppConstants.spacingM),
+              children: [_buildOrderDetails(order)],
             ),
-          );
-          if (updated == true) {
-            _loadOrders();
-          }
-          return false; // Never dismiss; we handle refresh ourselves
-        }
-        // Left swipe to Cancel
-        else if (direction == DismissDirection.endToStart) {
-          final confirm =
-              await showDialog<bool>(
-                context: context,
-                builder:
-                    (ctx) => AlertDialog(
-                      title: const Text('Cancel Order?'),
-                      content: const Text(
-                        'Are you sure you want to cancel this order? This action cannot be undone.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('No'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Yes'),
-                        ),
-                      ],
-                    ),
-              ) ??
-              false;
-          if (!confirm) return false;
-
-          final token = AuthService.currentToken;
-          if (token == null) return false;
-          try {
-            await OrderService.updateOrderStatus(
-              orderId: order.id,
-              newStatus: OrderStatus.cancelled,
-              token: token,
-            );
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Order cancelled successfully'),
-                  backgroundColor: AppConstants.successColor,
-                ),
-              );
-            }
-            _loadOrders();
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to cancel order: $e'),
-                  backgroundColor: AppConstants.errorColor,
-                ),
-              );
-            }
-          }
-          return false; // Do not dismiss; keep list stable
-        }
-        return false; // Default: never dismiss via swipe
-      },
-      // onDismissed no longer used since we don't actually dismiss items
-      child: Stack(
-        children: [
-          Container(
-            margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
+          ),
+        ),
+        if (_isUrgent(order))
+          Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
+        // Status ribbon positioned on the right end
+        Positioned(
+          top: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: AppConstants.surfaceColor,
-              borderRadius: BorderRadius.circular(AppConstants.radiusM),
-              boxShadow: AppConstants.cardShadow,
-            ),
-            child: Theme(
-              data: Theme.of(
-                context,
-              ).copyWith(dividerColor: Colors.transparent),
-              child: ExpansionTile(
-                initiallyExpanded: isOpen,
-                onExpansionChanged: (open) {
-                  setState(() {
-                    if (open) {
-                      _expanded.add(index);
-                    } else {
-                      _expanded.remove(index);
-                    }
-                  });
-                },
-                tilePadding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingM,
-                  vertical: AppConstants.spacingS,
-                ),
-                // trailing:
-                //     isOpen ? _buildStatusChip(order) : _buildStatusChip(order),
-                title: _buildOrderSummary(index, order),
-                childrenPadding: const EdgeInsets.all(AppConstants.spacingM),
-                children: [_buildOrderDetails(order)],
+              color: order.statusColor,
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(AppConstants.radiusM),
+                bottomLeft: Radius.circular(8),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: order.statusColor.withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
+            child:
+                ([
+                      OrderStatus.Casted,
+                      OrderStatus.DC,
+                      OrderStatus.PendingDisp,
+                      OrderStatus.Wax,
+                    ].contains(order.status))
+                    ? Text(
+                      "In Progress",
+                      style: AppConstants.bodySmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                        letterSpacing: 0.5,
+                      ),
+                    )
+                    : Text(
+                      order.statusText.toUpperCase(),
+                      style: AppConstants.bodySmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
           ),
-          if (_isUrgent(order))
-            Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
-          // Status ribbon positioned on the right end
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: order.statusColor,
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(AppConstants.radiusM),
-                  bottomLeft: Radius.circular(8),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: order.statusColor.withOpacity(0.3),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: 
-                ([OrderStatus.Casted, OrderStatus.DC, OrderStatus.PendingDisp, OrderStatus.Wax].contains(order.status))
-              ? Text(
-               "In Progress",
-                style: AppConstants.bodySmall.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                  letterSpacing: 0.5,
-                ),
-              ) :
-               Text(
-               order.statusText.toUpperCase(),
-                style: AppConstants.bodySmall.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-          ),
-          // Show Delay over Due when both conditions could be true (positioned below status ribbon)
-          if (_isDelay(order))
-            Positioned(top: 30, right: 0, child: _buildDelayRibbon())
-          else if (_isDue(order))
-            Positioned(top: 30, right: 0, child: _buildDueRibbon()),
-        ],
-      ),
+        ),
+        // Show Delay over Due when both conditions could be true (positioned below status ribbon)
+        if (_isDelay(order))
+          Positioned(top: 30, right: 0, child: _buildDelayRibbon())
+        else if (_isDue(order))
+          Positioned(top: 30, right: 0, child: _buildDueRibbon()),
+      ],
     );
   }
 
