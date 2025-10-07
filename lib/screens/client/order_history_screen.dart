@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart'; // For loading asset images
+import 'package:url_launcher/url_launcher.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
 import '../../providers/auth_provider.dart';
@@ -305,10 +306,33 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadOrders),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: _tabs.map((t) => Tab(text: t)).toList(),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            color: AppConstants.primaryColor,
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              indicatorColor: Colors.white,
+              indicatorWeight: 3,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              tabs: _tabs.map((t) => Tab(
+                text: t,
+                height: 48,
+              )).toList(),
+            ),
+          ),
         ),
       ),
       body: TabBarView(
@@ -642,26 +666,36 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                       ),
                     );
                   }
+                  final isPdf = url.toLowerCase().endsWith('.pdf');
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      url,
-                      width: 48,
-                      height: 48,
-                      fit: BoxFit.cover,
-                      errorBuilder:
-                          (c, e, s) => Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                    child: isPdf
+                        ? Container(
+                            color: Colors.red.shade50,
                             child: Icon(
-                              Icons.broken_image_outlined,
-                              color: Colors.grey.shade400,
-                              size: 20,
+                              Icons.picture_as_pdf,
+                              color: Colors.red.shade400,
+                              size: 24,
                             ),
+                          )
+                        : Image.network(
+                            url,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (c, e, s) => Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.broken_image_outlined,
+                                    color: Colors.grey.shade400,
+                                    size: 20,
+                                  ),
+                                ),
                           ),
-                    ),
                   );
                 },
               ),
@@ -1301,22 +1335,48 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final url = images[index];
+          final isPdf = url.toLowerCase().endsWith('.pdf');
+          
           return GestureDetector(
             onTap: () => _showImagePreview(url),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppConstants.radiusS),
               child: AspectRatio(
                 aspectRatio: 1,
-                child: Image.network(
-                  url,
-                  fit: BoxFit.cover,
-                  errorBuilder:
-                      (context, error, stack) => Container(
-                        color: AppConstants.backgroundColor,
+                child: isPdf
+                    ? Container(
+                        color: Colors.red.shade50,
                         alignment: Alignment.center,
-                        child: const Icon(Icons.broken_image),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.picture_as_pdf,
+                              color: Colors.red.shade400,
+                              size: 40,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'PDF',
+                              style: TextStyle(
+                                color: Colors.red.shade400,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Image.network(
+                        url,
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (context, error, stack) => Container(
+                              color: AppConstants.backgroundColor,
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.broken_image),
+                            ),
                       ),
-                ),
               ),
             ),
           );
@@ -1325,51 +1385,98 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     );
   }
 
-  void _showImagePreview(String url) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => Dialog(
-            insetPadding: const EdgeInsets.all(16),
-            child: Stack(
-              children: [
-                InteractiveViewer(
-                  minScale: 0.5,
-                  maxScale: 4,
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: Image.network(
-                      url,
-                      fit: BoxFit.contain,
-                      errorBuilder:
-                          (context, error, stack) => SizedBox(
-                            height: 300,
-                            child: Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.broken_image, size: 40),
-                                  SizedBox(height: 8),
-                                  Text('Failed to load image'),
-                                ],
+  void _showImagePreview(String url) async {
+    // Check if the URL is a PDF
+    if (url.toLowerCase().endsWith('.pdf')) {
+      // Open PDF in external viewer
+      try {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.error, color: Colors.white, size: 20),
+                    SizedBox(width: 12),
+                    Text('Unable to open PDF'),
+                  ],
+                ),
+                backgroundColor: AppConstants.errorColor,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  Text('Error opening PDF: $e'),
+                ],
+              ),
+              backgroundColor: AppConstants.errorColor,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } else {
+      // Show image preview dialog
+      showDialog(
+        context: context,
+        builder:
+            (context) => Dialog(
+              insetPadding: const EdgeInsets.all(16),
+              child: Stack(
+                children: [
+                  InteractiveViewer(
+                    minScale: 0.5,
+                    maxScale: 4,
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: Image.network(
+                        url,
+                        fit: BoxFit.contain,
+                        errorBuilder:
+                            (context, error, stack) => SizedBox(
+                              height: 300,
+                              child: Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.broken_image, size: 40),
+                                    SizedBox(height: 8),
+                                    Text('Failed to load image'),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
+                      ),
                     ),
                   ),
-                ),
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-    );
+      );
+    }
   }
 
   Widget _buildDateField({required String label, DateTime? date}) {
