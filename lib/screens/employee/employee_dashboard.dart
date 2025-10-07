@@ -107,7 +107,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         return 'Partial Delivery';
       case OrderStatus.PendingDisp:
         return 'PendingDisp';
-        case OrderStatus.completed:
+        case OrderStatus.Completed:
         return 'Completed';
     }
   }
@@ -132,7 +132,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         return AppConstants.partialDeliveryColor;
       case OrderStatus.PendingDisp:
         return AppConstants.PendingDisp;
-             case OrderStatus.completed:
+             case OrderStatus.Completed:
         return AppConstants.Completed;
     }
   }

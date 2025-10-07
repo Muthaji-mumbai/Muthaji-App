@@ -186,6 +186,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
 
   Future<void> _checkAndUpdateDeliveredOrders(String token) async {
     try {
+      final currentUser = AuthService.currentUser;
       final ordersToUpdate =
           _allOrders.where((order) => order.shouldBeDelivered).toList();
 
@@ -195,6 +196,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             await OrderService.updateOrderStatus(
               orderId: order.id,
               newStatus: OrderStatus.DC, // Mark as delivered
+              userId: currentUser?.id,
               token: token,
             );
           } catch (e) {
@@ -446,6 +448,27 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   }
 
   Future<void> _updateOrderStatus(Order order, OrderStatus newStatus) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(
+              color: AppConstants.primaryColor,
+            ),
+            const SizedBox(height: 16),
+            const Text('Updating order status...'),
+          ],
+        ),
+      ),
+    );
+
     try {
       final token = AuthService.currentToken;
       final currentUser = AuthService.currentUser;
@@ -456,7 +479,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           userId: currentUser?.id,
           token: token,
         );
-        _loadData();
+        await _loadData();
+        
+        // Close loading dialog
+        if (mounted) Navigator.of(context).pop();
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -476,9 +503,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           );
         }
       } else {
+        // Close loading dialog
+        if (mounted) Navigator.of(context).pop();
         throw Exception('No authentication token');
       }
     } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -651,11 +683,13 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     );
 
     try {
+      final currentUser = AuthService.currentUser;
       for (final id in _selectedOrderIds) {
         final order = _allOrders.firstWhere((o) => o.id == id);
         await OrderService.updateOrderStatus(
           orderId: order.id,
           newStatus: status,
+          userId: currentUser?.id,
           token: token,
         );
       }
@@ -2293,9 +2327,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Order Details Grid
-
-          // Ornament Details (with images under each detail)
+        
           if (order.ornamentDetails.isNotEmpty) ...[
             const SizedBox(height: 20),
             _buildDetailSection('Ornament Details', []),
@@ -2799,7 +2831,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         return const Color.fromARGB(255, 75, 121, 118);
       case OrderStatus.PendingDisp:
         return AppConstants.PendingDisp;
-      case OrderStatus.completed:
+      case OrderStatus.Completed:
         return AppConstants.Completed;
     }
   }
@@ -2824,7 +2856,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         return 'Partial Delivery';
       case OrderStatus.PendingDisp:
         return 'PendingDisp';
-      case OrderStatus.completed:
+      case OrderStatus.Completed:
         return 'Completed';
     }
   }

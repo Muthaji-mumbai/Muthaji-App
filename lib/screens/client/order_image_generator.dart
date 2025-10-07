@@ -964,7 +964,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         return 'Partial Delivery';
       case OrderStatus.PendingDisp:
         return 'PendingDisp';
-        case OrderStatus.completed:
+        case OrderStatus.Completed:
         return 'Completed';
     }
   }
@@ -989,7 +989,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         return Colors.teal; // fallback
       case OrderStatus.PendingDisp:
         return Colors.amber; 
-          case OrderStatus.completed:
+          case OrderStatus.Completed:
         return AppConstants.Completed;
     }
   }
