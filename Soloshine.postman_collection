@@ -1,0 +1,642 @@
+{
+	"info": {
+		"_postman_id": "e78eb996-1159-4922-8b38-b0082400c5e9",
+		"name": "Gold Order App Backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "32801106"
+	},
+	"item": [
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Get All User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODljYWEwMzQyYjcxNmI5MDQ1MDM1ODciLCJlbWFpbCI6ImZyaW5nZWtzMDExQGdtYWlsLmNvbSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc1NTA5ODMyOSwiZXhwIjoxNzU1MTE5OTI5fQ.xnfCkdmTEM8xDWX5sB6iIHxwU-HxNkJvnsY1WFOPLY4",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/user",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"user"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add user",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODljYWEwMzQyYjcxNmI5MDQ1MDM1ODciLCJlbWFpbCI6ImZyaW5nZWtzMDExQGdtYWlsLmNvbSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc1NTEwMDE1MiwiZXhwIjoxNzU1MTIxNzUyfQ.U72FajBoXWv8KPxwmm7NzjLGx_842BgC-iDFWpGJy-8",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\":\"Fringe\",\r\n    \"email\":\"fringeks011@gmail.com\",\r\n    \"password\":\"123456\",\r\n    \"phone\":\"9961857227\",\r\n    \"role\": \"admin\",\r\n    \"address\":\"Thrissur\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/user",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"user"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by id",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODljYWEwMzQyYjcxNmI5MDQ1MDM1ODciLCJlbWFpbCI6ImZyaW5nZWtzMDExQGdtYWlsLmNvbSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc1NTEwMDE1MiwiZXhwIjoxNzU1MTIxNzUyfQ.U72FajBoXWv8KPxwmm7NzjLGx_842BgC-iDFWpGJy-8",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/user/689caa0342b716b904503587",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"user",
+								"689caa0342b716b904503587"
+							],
+							"query": [
+								{
+									"key": "",
+									"value": null,
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGM5YTMwMDExZTliM2Q5ZTBkMDg2MmMiLCJlbWFpbCI6ImVtcGxveWVlQGdtYWlscy5jb20iLCJyb2xlIjoiY3VzdG9tZXIiLCJpYXQiOjE3NTgxMzMyODYsImV4cCI6MTc2MDcyNTI4Nn0.xpnFteAXAFsayv9PspPs4Yilc7ag7OYrnS7m1uqNMR8",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"fcmtoken\": \"c0xIL7lCS-mg_OzKkRxnKH:APA91bH2nlpmKBqvSkfWyDyggobiDbukyuudWmqgdfKqau0PY1obtZWVDGUGESje5H9nhDwvct7Mh2zQ-45j_-qtvAeDcBqMBY6BqyDq1-BZfzbs6ei-zG0\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/user/68c9a30011e9b3d9e0d0862c",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"user",
+								"68c9a30011e9b3d9e0d0862c"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODljYWEwMzQyYjcxNmI5MDQ1MDM1ODciLCJlbWFpbCI6ImZyaW5nZWtzMDExQGdtYWlsLmNvbSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc1NTA5ODMyOSwiZXhwIjoxNzU1MTE5OTI5fQ.xnfCkdmTEM8xDWX5sB6iIHxwU-HxNkJvnsY1WFOPLY4",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/user/689cab7d17be0c67989f6bc9",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"user",
+								"689cab7d17be0c67989f6bc9"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\":\"fringeks011@gmail.com\",\r\n    \"password\":\"123456\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/auth/login",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Order",
+			"item": [
+				{
+					"name": "Get all  order",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODljYWEwMzQyYjcxNmI5MDQ1MDM1ODciLCJlbWFpbCI6ImZyaW5nZWtzMDExQGdtYWlsLmNvbSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc1NTEwMDE1MiwiZXhwIjoxNzU1MTIxNzUyfQ.U72FajBoXWv8KPxwmm7NzjLGx_842BgC-iDFWpGJy-8",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\":\"Fringe\",\r\n    \"email\":\"fringeks0112@gmail.com\",\r\n    \"password\":\"123456\",\r\n    \"phone\":\"9961857227\",\r\n    \"role\": \"customer\",\r\n    \"address\":\"Kodappully house, Thrissur\"\r\n}"
+						},
+						"url": {
+							"raw": "{{baseURL}}/order",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"order"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Order by Id",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODljYWEwMzQyYjcxNmI5MDQ1MDM1ODciLCJlbWFpbCI6ImZyaW5nZWtzMDExQGdtYWlsLmNvbSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc1NTEwMDE1MiwiZXhwIjoxNzU1MTIxNzUyfQ.U72FajBoXWv8KPxwmm7NzjLGx_842BgC-iDFWpGJy-8",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/order/689e241e19714482c1a37694",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"order",
+								"689e241e19714482c1a37694"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODljYWEwMzQyYjcxNmI5MDQ1MDM1ODciLCJlbWFpbCI6ImZyaW5nZWtzMDExQGdtYWlsLmNvbSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc1NTEwMDE1MiwiZXhwIjoxNzU1MTIxNzUyfQ.U72FajBoXWv8KPxwmm7NzjLGx_842BgC-iDFWpGJy-8",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "userid",
+									"value": "689caa0342b716b904503587",
+									"type": "text"
+								},
+								{
+									"key": "orderdate",
+									"value": "2025-08-14",
+									"type": "text"
+								},
+								{
+									"key": "ordertype",
+									"value": "Single",
+									"type": "text"
+								},
+								{
+									"key": "ornamentDetails",
+									"value": "[{\"name\":\"Ring\",\"material\":\"Gold\",\"weight\":5,\"purity\":\"18K\",\"quantity\":100},{\"name\":\"Necklace\",\"material\":\"Platinum\",\"weight\":10,\"purity\":\"22K\",\"quantity\":20}]",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseURL}}/order/689e573ffda0657c8896ae69",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"order",
+								"689e573ffda0657c8896ae69"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Order",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGM5OTc4NzMwOTM0MjE0NWZjMWYwOGIiLCJlbWFpbCI6ImZyaW5nZWtzMDExQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1ODQwNTE1MiwiZXhwIjoxNzYwOTk3MTUyfQ.SUbm8RjR9SPaqEYjI-S5fvd9WIMPnZFhwJ8e-8H-Qrw",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/order/68cf2b816f6dfae22cc0db0c",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"order",
+								"68cf2b816f6dfae22cc0db0c"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODllMTc4MmUwZjNkNzJmNzIzNjVhZTIiLCJlbWFpbCI6ImNvZG9pdDUzQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1NzQyNTkxMywiZXhwIjoxNzU3NDQ3NTEzfQ.VvSr2YVC2Jyq4wbRbGUcpTA9T7fnE7WiDxdbzyWw2a4",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "userid",
+									"value": "689e1782e0f3d72f72365ae2",
+									"type": "text"
+								},
+								{
+									"key": "orderdate",
+									"value": "2025-09-09",
+									"type": "text"
+								},
+								{
+									"key": "ordertype",
+									"value": "Single",
+									"type": "text"
+								},
+								{
+									"key": "status",
+									"value": "pending",
+									"type": "text"
+								},
+								{
+									"key": "orderpriority",
+									"value": "Urgent",
+									"type": "text"
+								},
+								{
+									"key": "ornamentDetails",
+									"value": "[{\"name\":\"68be790f38dd21af7604823a\",\"size\":\"2.4\",\"unit\":\"a\",\"colorstone\":\"Red\",\"rhodium\":\"Ganga Jamuna\",\"dull\":\"Dull\",\"weight\":2,\"purity\":\"18K Yellow gold\",\"quantity\":\"2\",\"remarks\":\"Test\"\n}]",
+									"type": "text"
+								},
+								{
+									"key": "image0",
+									"type": "file",
+									"src": "/C:/Users/fring/Downloads/Nivea Men Deep Impact Scalp Clean Shampoo (250 ml).jpeg"
+								}
+							]
+						},
+						"url": {
+							"raw": "https://soloshine-backend.onrender.com/order",
+							"protocol": "https",
+							"host": [
+								"soloshine-backend",
+								"onrender",
+								"com"
+							],
+							"path": [
+								"order"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update order status",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODllMTc4MmUwZjNkNzJmNzIzNjVhZTIiLCJlbWFpbCI6ImNvZG9pdDUzQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1NjEzNTg3NSwiZXhwIjoxNzU2MTU3NDc1fQ.95CUidXHYyR4Ez8CxcVXrKfy6O07MeSXUGITHMFjRh0",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"orderIds\": [\"68ac8b196777d2c830401a19\", \"68ac82fca5dbdef3ca46c2cf\", \"68ac8237c94594d2adb0558f\"],\r\n    \"status\": \"Completed\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/order/updateorderstatus",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"order",
+								"updateorderstatus"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Category",
+			"item": [
+				{
+					"name": "Get all category",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGM5OTc4NzMwOTM0MjE0NWZjMWYwOGIiLCJlbWFpbCI6ImZyaW5nZWtzMDExQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1ODIxMDQ3NSwiZXhwIjoxNzYwODAyNDc1fQ.P0FYR2qrASwNvi0SLzl5U3bp06KAk_6rrKf4wsgG4TY",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/category",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"category"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Category by id",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODllMTc4MmUwZjNkNzJmNzIzNjVhZTIiLCJlbWFpbCI6ImNvZG9pdDUzQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1NjIyNDc0MSwiZXhwIjoxNzU2MjQ2MzQxfQ.f8yJfq-NXrFu2t5b19mP9J0l-SrtgHd7t8JQxX4G8bg",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/category/68adddc286c9785cc7e05717",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"category",
+								"68adddc286c9785cc7e05717"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODllMTc4MmUwZjNkNzJmNzIzNjVhZTIiLCJlbWFpbCI6ImNvZG9pdDUzQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1NzIxNTk3MCwiZXhwIjoxNzU3MjM3NTcwfQ.ngVr2boll-oGJ_mtq-6z6iEAkZoetRGVvqs3IUe4mGo",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"categoryname\":\"Bangle234\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/category/",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"category",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODllMTc4MmUwZjNkNzJmNzIzNjVhZTIiLCJlbWFpbCI6ImNvZG9pdDUzQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1NjIyNDc0MSwiZXhwIjoxNzU2MjQ2MzQxfQ.f8yJfq-NXrFu2t5b19mP9J0l-SrtgHd7t8JQxX4G8bg",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"categoryname\":\"Ring\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/category/68adddc286c9785cc7e05717",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"category",
+								"68adddc286c9785cc7e05717"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODllMTc4MmUwZjNkNzJmNzIzNjVhZTIiLCJlbWFpbCI6ImNvZG9pdDUzQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1NjIyNDc0MSwiZXhwIjoxNzU2MjQ2MzQxfQ.f8yJfq-NXrFu2t5b19mP9J0l-SrtgHd7t8JQxX4G8bg",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/category/68adde1386c9785cc7e0571a",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"category",
+								"68adde1386c9785cc7e0571a"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODllMTc4MmUwZjNkNzJmNzIzNjVhZTIiLCJlbWFpbCI6ImNvZG9pdDUzQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1NzIxNTk3MCwiZXhwIjoxNzU3MjM3NTcwfQ.ngVr2boll-oGJ_mtq-6z6iEAkZoetRGVvqs3IUe4mGo",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/dashboard",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"dashboard"
+							],
+							"query": [
+								{
+									"key": "a",
+									"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODllMTc4MmUwZjNkNzJmNzIzNjVhZTIiLCJlbWFpbCI6ImNvZG9pdDUzQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1NjMxNDQ3OCwiZXhwIjoxNzU2MzM2MDc4fQ.s1-Zg17IUIRTQwzoDbGH8uem9Eh0lw7DZSf6jI5CCko",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "graph",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODllMTc4MmUwZjNkNzJmNzIzNjVhZTIiLCJlbWFpbCI6ImNvZG9pdDUzQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1NzIxNTk3MCwiZXhwIjoxNzU3MjM3NTcwfQ.ngVr2boll-oGJ_mtq-6z6iEAkZoetRGVvqs3IUe4mGo",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/dashboard/graph?startDate=2025-09-01&endDate=2025-09-07",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"dashboard",
+								"graph"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2025-09-01"
+								},
+								{
+									"key": "endDate",
+									"value": "2025-09-07"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseURL",
+			"value": "http://localhost:3000",
+			"type": "default"
+		}
+	]
+}

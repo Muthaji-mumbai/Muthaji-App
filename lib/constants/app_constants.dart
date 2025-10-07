@@ -66,7 +66,7 @@ class AppConstants {
   static TextStyle get bodyMedium => GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.w400,
-    color: textSecondaryColor,
+    color: textSecondaryColor,    
   );
 
   static TextStyle get bodySmall => GoogleFonts.inter(

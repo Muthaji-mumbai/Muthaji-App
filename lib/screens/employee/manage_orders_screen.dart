@@ -3,6 +3,7 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/employee/order_detailed_screen.dart';
 import 'package:soloshine/screens/client/pdfview.dart';
@@ -13,7 +14,7 @@ import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import '../../models/user.dart';
 import '../../constants/app_constants.dart';
-import 'update_order_screen.dart';
+
 
 class ManageOrdersScreen extends StatefulWidget {
   final OrderStatus? initialStatus;
@@ -1700,21 +1701,30 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     borderRadius: BorderRadius.circular(10),
                     child:
                         order.images.isNotEmpty
-                            ? Image.network(
-                              order.images.first,
-                              fit: BoxFit.cover,
-                              errorBuilder:
-                                  (context, error, stackTrace) => Container(
-                                    color: _getStatusColor(
-                                      order.status,
-                                    ).withOpacity(0.1),
+                            ? (order.images.first.toLowerCase().endsWith('.pdf')
+                                ? Container(
+                                    color: Colors.red.shade50,
                                     child: Icon(
-                                      Icons.image_not_supported_rounded,
-                                      color: _getStatusColor(order.status),
-                                      size: 24,
+                                      Icons.picture_as_pdf,
+                                      color: Colors.red.shade400,
+                                      size: 32,
                                     ),
-                                  ),
-                            )
+                                  )
+                                : Image.network(
+                                    order.images.first,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) => Container(
+                                          color: _getStatusColor(
+                                            order.status,
+                                          ).withOpacity(0.1),
+                                          child: Icon(
+                                            Icons.image_not_supported_rounded,
+                                            color: _getStatusColor(order.status),
+                                            size: 24,
+                                          ),
+                                        ),
+                                  ))
                             : Container(
                               color: _getStatusColor(
                                 order.status,
@@ -2240,6 +2250,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           itemCount: detail.images.length,
                           itemBuilder: (context, index) {
                             final imageUrl = detail.images[index];
+                            final isPdf = imageUrl.toLowerCase().endsWith('.pdf');
+                            
                             return GestureDetector(
                               onTap:
                                   () => _showFullScreenImage(
@@ -2257,34 +2269,58 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(11),
-                                  child: Image.network(
-                                    imageUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        color: Colors.grey.shade100,
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.broken_image_outlined,
-                                              color: Colors.grey.shade400,
-                                              size: 32,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'Error',
-                                              style: TextStyle(
-                                                color: Colors.grey.shade400,
-                                                fontSize: 10,
+                                  child: isPdf
+                                      ? Container(
+                                          color: Colors.red.shade50,
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.picture_as_pdf,
+                                                color: Colors.red.shade400,
+                                                size: 40,
                                               ),
-                                            ),
-                                          ],
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'PDF',
+                                                style: TextStyle(
+                                                  color: Colors.red.shade400,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : Image.network(
+                                          imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Container(
+                                              color: Colors.grey.shade100,
+                                              child: Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.broken_image_outlined,
+                                                    color: Colors.grey.shade400,
+                                                    size: 32,
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    'Error',
+                                                    style: TextStyle(
+                                                      color: Colors.grey.shade400,
+                                                      fontSize: 10,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
                                         ),
-                                      );
-                                    },
-                                  ),
                                 ),
                               ),
                             );
@@ -2321,17 +2357,72 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     );
   }
 
-  void _showFullScreenImage(List<String> images, int initialIndex) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => FullScreenImageViewer(
-              images: images,
-              initialIndex: initialIndex,
+  void _showFullScreenImage(List<String> images, int initialIndex) async {
+    final imageUrl = images[initialIndex];
+    
+    // Check if the URL is a PDF
+    if (imageUrl.toLowerCase().endsWith('.pdf')) {
+      // Open PDF in external viewer
+      try {
+        final uri = Uri.parse(imageUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.error, color: Colors.white, size: 20),
+                    SizedBox(width: 12),
+                    Text('Unable to open PDF'),
+                  ],
+                ),
+                backgroundColor: AppConstants.errorColor,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  Text('Error opening PDF: $e'),
+                ],
+              ),
+              backgroundColor: AppConstants.errorColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-      ),
-    );
+          );
+        }
+      }
+    } else {
+      // Open image in full screen viewer
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => FullScreenImageViewer(
+                images: images,
+                initialIndex: initialIndex,
+              ),
+        ),
+      );
+    }
   }
 
   void _showStatusUpdateDialog(Order order) {
