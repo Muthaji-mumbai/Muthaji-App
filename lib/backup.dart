@@ -45,7 +45,8 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
 
   List<String> get _currentOrnamentImages {
     if (widget.order.ornamentDetails.isEmpty) return widget.order.images;
-    final selectedOrnament = widget.order.ornamentDetails[_currentOrnamentIndex];
+    final selectedOrnament =
+        widget.order.ornamentDetails[_currentOrnamentIndex];
     return selectedOrnament.images.isNotEmpty
         ? selectedOrnament.images
         : widget.order.images;
@@ -54,7 +55,12 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
   List<List<String>> _partitionImages(List<String> images, {int pageSize = 4}) {
     final List<List<String>> pages = [];
     for (int i = 0; i < images.length; i += pageSize) {
-      pages.add(images.sublist(i, i + pageSize > images.length ? images.length : i + pageSize));
+      pages.add(
+        images.sublist(
+          i,
+          i + pageSize > images.length ? images.length : i + pageSize,
+        ),
+      );
     }
     return pages.isEmpty ? [[]] : pages;
   }
@@ -62,7 +68,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
   List<GlobalKey> _ensurePageKeys(int ornamentIndex, int pageCount) {
     final existing = _ornamentPageKeys[ornamentIndex] ?? [];
     if (existing.length != pageCount) {
-      _ornamentPageKeys[ornamentIndex] = List.generate(pageCount, (_) => GlobalKey());
+      _ornamentPageKeys[ornamentIndex] = List.generate(
+        pageCount,
+        (_) => GlobalKey(),
+      );
     }
     return _ornamentPageKeys[ornamentIndex]!;
   }
@@ -76,9 +85,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         key: _repaintBoundaryKey,
         child: Container(
           color: const Color(0xFFF8FAFC),
-          child: widget.order.ornamentDetails.isEmpty
-              ? _buildSingleOrderView()
-              : _buildMultiOrnamentView(),
+          child:
+              widget.order.ornamentDetails.isEmpty
+                  ? _buildSingleOrderView()
+                  : _buildMultiOrnamentView(),
         ),
       ),
     );
@@ -115,9 +125,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         Container(
           margin: const EdgeInsets.only(right: 12),
           child: Material(
-            color: _isGeneratingImage
-                ? const Color(0xFFE2E8F0)
-                : const Color(0xFF3B82F6),
+            color:
+                _isGeneratingImage
+                    ? const Color(0xFFE2E8F0)
+                    : const Color(0xFF3B82F6),
             borderRadius: BorderRadius.circular(10),
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
@@ -147,9 +158,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: _isGeneratingImage
-                            ? const Color(0xFF64748B)
-                            : Colors.white,
+                        color:
+                            _isGeneratingImage
+                                ? const Color(0xFF64748B)
+                                : Colors.white,
                       ),
                     ),
                   ],
@@ -172,20 +184,21 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             controller: _imagePageController,
             onPageChanged: (i) => setState(() => _currentImageIndex = i),
             itemCount: pages.length,
-            itemBuilder: (context, index) => _buildComposedPage(
-              pageKey: keys[index],
-              ornamentName: 'Order',
-              purity: '-',
-              unit: '-',
-              size: '-',
-              colorstone: '-',
-              rhodium: '-',
-              dull: '-',
-              weight: '-',
-              quantity: '-',
-              remarks: widget.order.notes ?? '',
-              images: pages[index],
-            ),
+            itemBuilder:
+                (context, index) => _buildComposedPage(
+                  pageKey: keys[index],
+                  ornamentName: 'Order',
+                  purity: '-',
+                  unit: '-',
+                  size: '-',
+                  colorstone: '-',
+                  rhodium: '-',
+                  dull: '-',
+                  weight: '-',
+                  quantity: '-',
+                  remarks: widget.order.notes ?? '',
+                  images: pages[index],
+                ),
           ),
         ),
         if (pages.length > 1) _buildGeneratedPageIndicators(pages.length),
@@ -209,7 +222,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             itemCount: widget.order.ornamentDetails.length,
             itemBuilder: (context, index) {
               final ornament = widget.order.ornamentDetails[index];
-              final images = ornament.images.isNotEmpty ? ornament.images : widget.order.images;
+              final images =
+                  ornament.images.isNotEmpty
+                      ? ornament.images
+                      : widget.order.images;
               final pages = _partitionImages(images);
               final keys = _ensurePageKeys(index, pages.length);
               return Column(
@@ -217,31 +233,35 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                   Expanded(
                     child: PageView.builder(
                       controller: _imagePageController,
-                      onPageChanged: (i) => setState(() => _currentImageIndex = i),
+                      onPageChanged:
+                          (i) => setState(() => _currentImageIndex = i),
                       itemCount: pages.length,
-                      itemBuilder: (context, pageIdx) => _buildComposedPage(
-                        pageKey: keys[pageIdx],
-                        ornamentName: ornament.name,
-                        purity: ornament.purity,
-                        unit: ornament.unit ?? '-',
-                        size: ornament.size ?? '-',
-                        colorstone: ornament.colorstone ?? '-',
-                        rhodium: ornament.rhodium ?? '-',
-                        dull: ornament.dull ?? '-',
-                        weight: '${ornament.weight}g',
-                        quantity: '${ornament.quantity}',
-                        remarks: ornament.remarks ?? '',
-                        images: pages[pageIdx],
-                      ),
+                      itemBuilder:
+                          (context, pageIdx) => _buildComposedPage(
+                            pageKey: keys[pageIdx],
+                            ornamentName: ornament.name,
+                            purity: ornament.purity,
+                            unit: ornament.unit ?? '-',
+                            size: ornament.size ?? '-',
+                            colorstone: ornament.colorstone ?? '-',
+                            rhodium: ornament.rhodium ?? '-',
+                            dull: ornament.dull ?? '-',
+                            weight: '${ornament.weight}g',
+                            quantity: '${ornament.quantity}',
+                            remarks: ornament.remarks ?? '',
+                            images: pages[pageIdx],
+                          ),
                     ),
                   ),
-                  if (pages.length > 1) _buildGeneratedPageIndicators(pages.length),
+                  if (pages.length > 1)
+                    _buildGeneratedPageIndicators(pages.length),
                 ],
               );
             },
           ),
         ),
-        if (widget.order.ornamentDetails.length > 1) _buildModernPageIndicators(),
+        if (widget.order.ornamentDetails.length > 1)
+          _buildModernPageIndicators(),
       ],
     );
   }
@@ -269,73 +289,101 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             final isMobile = constraints.maxWidth < 700;
             return Center(
               child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: isMobile ? 600 : 900,
-                ),
+                constraints: BoxConstraints(maxWidth: isMobile ? 600 : 900),
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
-                  child: isMobile
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: _buildDetailsTable(
-                                  ornamentName, purity, weight, quantity, remarks, unit, size, colorstone, rhodium, dull),
-                            ),
-                            Expanded(
-                              child: Padding(
+                  child:
+                      isMobile
+                          ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Padding(
                                 padding: const EdgeInsets.all(8),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  ),
-                                  child: _buildImagesGridForPage(images, isMobile: true),
+                                child: _buildDetailsTable(
+                                  ornamentName,
+                                  purity,
+                                  weight,
+                                  quantity,
+                                  remarks,
+                                  unit,
+                                  size,
+                                  colorstone,
+                                  rhodium,
+                                  dull,
                                 ),
                               ),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 10,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    right: BorderSide(color: const Color(0xFFE2E8F0)),
-                                  ),
-                                ),
+                              Expanded(
                                 child: Padding(
                                   padding: const EdgeInsets.all(8),
-                                  child: _buildDetailsTable(
-                                      ornamentName, purity, weight, quantity, remarks, unit, size, colorstone, rhodium, dull),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFFE2E8F0),
+                                      ),
+                                    ),
+                                    child: _buildImagesGridForPage(
+                                      images,
+                                      isMobile: true,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                            Expanded(
-                              flex: 15,
-                              child: Padding(
-                                padding: const EdgeInsets.all(8),
+                            ],
+                          )
+                          : Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                flex: 10,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    border: Border(
+                                      right: BorderSide(
+                                        color: const Color(0xFFE2E8F0),
+                                      ),
+                                    ),
                                   ),
-                                  child: _buildImagesGridForPage(images),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: _buildDetailsTable(
+                                      ornamentName,
+                                      purity,
+                                      weight,
+                                      quantity,
+                                      remarks,
+                                      unit,
+                                      size,
+                                      colorstone,
+                                      rhodium,
+                                      dull,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
+                              Expanded(
+                                flex: 15,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFFE2E8F0),
+                                      ),
+                                    ),
+                                    child: _buildImagesGridForPage(images),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                 ),
               ),
             );
@@ -345,16 +393,29 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     );
   }
 
-  Widget _buildDetailsTable(String ornamentName, String purity, String weight, String quantity, String remarks, String unit, String size, String colorstone, String rhodium, String dull) {
+  Widget _buildDetailsTable(
+    String ornamentName,
+    String purity,
+    String weight,
+    String quantity,
+    String remarks,
+    String unit,
+    String size,
+    String colorstone,
+    String rhodium,
+    String dull,
+  ) {
     Text cell(String text, {bool bold = false, Color? color}) => Text(
-          text,
-          style: TextStyle(
-            fontSize: 12, // Reduced from 14
-            fontWeight: bold ? FontWeight.w700 : FontWeight.w400, // Adjusted weights
-            color: color ?? const Color(0xFF0F172A),
-          ),
-        );
-    Widget row(String label1, String value1, String label2, String value2) => Container(
+      text,
+      style: TextStyle(
+        fontSize: 12, // Reduced from 14
+        fontWeight:
+            bold ? FontWeight.w700 : FontWeight.w400, // Adjusted weights
+        color: color ?? const Color(0xFF0F172A),
+      ),
+    );
+    Widget row(String label1, String value1, String label2, String value2) =>
+        Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: const Color(0xFFE2E8F0))),
@@ -363,7 +424,11 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             children: [
               Flexible(
                 flex: 1,
-                child: cell('$label1 :', bold: true, color: const Color(0xFF334155)),
+                child: cell(
+                  '$label1 :',
+                  bold: true,
+                  color: const Color(0xFF334155),
+                ),
               ),
               Flexible(
                 flex: 2,
@@ -372,7 +437,11 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
               if (label2.isNotEmpty)
                 Flexible(
                   flex: 1,
-                  child: cell('$label2 :', bold: true, color: const Color(0xFF334155)),
+                  child: cell(
+                    '$label2 :',
+                    bold: true,
+                    color: const Color(0xFF334155),
+                  ),
                 ),
               if (label2.isNotEmpty)
                 Flexible(
@@ -386,7 +455,12 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        row('Order No.', widget.order.orderNo ?? widget.order.id.substring(0, 8).toUpperCase(), 'Order Date', _formatDate(widget.order.orderDate ?? widget.order.createdAt)),
+        row(
+          'Order No.',
+          widget.order.orderNo ?? widget.order.id.substring(0, 8).toUpperCase(),
+          'Order Date',
+          _formatDate(widget.order.orderDate ?? widget.order.createdAt),
+        ),
         row('Party Name', widget.order.clientName, '', ''),
         row('Items', ornamentName, '', ''),
         row('Purity', purity, 'Unit', unit),
@@ -406,9 +480,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = isMobile
-            ? (width < 400 ? 1 : (width < 600 ? 2 : 3))
-            : (width < 800 ? 2 : (width < 1000 ? 3 : 4));
+        final crossAxisCount =
+            isMobile
+                ? (width < 400 ? 1 : (width < 600 ? 2 : 3))
+                : (width < 800 ? 2 : (width < 1000 ? 3 : 4));
         return Padding(
           padding: const EdgeInsets.all(8),
           child: GridView.builder(
@@ -522,7 +597,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     Color textColor;
 
     switch (status.toLowerCase()) {
-      case 'completed':
+      case 'DC':
         backgroundColor = const Color(0xFF10B981).withOpacity(0.1);
         textColor = const Color(0xFF10B981);
         break;
@@ -743,7 +818,12 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     );
   }
 
-  Widget _buildSpecItem(String label, String value, IconData icon, Color color) {
+  Widget _buildSpecItem(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -892,10 +972,11 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: images.length,
             separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildModernImageCard(images[index]),
-            ),
+            itemBuilder:
+                (context, index) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _buildModernImageCard(images[index]),
+                ),
           ),
           const SizedBox(height: 16),
         ],
@@ -1081,9 +1162,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                     height: 6,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(3),
-                      color: index == _currentOrnamentIndex
-                          ? const Color(0xFF3B82F6)
-                          : const Color(0xFFE2E8F0),
+                      color:
+                          index == _currentOrnamentIndex
+                              ? const Color(0xFF3B82F6)
+                              : const Color(0xFFE2E8F0),
                     ),
                   ),
                 ),
@@ -1129,10 +1211,13 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         final keys = _ornamentPageKeys[ornamentIndex] ?? [];
         for (int i = 0; i < keys.length; i++) {
           final key = keys[i];
-          final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+          final boundary =
+              key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
           if (boundary == null) continue;
           final pageImage = await boundary.toImage(pixelRatio: 3.0);
-          final pageBytes = await pageImage.toByteData(format: ui.ImageByteFormat.png);
+          final pageBytes = await pageImage.toByteData(
+            format: ui.ImageByteFormat.png,
+          );
           if (pageBytes == null) continue;
           pagePngs.add(pageBytes.buffer.asUint8List());
         }
@@ -1141,22 +1226,32 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
       if (kIsWeb) {
         final files = <XFile>[];
         for (int i = 0; i < pagePngs.length; i++) {
-          files.add(XFile.fromData(
-            pagePngs[i],
-            mimeType: 'image/png',
-            name: 'order_${widget.order.id}_$i.png',
-          ));
+          files.add(
+            XFile.fromData(
+              pagePngs[i],
+              mimeType: 'image/png',
+              name: 'order_${widget.order.id}_$i.png',
+            ),
+          );
         }
-        await Share.shareXFiles(files, text: 'Order Details - ${widget.order.id}');
+        await Share.shareXFiles(
+          files,
+          text: 'Order Details - ${widget.order.id}',
+        );
       } else {
         final directory = await getTemporaryDirectory();
         final files = <XFile>[];
         for (int i = 0; i < pagePngs.length; i++) {
-          final file = File('${directory.path}/generated_${widget.order.id}_$i.png');
+          final file = File(
+            '${directory.path}/generated_${widget.order.id}_$i.png',
+          );
           await file.writeAsBytes(pagePngs[i]);
           files.add(XFile(file.path));
         }
-        await Share.shareXFiles(files, text: 'Order Details - ${widget.order.id}');
+        await Share.shareXFiles(
+          files,
+          text: 'Order Details - ${widget.order.id}',
+        );
       }
 
       if (mounted) {

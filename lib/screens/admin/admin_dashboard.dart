@@ -320,19 +320,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
       _orderStats = {
         'totalOrders': 0,
         'pendingOrders': 0,
-        'inProgressOrders': 0,
-        'completedOrders': 0,
+        'WaxOrders': 0,
+        'DCOrders': 0,
         'cancelledOrders': 0,
         'totalRevenue': 0.0,
       };
       _dashboardStats = {
         'orderTypeCounts': {'single': 0, 'bulk': 0, 'total': 0},
-        'statusCounts': {
-          'pending': 0,
-          'inProgress': 0,
-          'completed': 0,
-          'cancelled': 0,
-        },
+        'statusCounts': {'pending': 0, 'Wax': 0, 'DC': 0, 'cancelled': 0},
       };
     }
 
@@ -361,17 +356,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _selectDate({required bool isStartDate}) async {
-    final initialDate = isStartDate 
-        ? (_startDate ?? DateTime.now()) 
-        : (_endDate ?? DateTime.now());
-    
+    final initialDate =
+        isStartDate
+            ? (_startDate ?? DateTime.now())
+            : (_endDate ?? DateTime.now());
+
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: initialDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
     );
-    
+
     if (pickedDate != null) {
       setState(() {
         if (isStartDate) {
@@ -499,7 +495,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildOrderTrendsChart() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
-    
+
     return Container(
       margin: EdgeInsets.symmetric(
         horizontal: isMobile ? AppConstants.spacingS : AppConstants.spacingM,
@@ -526,7 +522,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         children: [
           // Header Section
           Container(
-            padding: EdgeInsets.all(isMobile ? AppConstants.spacingM : AppConstants.spacingL),
+            padding: EdgeInsets.all(
+              isMobile ? AppConstants.spacingM : AppConstants.spacingL,
+            ),
             child: Column(
               children: [
                 Row(
@@ -541,7 +539,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: AppConstants.primaryColor.withOpacity(0.2),
+                                  color: AppConstants.primaryColor.withOpacity(
+                                    0.2,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(
@@ -579,20 +579,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(AppConstants.radiusM),
-                        border: Border.all(color: Colors.white.withOpacity(0.2)),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusM,
+                        ),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                        ),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<int>(
                           value: _chartDays,
                           dropdownColor: const Color(0xFF1E293B),
-                          style: AppConstants.bodySmall.copyWith(color: Colors.white),
-                          items: const [7, 14, 30, 90]
-                              .map((d) => DropdownMenuItem<int>(
-                                    value: d,
-                                    child: Text('$d days'),
-                                  ))
-                              .toList(),
+                          style: AppConstants.bodySmall.copyWith(
+                            color: Colors.white,
+                          ),
+                          items:
+                              const [7, 14, 30, 90]
+                                  .map(
+                                    (d) => DropdownMenuItem<int>(
+                                      value: d,
+                                      child: Text('$d days'),
+                                    ),
+                                  )
+                                  .toList(),
                           onChanged: (val) {
                             if (val != null) {
                               setState(() => _chartDays = val);
@@ -605,56 +614,110 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ],
                 ),
                 const SizedBox(height: AppConstants.spacingL),
-                
+
                 // Quick Stats Row
                 // _buildQuickStatsRow(isMobile),
               ],
             ),
           ),
-          
+
           // Chart Section
           Container(
             height: isMobile ? 280 : 320,
             padding: EdgeInsets.symmetric(
-              horizontal: isMobile ? AppConstants.spacingS : AppConstants.spacingM,
+              horizontal:
+                  isMobile ? AppConstants.spacingS : AppConstants.spacingM,
             ),
-            child: _isLoadingGraphData
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppConstants.primaryColor),
-                  )
-                : _buildInteractiveLineChart(darkStyle: true),
+            child:
+                _isLoadingGraphData
+                    ? const Center(
+                      child: CircularProgressIndicator(
+                        color: AppConstants.primaryColor,
+                      ),
+                    )
+                    : _buildInteractiveLineChart(darkStyle: true),
           ),
-          
+
           // Legend Section
           Container(
-            padding: EdgeInsets.all(isMobile ? AppConstants.spacingM : AppConstants.spacingL),
-            child: isMobile 
-                ? Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(child: _buildCompactLegendButton('Single', Colors.white, _showSingleOrders, () => setState(() => _showSingleOrders = !_showSingleOrders))),
-                          const SizedBox(width: AppConstants.spacingS),
-                          Expanded(child: _buildCompactLegendButton('Bulk', AppConstants.accentColor, _showBulkOrders, () => setState(() => _showBulkOrders = !_showBulkOrders))),
-                        ],
-                      ),
-                      const SizedBox(height: AppConstants.spacingS),
-                      _buildCompactLegendButton('Total Orders', AppConstants.secondaryColor, _showTotalOrders, () => setState(() => _showTotalOrders = !_showTotalOrders)),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildCompactLegendButton('Single Orders', AppConstants.primaryColor, _showSingleOrders, () => setState(() => _showSingleOrders = !_showSingleOrders)),
-                      _buildCompactLegendButton('Bulk Orders', AppConstants.accentColor, _showBulkOrders, () => setState(() => _showBulkOrders = !_showBulkOrders)),
-                      _buildCompactLegendButton('Total Orders', AppConstants.secondaryColor, _showTotalOrders, () => setState(() => _showTotalOrders = !_showTotalOrders)),
-                    ],
-                  ),
+            padding: EdgeInsets.all(
+              isMobile ? AppConstants.spacingM : AppConstants.spacingL,
+            ),
+            child:
+                isMobile
+                    ? Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildCompactLegendButton(
+                                'Single',
+                                Colors.white,
+                                _showSingleOrders,
+                                () => setState(
+                                  () => _showSingleOrders = !_showSingleOrders,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppConstants.spacingS),
+                            Expanded(
+                              child: _buildCompactLegendButton(
+                                'Bulk',
+                                AppConstants.accentColor,
+                                _showBulkOrders,
+                                () => setState(
+                                  () => _showBulkOrders = !_showBulkOrders,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppConstants.spacingS),
+                        _buildCompactLegendButton(
+                          'Total Orders',
+                          AppConstants.secondaryColor,
+                          _showTotalOrders,
+                          () => setState(
+                            () => _showTotalOrders = !_showTotalOrders,
+                          ),
+                        ),
+                      ],
+                    )
+                    : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildCompactLegendButton(
+                          'Single Orders',
+                          AppConstants.primaryColor,
+                          _showSingleOrders,
+                          () => setState(
+                            () => _showSingleOrders = !_showSingleOrders,
+                          ),
+                        ),
+                        _buildCompactLegendButton(
+                          'Bulk Orders',
+                          AppConstants.accentColor,
+                          _showBulkOrders,
+                          () => setState(
+                            () => _showBulkOrders = !_showBulkOrders,
+                          ),
+                        ),
+                        _buildCompactLegendButton(
+                          'Total Orders',
+                          AppConstants.secondaryColor,
+                          _showTotalOrders,
+                          () => setState(
+                            () => _showTotalOrders = !_showTotalOrders,
+                          ),
+                        ),
+                      ],
+                    ),
           ),
         ],
       ),
     );
   }
+
   Widget _buildCompactLegendButton(
     String label,
     Color color,
@@ -669,7 +732,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
           vertical: AppConstants.spacingS,
         ),
         decoration: BoxDecoration(
-          color: isVisible ? color.withOpacity(0.15) : Colors.white.withOpacity(0.05),
+          color:
+              isVisible
+                  ? color.withOpacity(0.15)
+                  : Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(AppConstants.radiusM),
           border: Border.all(
             color: isVisible ? color : Colors.white.withOpacity(0.2),
@@ -845,7 +911,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 return Text(
                   value.toInt().toString(),
                   style: AppConstants.bodySmall.copyWith(
-                    color: darkStyle ? Colors.white70 : AppConstants.textSecondaryColor,
+                    color:
+                        darkStyle
+                            ? Colors.white70
+                            : AppConstants.textSecondaryColor,
                   ),
                 );
               },
@@ -868,7 +937,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   return Text(
                     '${date.day}/${date.month}',
                     style: AppConstants.bodySmall.copyWith(
-                      color: darkStyle ? Colors.white70 : AppConstants.textSecondaryColor,
+                      color:
+                          darkStyle
+                              ? Colors.white70
+                              : AppConstants.textSecondaryColor,
                     ),
                   );
                 }
@@ -889,19 +961,35 @@ class _AdminDashboardState extends State<AdminDashboard> {
           drawVerticalLine: true,
           horizontalInterval: _getYInterval(),
           getDrawingHorizontalLine: (value) {
-            final c = darkStyle ? Colors.white.withOpacity(0.2) : Colors.grey.withOpacity(0.2);
+            final c =
+                darkStyle
+                    ? Colors.white.withOpacity(0.2)
+                    : Colors.grey.withOpacity(0.2);
             return FlLine(color: c, strokeWidth: 1);
           },
           getDrawingVerticalLine: (value) {
-            final c = darkStyle ? Colors.white.withOpacity(0.15) : Colors.grey.withOpacity(0.15);
+            final c =
+                darkStyle
+                    ? Colors.white.withOpacity(0.15)
+                    : Colors.grey.withOpacity(0.15);
             return FlLine(color: c, strokeWidth: 0.5);
           },
         ),
         borderData: FlBorderData(
           show: true,
           border: Border(
-            bottom: BorderSide(color: darkStyle ? Colors.white.withOpacity(0.3) : Colors.grey.withOpacity(0.3)),
-            left: BorderSide(color: darkStyle ? Colors.white.withOpacity(0.3) : Colors.grey.withOpacity(0.3)),
+            bottom: BorderSide(
+              color:
+                  darkStyle
+                      ? Colors.white.withOpacity(0.3)
+                      : Colors.grey.withOpacity(0.3),
+            ),
+            left: BorderSide(
+              color:
+                  darkStyle
+                      ? Colors.white.withOpacity(0.3)
+                      : Colors.grey.withOpacity(0.3),
+            ),
           ),
         ),
         lineTouchData: LineTouchData(
@@ -976,7 +1064,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return (dataLength / 10).ceilToDouble();
   }
 
-
   Widget _buildDashboardView() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1005,15 +1092,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'title': 'Active Orders',
         'value':
             ((_orderStats['pendingOrders'] ?? 0) +
-                    (_orderStats['inProgressOrders'] ?? 0))
+                    (_orderStats['WaxOrders'] ?? 0))
                 .toString(),
         'icon': Icons.pending_actions,
         'color': AppConstants.warningColor,
-        'subtitle': 'In progress',
+        'subtitle': 'Wax',
       },
       {
-        'title': 'Completed',
-        'value': _orderStats['completedOrders']?.toString() ?? '0',
+        'title': 'DC',
+        'value': _orderStats['DCOrders']?.toString() ?? '0',
         'icon': Icons.check_circle,
         'color': AppConstants.successColor,
         'subtitle': 'This month',
@@ -1024,12 +1111,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'icon': Icons.people,
         'color': AppConstants.accentColor,
         'subtitle': 'Registered',
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const UserManagementScreen(),
-          ),
-        ),
+        'onTap':
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const UserManagementScreen(),
+              ),
+            ),
       },
     ];
 
@@ -1067,7 +1155,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildKPICard(Map<String, dynamic> kpi) {
     final hasOnTap = kpi['onTap'] != null;
-    
+
     return GestureDetector(
       onTap: hasOnTap ? kpi['onTap'] : null,
       child: Container(
@@ -1076,10 +1164,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
           color: AppConstants.surfaceColor,
           borderRadius: BorderRadius.circular(AppConstants.radiusL),
           boxShadow: AppConstants.cardShadow,
-          border: hasOnTap ? Border.all(
-            color: (kpi['color'] as Color).withOpacity(0.2),
-            width: 1,
-          ) : null,
+          border:
+              hasOnTap
+                  ? Border.all(
+                    color: (kpi['color'] as Color).withOpacity(0.2),
+                    width: 1,
+                  )
+                  : null,
         ),
         child: Row(
           children: [
@@ -1223,6 +1314,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ],
     );
   }
+
   Widget _buildQuickActionCard(Map<String, dynamic> action) {
     return GestureDetector(
       onTap: action['onTap'],
@@ -1351,12 +1443,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildRecentUserCard(User user) {
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const UserManagementScreen(),
-        ),
-      ),
+      onTap:
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const UserManagementScreen(),
+            ),
+          ),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
         padding: const EdgeInsets.all(AppConstants.spacingL),
@@ -1476,71 +1569,72 @@ class _AdminDashboardState extends State<AdminDashboard> {
           const SizedBox(height: AppConstants.spacingM),
           _loadingUsers
               ? Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppConstants.primaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('Loading customers...'),
-                    ],
-                  ),
-                )
-              : Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedUserId,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      hintText: 'Select a party to filter reports',
-                    ),
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: null,
-                        child: Text(
-                          'All Parties',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ),
-                      ..._allUsers.map(
-                        (user) => DropdownMenuItem<String>(
-                          value: user.id,
-                          child: Text(
-                            '${user.name} (${user.email})',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedUserId = value;
-                        _selectedUserName = value != null
-                            ? _allUsers.firstWhere((u) => u.id == value).name
-                            : null;
-                      });
-                      // The pie charts will automatically update since they use _allOrders
-                      // which will be filtered by the selected user in the chart calculation
-                    },
-                  ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppConstants.primaryColor,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Loading customers...'),
+                  ],
+                ),
+              )
+              : Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: DropdownButtonFormField<String>(
+                  value: _selectedUserId,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    hintText: 'Select a party to filter reports',
+                  ),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text(
+                        'All Parties',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                    ..._allUsers.map(
+                      (user) => DropdownMenuItem<String>(
+                        value: user.id,
+                        child: Text(
+                          '${user.name} (${user.email})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedUserId = value;
+                      _selectedUserName =
+                          value != null
+                              ? _allUsers.firstWhere((u) => u.id == value).name
+                              : null;
+                    });
+                    // The pie charts will automatically update since they use _allOrders
+                    // which will be filtered by the selected user in the chart calculation
+                  },
+                ),
+              ),
           const SizedBox(height: AppConstants.spacingM),
           _buildDateFilterSection(),
         ],
@@ -1600,7 +1694,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ? '${_startDate!.day.toString().padLeft(2, '0')}/${_startDate!.month.toString().padLeft(2, '0')}/${_startDate!.year}'
                               : 'Start Date',
                           style: TextStyle(
-                            color: _startDate != null ? Colors.black87 : Colors.grey.shade600,
+                            color:
+                                _startDate != null
+                                    ? Colors.black87
+                                    : Colors.grey.shade600,
                             fontSize: 14,
                           ),
                         ),
@@ -1638,7 +1735,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ? '${_endDate!.day.toString().padLeft(2, '0')}/${_endDate!.month.toString().padLeft(2, '0')}/${_endDate!.year}'
                               : 'End Date',
                           style: TextStyle(
-                            color: _endDate != null ? Colors.black87 : Colors.grey.shade600,
+                            color:
+                                _endDate != null
+                                    ? Colors.black87
+                                    : Colors.grey.shade600,
                             fontSize: 14,
                           ),
                         ),
@@ -1651,11 +1751,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             const SizedBox(width: AppConstants.spacingS),
             IconButton(
               onPressed: _clearDateFilters,
-              icon: Icon(
-                Icons.clear,
-                size: 20,
-                color: Colors.grey.shade600,
-              ),
+              icon: Icon(Icons.clear, size: 20, color: Colors.grey.shade600),
               tooltip: 'Clear dates',
             ),
           ],
@@ -1667,45 +1763,51 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildTypePieChartsSection() {
     // Filter orders by selected party and date range
     var filteredOrders = _allOrders;
-    
+
     // Filter by party
     if (_selectedUserId != null) {
-      filteredOrders = filteredOrders.where((order) => order.clientId == _selectedUserId).toList();
+      filteredOrders =
+          filteredOrders
+              .where((order) => order.clientId == _selectedUserId)
+              .toList();
     }
-    
+
     // Filter by date range
     if (_startDate != null) {
-      filteredOrders = filteredOrders.where((order) {
-        final orderDate = order.orderDate ?? order.createdAt;
-        return orderDate.isAfter(_startDate!.subtract(const Duration(days: 1)));
-      }).toList();
+      filteredOrders =
+          filteredOrders.where((order) {
+            final orderDate = order.orderDate ?? order.createdAt;
+            return orderDate.isAfter(
+              _startDate!.subtract(const Duration(days: 1)),
+            );
+          }).toList();
     }
-    
+
     if (_endDate != null) {
-      filteredOrders = filteredOrders.where((order) {
-        final orderDate = order.orderDate ?? order.createdAt;
-        return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
-      }).toList();
+      filteredOrders =
+          filteredOrders.where((order) {
+            final orderDate = order.orderDate ?? order.createdAt;
+            return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
+          }).toList();
     }
-    
+
     // Compute per type status counts from filtered orders
     int singlePending = 0,
-        singleInProgress = 0,
-        singleCompleted = 0,
+        singleWax = 0,
+        singleDC = 0,
         singleCancelled = 0,
-        singleConfirmed = 0;
-    int singleDelay = 0,
-        singleDue = 0,
-        singlePartialDelivery = 0;
+        singlecompleted = 0,
+        singleCasted = 0;
+
+    int singleDelay = 0, singleDue = 0, singlePartialDelivery = 0;
     int bulkPending = 0,
-        bulkInProgress = 0,
-        bulkCompleted = 0,
+        bulkWax = 0,
+        bulkDC = 0,
+        bulkcompleted = 0,
         bulkCancelled = 0,
-        bulkConfirmed = 0;
-    int bulkDelay = 0,
-        bulkDue = 0,
-        bulkPartialDelivery = 0;
-    
+        bulkCasted = 0;
+    int bulkDelay = 0, bulkDue = 0, bulkPartialDelivery = 0;
+
     for (final o in filteredOrders) {
       final isSingle = (o.orderType ?? '').toLowerCase().contains('single');
       final isBulk = (o.orderType ?? '').toLowerCase().contains('bulk');
@@ -1716,14 +1818,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
           case OrderStatus.pending:
             toSingle ? singlePending++ : bulkPending++;
             break;
-          case OrderStatus.confirmed:
-            toSingle ? singleConfirmed++ : bulkConfirmed++;
+          case OrderStatus.Casted:
+            toSingle ? singleCasted++ : bulkCasted++;
             break;
-          case OrderStatus.inProgress:
-            toSingle ? singleInProgress++ : bulkInProgress++;
+          case OrderStatus.Wax:
+            toSingle ? singleWax++ : bulkWax++;
             break;
-          case OrderStatus.completed:
-            toSingle ? singleCompleted++ : bulkCompleted++;
+          case OrderStatus.DC:
+            toSingle ? singleDC++ : bulkDC++;
             break;
           case OrderStatus.cancelled:
             toSingle ? singleCancelled++ : bulkCancelled++;
@@ -1736,6 +1838,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
             break;
           case OrderStatus.partialDelivery:
             toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
+            break;
+
+          case OrderStatus.PendingDisp:
+            toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
+            break;
+          case OrderStatus.completed:
+            toSingle ? singlecompleted++ : bulkcompleted++;
             break;
         }
       }
@@ -1751,18 +1860,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'color': AppConstants.warningColor,
       },
       {
-        'label': 'Confirmed',
-        'value': singleConfirmed.toDouble(),
+        'label': 'Casted',
+        'value': singleCasted.toDouble(),
         'color': AppConstants.accentColor,
       },
       {
-        'label': 'In Progress',
-        'value': singleInProgress.toDouble(),
+        'label': 'Wax',
+        'value': singleWax.toDouble(),
         'color': AppConstants.secondaryColor,
       },
       {
-        'label': 'Completed',
-        'value': singleCompleted.toDouble(),
+        'label': 'DC',
+        'value': singleDC.toDouble(),
         'color': AppConstants.successColor,
       },
       {
@@ -1779,18 +1888,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'color': AppConstants.warningColor,
       },
       {
-        'label': 'Confirmed',
-        'value': bulkConfirmed.toDouble(),
+        'label': 'Casted',
+        'value': bulkCasted.toDouble(),
         'color': AppConstants.accentColor,
       },
       {
-        'label': 'In Progress',
-        'value': bulkInProgress.toDouble(),
+        'label': 'Wax',
+        'value': bulkWax.toDouble(),
         'color': AppConstants.secondaryColor,
       },
       {
-        'label': 'Completed',
-        'value': bulkCompleted.toDouble(),
+        'label': 'DC',
+        'value': bulkDC.toDouble(),
         'color': AppConstants.successColor,
       },
       {
@@ -1810,44 +1919,47 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Order Type Status Distribution', style: AppConstants.headingSmall),
+        Text(
+          'Order Type Status Distribution',
+          style: AppConstants.headingSmall,
+        ),
         const SizedBox(height: AppConstants.spacingM),
         isMobile
             ? Column(
-                children: [
-                  _buildPieChart(
+              children: [
+                _buildPieChart(
+                  title: 'Single Orders Status',
+                  data: singleData,
+                  onItemTap: _onSingleOrderStatusItemTap,
+                ),
+                const SizedBox(height: AppConstants.spacingL),
+                _buildPieChart(
+                  title: 'Bulk Orders Status',
+                  data: bulkData,
+                  onItemTap: _onBulkOrderStatusItemTap,
+                ),
+              ],
+            )
+            : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildPieChart(
                     title: 'Single Orders Status',
                     data: singleData,
                     onItemTap: _onSingleOrderStatusItemTap,
                   ),
-                  const SizedBox(height: AppConstants.spacingL),
-                  _buildPieChart(
+                ),
+                const SizedBox(width: AppConstants.spacingL),
+                Expanded(
+                  child: _buildPieChart(
                     title: 'Bulk Orders Status',
                     data: bulkData,
                     onItemTap: _onBulkOrderStatusItemTap,
                   ),
-                ],
-              )
-            : Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _buildPieChart(
-                      title: 'Single Orders Status',
-                      data: singleData,
-                      onItemTap: _onSingleOrderStatusItemTap,
-                    ),
-                  ),
-                  const SizedBox(width: AppConstants.spacingL),
-                  Expanded(
-                    child: _buildPieChart(
-                      title: 'Bulk Orders Status',
-                      data: bulkData,
-                      onItemTap: _onBulkOrderStatusItemTap,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
+            ),
       ],
     );
   }
@@ -1855,44 +1967,49 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildTypeStatusBarCharts() {
     // Filter orders by selected party and date range
     var filteredOrders = _allOrders;
-    
+
     // Filter by party
     if (_selectedUserId != null) {
-      filteredOrders = filteredOrders.where((order) => order.clientId == _selectedUserId).toList();
+      filteredOrders =
+          filteredOrders
+              .where((order) => order.clientId == _selectedUserId)
+              .toList();
     }
-    
+
     // Filter by date range
     if (_startDate != null) {
-      filteredOrders = filteredOrders.where((order) {
-        final orderDate = order.orderDate ?? order.createdAt;
-        return orderDate.isAfter(_startDate!.subtract(const Duration(days: 1)));
-      }).toList();
+      filteredOrders =
+          filteredOrders.where((order) {
+            final orderDate = order.orderDate ?? order.createdAt;
+            return orderDate.isAfter(
+              _startDate!.subtract(const Duration(days: 1)),
+            );
+          }).toList();
     }
-    
+
     if (_endDate != null) {
-      filteredOrders = filteredOrders.where((order) {
-        final orderDate = order.orderDate ?? order.createdAt;
-        return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
-      }).toList();
+      filteredOrders =
+          filteredOrders.where((order) {
+            final orderDate = order.orderDate ?? order.createdAt;
+            return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
+          }).toList();
     }
-    
+
     // Compute per type status counts from filtered orders
     int singlePending = 0,
-        singleInProgress = 0,
-        singleCompleted = 0,
+        singleWax = 0,
+        singleDC = 0,
+        singlecompleted = 0,
         singleCancelled = 0,
-        singleConfirmed = 0;
-        int singleDelay = 0,
-        singleDue = 0,
-        singlePartialDelivery = 0;
+        singleCasted = 0;
+    int singleDelay = 0, singleDue = 0, singlePartialDelivery = 0;
     int bulkPending = 0,
-        bulkInProgress = 0,
-        bulkCompleted = 0,
+        bulkWax = 0,
+        bulkDC = 0,
         bulkCancelled = 0,
-        bulkConfirmed = 0;
-        int bulkDelay = 0,
-        bulkDue = 0,
-        bulkPartialDelivery = 0;
+        bulkcompleted = 0,
+        bulkCasted = 0;
+    int bulkDelay = 0, bulkDue = 0, bulkPartialDelivery = 0;
     for (final o in filteredOrders) {
       final isSingle = (o.orderType ?? '').toLowerCase().contains('single');
       final isBulk = (o.orderType ?? '').toLowerCase().contains('bulk');
@@ -1903,14 +2020,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
           case OrderStatus.pending:
             toSingle ? singlePending++ : bulkPending++;
             break;
-          case OrderStatus.confirmed:
-            toSingle ? singleConfirmed++ : bulkConfirmed++;
+          case OrderStatus.Casted:
+            toSingle ? singleCasted++ : bulkCasted++;
             break;
-          case OrderStatus.inProgress:
-            toSingle ? singleInProgress++ : bulkInProgress++;
+          case OrderStatus.Wax:
+            toSingle ? singleWax++ : bulkWax++;
             break;
-          case OrderStatus.completed:
-            toSingle ? singleCompleted++ : bulkCompleted++;
+          case OrderStatus.DC:
+            toSingle ? singleDC++ : bulkDC++;
             break;
           case OrderStatus.cancelled:
             toSingle ? singleCancelled++ : bulkCancelled++;
@@ -1923,6 +2040,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
             break;
           case OrderStatus.partialDelivery:
             toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
+            break;
+          case OrderStatus.PendingDisp:
+            toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
+            break;
+          case OrderStatus.completed:
+            toSingle ? singlecompleted++ : bulkcompleted++;
             break;
         }
       }
@@ -1938,18 +2061,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'color': AppConstants.warningColor,
       },
       {
-        'label': 'Confirmed',
-        'value': singleConfirmed.toDouble(),
+        'label': 'Casted',
+        'value': singleCasted.toDouble(),
         'color': AppConstants.accentColor,
       },
       {
-        'label': 'In Progress',
-        'value': singleInProgress.toDouble(),
+        'label': 'Wax',
+        'value': singleWax.toDouble(),
         'color': AppConstants.secondaryColor,
       },
       {
-        'label': 'Completed',
-        'value': singleCompleted.toDouble(),
+        'label': 'DC',
+        'value': singleDC.toDouble(),
         'color': AppConstants.successColor,
       },
       {
@@ -1966,18 +2089,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'color': AppConstants.warningColor,
       },
       {
-        'label': 'Confirmed',
-        'value': bulkConfirmed.toDouble(),
+        'label': 'Casted',
+        'value': bulkCasted.toDouble(),
         'color': AppConstants.accentColor,
       },
       {
-        'label': 'In Progress',
-        'value': bulkInProgress.toDouble(),
+        'label': 'Wax',
+        'value': bulkWax.toDouble(),
         'color': AppConstants.secondaryColor,
       },
       {
-        'label': 'Completed',
-        'value': bulkCompleted.toDouble(),
+        'label': 'DC',
+        'value': bulkDC.toDouble(),
         'color': AppConstants.successColor,
       },
       {
@@ -2033,7 +2156,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         reservedSize: 44,
                         getTitlesWidget: (value, meta) {
                           final idx = value.toInt();
-                          if (idx < 0 || idx >= data.length) return const SizedBox();
+                          if (idx < 0 || idx >= data.length)
+                            return const SizedBox();
                           final label = data[idx]['label'] as String;
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
@@ -2107,42 +2231,59 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildPieChartsSection() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
-    
+
     // Filter orders by selected party and date range
     var filteredOrders = _allOrders;
-    
+
     // Filter by party
     if (_selectedUserId != null) {
-      filteredOrders = filteredOrders.where((order) => order.clientId == _selectedUserId).toList();
+      filteredOrders =
+          filteredOrders
+              .where((order) => order.clientId == _selectedUserId)
+              .toList();
     }
-    
+
     // Filter by date range
     if (_startDate != null) {
-      filteredOrders = filteredOrders.where((order) {
-        final orderDate = order.orderDate ?? order.createdAt;
-        return orderDate.isAfter(_startDate!.subtract(const Duration(days: 1)));
-      }).toList();
+      filteredOrders =
+          filteredOrders.where((order) {
+            final orderDate = order.orderDate ?? order.createdAt;
+            return orderDate.isAfter(
+              _startDate!.subtract(const Duration(days: 1)),
+            );
+          }).toList();
     }
-    
+
     if (_endDate != null) {
-      filteredOrders = filteredOrders.where((order) {
-        final orderDate = order.orderDate ?? order.createdAt;
-        return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
-      }).toList();
+      filteredOrders =
+          filteredOrders.where((order) {
+            final orderDate = order.orderDate ?? order.createdAt;
+            return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
+          }).toList();
     }
-    
+
     // Calculate filtered statistics
     final orderTypeCounts = {
-      'single': filteredOrders.where((o) => (o.orderType ?? '').toLowerCase().contains('single')).length,
-      'bulk': filteredOrders.where((o) => (o.orderType ?? '').toLowerCase().contains('bulk')).length,
+      'single':
+          filteredOrders
+              .where(
+                (o) => (o.orderType ?? '').toLowerCase().contains('single'),
+              )
+              .length,
+      'bulk':
+          filteredOrders
+              .where((o) => (o.orderType ?? '').toLowerCase().contains('bulk'))
+              .length,
       'total': filteredOrders.length,
     };
-    
+
     final statusCounts = {
-      'pending': filteredOrders.where((o) => o.status == OrderStatus.pending).length,
-      'inProgress': filteredOrders.where((o) => o.status == OrderStatus.inProgress).length,
-      'completed': filteredOrders.where((o) => o.status == OrderStatus.completed).length,
-      'cancelled': filteredOrders.where((o) => o.status == OrderStatus.cancelled).length,
+      'pending':
+          filteredOrders.where((o) => o.status == OrderStatus.pending).length,
+      'Wax': filteredOrders.where((o) => o.status == OrderStatus.Wax).length,
+      'DC': filteredOrders.where((o) => o.status == OrderStatus.DC).length,
+      'cancelled':
+          filteredOrders.where((o) => o.status == OrderStatus.cancelled).length,
     };
 
     return Column(
@@ -2162,13 +2303,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       'color': AppConstants.warningColor,
                     },
                     {
-                      'label': 'In Progress',
-                      'value': statusCounts['inProgress']!.toDouble(),
+                      'label': 'Wax',
+                      'value': statusCounts['Wax']!.toDouble(),
                       'color': AppConstants.secondaryColor,
                     },
                     {
-                      'label': 'Completed',
-                      'value': statusCounts['completed']!.toDouble(),
+                      'label': 'DC',
+                      'value': statusCounts['DC']!.toDouble(),
                       'color': AppConstants.successColor,
                     },
                     {
@@ -2191,7 +2332,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     {
                       'label': 'Bulk Orders',
                       'value': orderTypeCounts['bulk']!.toDouble(),
-                        'color': AppConstants.accentColor,
+                      'color': AppConstants.accentColor,
                     },
                   ],
                   onItemTap: _onOrderTypeItemTap,
@@ -2211,13 +2352,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         'color': AppConstants.warningColor,
                       },
                       {
-                        'label': 'In Progress',
-                        'value': statusCounts['inProgress']!.toDouble(),
+                        'label': 'Wax',
+                        'value': statusCounts['Wax']!.toDouble(),
                         'color': AppConstants.secondaryColor,
                       },
                       {
-                        'label': 'Completed',
-                        'value': statusCounts['completed']!.toDouble(),
+                        'label': 'DC',
+                        'value': statusCounts['DC']!.toDouble(),
                         'color': AppConstants.successColor,
                       },
                       {
@@ -2340,12 +2481,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   bottom: AppConstants.spacingM,
                                 ),
                                 child: GestureDetector(
-                                  onTap: onItemTap != null ? () => onItemTap(item['label'], item) : null,
+                                  onTap:
+                                      onItemTap != null
+                                          ? () => onItemTap(item['label'], item)
+                                          : null,
                                   child: Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(8),
-                                      color: onItemTap != null ? Colors.transparent : null,
+                                      color:
+                                          onItemTap != null
+                                              ? Colors.transparent
+                                              : null,
                                     ),
                                     child: Row(
                                       children: [
@@ -2354,7 +2501,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           height: 16,
                                           decoration: BoxDecoration(
                                             color: item['color'],
-                                            borderRadius: BorderRadius.circular(4),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(
@@ -2369,7 +2518,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                                 item['label'],
                                                 style: AppConstants.bodyMedium
                                                     .copyWith(
-                                                      fontWeight: FontWeight.w600,
+                                                      fontWeight:
+                                                          FontWeight.w600,
                                                     ),
                                               ),
                                               Text(
@@ -2388,7 +2538,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           Icon(
                                             Icons.arrow_forward_ios,
                                             size: 12,
-                                            color: AppConstants.textSecondaryColor,
+                                            color:
+                                                AppConstants.textSecondaryColor,
                                           ),
                                       ],
                                     ),
@@ -2471,12 +2622,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     bottom: AppConstants.spacingM,
                                   ),
                                   child: GestureDetector(
-                                    onTap: onItemTap != null ? () => onItemTap(item['label'], item) : null,
+                                    onTap:
+                                        onItemTap != null
+                                            ? () =>
+                                                onItemTap(item['label'], item)
+                                            : null,
                                     child: Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(8),
-                                        color: onItemTap != null ? Colors.transparent : null,
+                                        color:
+                                            onItemTap != null
+                                                ? Colors.transparent
+                                                : null,
                                       ),
                                       child: Row(
                                         children: [
@@ -2485,9 +2643,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                             height: 16,
                                             decoration: BoxDecoration(
                                               color: item['color'],
-                                              borderRadius: BorderRadius.circular(
-                                                4,
-                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
                                           ),
                                           const SizedBox(
@@ -2502,7 +2659,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                                   item['label'],
                                                   style: AppConstants.bodyMedium
                                                       .copyWith(
-                                                        fontWeight: FontWeight.w600,
+                                                        fontWeight:
+                                                            FontWeight.w600,
                                                       ),
                                                 ),
                                                 Text(
@@ -2521,7 +2679,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                             Icon(
                                               Icons.arrow_forward_ios,
                                               size: 12,
-                                              color: AppConstants.textSecondaryColor,
+                                              color:
+                                                  AppConstants
+                                                      .textSecondaryColor,
                                             ),
                                         ],
                                       ),
@@ -2562,14 +2722,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       'value': _orderStats['pendingOrders']?.toString() ?? '0',
                     },
                     {
-                      'label': 'In Progress',
-                      'value':
-                          _orderStats['inProgressOrders']?.toString() ?? '0',
+                      'label': 'Wax',
+                      'value': _orderStats['WaxOrders']?.toString() ?? '0',
                     },
                     {
-                      'label': 'Completed',
-                      'value':
-                          _orderStats['completedOrders']?.toString() ?? '0',
+                      'label': 'DC',
+                      'value': _orderStats['DCOrders']?.toString() ?? '0',
                     },
                     {
                       'label': 'Cancelled',
@@ -2607,12 +2765,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ],
                   Icons.people,
                   AppConstants.accentColor,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const UserManagementScreen(),
-                    ),
-                  ),
+                  onTap:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const UserManagementScreen(),
+                        ),
+                      ),
                 ),
               ],
             )
@@ -2633,14 +2792,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             _orderStats['pendingOrders']?.toString() ?? '0',
                       },
                       {
-                        'label': 'In Progress',
-                        'value':
-                            _orderStats['inProgressOrders']?.toString() ?? '0',
+                        'label': 'Wax',
+                        'value': _orderStats['WaxOrders']?.toString() ?? '0',
                       },
                       {
-                        'label': 'Completed',
-                        'value':
-                            _orderStats['completedOrders']?.toString() ?? '0',
+                        'label': 'DC',
+                        'value': _orderStats['DCOrders']?.toString() ?? '0',
                       },
                       {
                         'label': 'Cancelled',
@@ -2680,12 +2837,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ],
                     Icons.people,
                     AppConstants.accentColor,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const UserManagementScreen(),
-                      ),
-                    ),
+                    onTap:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const UserManagementScreen(),
+                          ),
+                        ),
                   ),
                 ),
               ],
@@ -2710,71 +2868,76 @@ class _AdminDashboardState extends State<AdminDashboard> {
           borderRadius: BorderRadius.circular(AppConstants.radiusL),
           boxShadow: AppConstants.cardShadow,
           border: Border.all(
-            color: color.withOpacity(onTap != null ? 0.3 : 0.2), 
+            color: color.withOpacity(onTap != null ? 0.3 : 0.2),
             width: onTap != null ? 1.5 : 1,
           ),
         ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppConstants.spacingS),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const SizedBox(width: AppConstants.spacingM),
-              Expanded(
-                child: Text(
-                  title,
-                  style: AppConstants.headingSmall.copyWith(color: color),
-                ),
-              ),
-              if (onTap != null)
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: color.withOpacity(0.6),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppConstants.spacingL),
-          ...stats.map(
-            (stat) => Padding(
-              padding: const EdgeInsets.only(bottom: AppConstants.spacingM),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(stat['label']!, style: AppConstants.bodyMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppConstants.spacingS),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingS,
-                      vertical: AppConstants.spacingXS,
-                    ),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                    child: Text(
-                      stat['value']!,
-                      style: AppConstants.bodyMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: color,
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                const SizedBox(width: AppConstants.spacingM),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppConstants.headingSmall.copyWith(color: color),
+                  ),
+                ),
+                if (onTap != null)
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: color.withOpacity(0.6),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppConstants.spacingL),
+            ...stats.map(
+              (stat) => Padding(
+                padding: const EdgeInsets.only(bottom: AppConstants.spacingM),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        stat['label']!,
+                        style: AppConstants.bodyMedium,
                       ),
                     ),
-                  ),
-                ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacingS,
+                        vertical: AppConstants.spacingXS,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusS,
+                        ),
+                      ),
+                      child: Text(
+                        stat['value']!,
+                        style: AppConstants.bodyMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -2883,39 +3046,52 @@ class _AdminDashboardState extends State<AdminDashboard> {
   // Navigation callback methods for pie chart items
   void _onStatusItemTap(String label, Map<String, dynamic> item) {
     OrderStatus? status;
-    
+
     // Map the label to OrderStatus enum
     switch (label.toLowerCase()) {
       case 'pending':
         status = OrderStatus.pending;
         break;
-      case 'in progress':
-        status = OrderStatus.inProgress;
+      case 'casted':
+        status = OrderStatus.Casted;
         break;
-      case 'completed':
-        status = OrderStatus.completed;
+      case 'wax':
+        status = OrderStatus.Wax;
+        break;
+      case 'dc':
+        status = OrderStatus.DC;
         break;
       case 'cancelled':
         status = OrderStatus.cancelled;
         break;
+      case 'delay':
+        status = OrderStatus.delay;
+        break;
+      case 'due':
+        status = OrderStatus.due;
+        break;
+      case 'partial delivery':
+        status = OrderStatus.partialDelivery;
+        break;
+      case 'pendingdisp':
+        status = OrderStatus.PendingDisp;
+        break;
       default:
         status = null;
     }
-    
+
     // Navigate to ManageOrdersScreen with the selected status filter
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ManageOrdersScreen(
-          initialStatus: status,
-        ),
+        builder: (context) => ManageOrdersScreen(initialStatus: status),
       ),
     );
   }
 
   void _onOrderTypeItemTap(String label, Map<String, dynamic> item) {
     String? orderType;
-    
+
     // Map the label to order type
     switch (label.toLowerCase()) {
       case 'single orders':
@@ -2927,14 +3103,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
       default:
         orderType = null;
     }
-    
+
     // Navigate to ManageOrdersScreen with the selected order type filter
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ManageOrdersScreen(
-          initialOrderType: orderType,
-        ),
+        builder: (context) => ManageOrdersScreen(initialOrderType: orderType),
       ),
     );
   }
@@ -2942,20 +3116,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
   // Navigation callback methods for single order status items
   void _onSingleOrderStatusItemTap(String label, Map<String, dynamic> item) {
     OrderStatus? status;
-    
+
     // Map the label to OrderStatus enum
     switch (label.toLowerCase()) {
       case 'pending':
         status = OrderStatus.pending;
         break;
-      case 'confirmed':
-        status = OrderStatus.confirmed;
+      case 'casted':
+        status = OrderStatus.Casted;
         break;
-      case 'in progress':
-        status = OrderStatus.inProgress;
+      case 'wax':
+        status = OrderStatus.Wax;
         break;
-      case 'completed':
-        status = OrderStatus.completed;
+      case 'dc':
+        status = OrderStatus.DC;
         break;
       case 'cancelled':
         status = OrderStatus.cancelled;
@@ -2966,20 +3140,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 'due':
         status = OrderStatus.due;
         break;
+      case 'partial delivery':
+        status = OrderStatus.partialDelivery;
+        break;
+      case 'pendingdisp':
+        status = OrderStatus.PendingDisp;
+        break;
       default:
         status = null;
     }
-    
+
     // Navigate to ManageOrdersScreen with status, Single order type, and party filters
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ManageOrdersScreen(
-          initialStatus: status,
-          initialOrderType: 'Single',
-          initialUserId: _selectedUserId,
-          initialUserName: _selectedUserName,
-        ),
+        builder:
+            (context) => ManageOrdersScreen(
+              initialStatus: status,
+              initialOrderType: 'Single',
+              initialUserId: _selectedUserId,
+              initialUserName: _selectedUserName,
+            ),
       ),
     );
   }
@@ -2987,20 +3168,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
   // Navigation callback methods for bulk order status items
   void _onBulkOrderStatusItemTap(String label, Map<String, dynamic> item) {
     OrderStatus? status;
-    
+
     // Map the label to OrderStatus enum
     switch (label.toLowerCase()) {
       case 'pending':
         status = OrderStatus.pending;
         break;
-      case 'confirmed':
-        status = OrderStatus.confirmed;
+      case 'casted':
+        status = OrderStatus.Casted;
         break;
-      case 'in progress':
-        status = OrderStatus.inProgress;
+      case 'wax':
+        status = OrderStatus.Wax;
         break;
-      case 'completed':
-        status = OrderStatus.completed;
+      case 'dc':
+        status = OrderStatus.DC;
         break;
       case 'cancelled':
         status = OrderStatus.cancelled;
@@ -3011,20 +3192,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 'due':
         status = OrderStatus.due;
         break;
+      case 'partial delivery':
+        status = OrderStatus.partialDelivery;
+        break;
+      case 'pendingdisp':
+        status = OrderStatus.PendingDisp;
+        break;
       default:
         status = null;
     }
-    
-    // Navigate to ManageOrdersScreen with status, Bulk order type, and party filters
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ManageOrdersScreen(
-          initialStatus: status,
-          initialOrderType: 'Bulk',
-          initialUserId: _selectedUserId,
-          initialUserName: _selectedUserName,
-        ),
+        builder:
+            (context) => ManageOrdersScreen(
+              initialStatus: status,
+              initialOrderType: 'Bulk',
+              initialUserId: _selectedUserId,
+              initialUserName: _selectedUserName,
+            ),
       ),
     );
   }

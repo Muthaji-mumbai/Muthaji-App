@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/employee/order_detailed_screen.dart';
-import 'package:soloshine/screens/client/pdfview.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
 import '../../models/order.dart';
 import '../../services/order_service.dart';
@@ -15,13 +14,12 @@ import '../../services/user_service.dart';
 import '../../models/user.dart';
 import '../../constants/app_constants.dart';
 
-
 class ManageOrdersScreen extends StatefulWidget {
   final OrderStatus? initialStatus;
   final String? initialOrderType;
   final String? initialUserId;
   final String? initialUserName;
-  
+
   const ManageOrdersScreen({
     super.key,
     this.initialStatus,
@@ -83,13 +81,13 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   @override
   void initState() {
     super.initState();
-    
+
     // Set initial filter values from widget parameters
     _selectedStatus = widget.initialStatus;
     _selectedOrderType = widget.initialOrderType;
     _selectedUserId = widget.initialUserId;
     _selectedUserName = widget.initialUserName;
-    
+
     _filterAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -122,7 +120,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         // Calculate date range for API call
         DateTime? apiStartDate;
         DateTime? apiEndDate;
-        
+
         final now = DateTime.now();
         switch (_selectedRange) {
           case 'Today':
@@ -146,7 +144,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             // No date filtering at API level
             break;
         }
-        
+
         final orders = await OrderService.getAllOrders(
           token,
           status: _selectedStatus,
@@ -160,7 +158,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           _filteredOrders = orders;
           _isLoading = false;
         });
-        
+
+        // Check for orders that should be automatically marked as delivered
+        await _checkAndUpdateDeliveredOrders(token);
+
         // Apply additional client-side filters (search, order type, sorting)
         _applyFilters();
       } else {
@@ -180,6 +181,55 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           ),
         );
       }
+    }
+  }
+
+  Future<void> _checkAndUpdateDeliveredOrders(String token) async {
+    try {
+      final ordersToUpdate =
+          _allOrders.where((order) => order.shouldBeDelivered).toList();
+
+      if (ordersToUpdate.isNotEmpty) {
+        for (final order in ordersToUpdate) {
+          try {
+            await OrderService.updateOrderStatus(
+              orderId: order.id,
+              newStatus: OrderStatus.DC, // Mark as delivered
+              token: token,
+            );
+          } catch (e) {
+            // Log error but continue with other orders
+            print('Error updating order ${order.id} to delivered: $e');
+          }
+        }
+
+        // Reload data to reflect the changes
+        await _loadData();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  Text(
+                    '${ordersToUpdate.length} orders automatically marked as delivered',
+                  ),
+                ],
+              ),
+              backgroundColor: AppConstants.successColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Silently handle errors for auto-update
+      print('Error in auto-update delivered orders: $e');
     }
   }
 
@@ -325,7 +375,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 matchesStatus = order.status == _selectedStatus;
               }
             }
-            
+
             final matchesSearch =
                 _searchQuery.isEmpty ||
                 order.clientName.toLowerCase().contains(
@@ -334,13 +384,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 order.description.toLowerCase().contains(
                   _searchQuery.toLowerCase(),
                 ) ||
-                order.id.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
+                order.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
                 (order.orderNo?.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ?? false);
-                
+                      _searchQuery.toLowerCase(),
+                    ) ??
+                    false);
+
             final matchesType =
                 _selectedOrderType == null ||
                 (_selectedOrderType == (order.orderType ?? 'Single'));
@@ -348,11 +397,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             // Date filtering is now handled at API level
             return matchesStatus && matchesSearch && matchesType;
           }).toList();
-          
+
       // Apply sorting
       _filteredOrders.sort((a, b) {
         int comparison = 0;
-        
+
         switch (_sortBy) {
           case 'orderDate':
             if (a.orderDate != null && b.orderDate != null) {
@@ -364,7 +413,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             }
             break;
           case 'clientName':
-            comparison = a.clientName.toLowerCase().compareTo(b.clientName.toLowerCase());
+            comparison = a.clientName.toLowerCase().compareTo(
+              b.clientName.toLowerCase(),
+            );
             break;
           case 'status':
             comparison = a.status.toString().compareTo(b.status.toString());
@@ -372,10 +423,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           case 'orderNo':
             final aOrderNo = a.orderNo ?? a.id;
             final bOrderNo = b.orderNo ?? b.id;
-            comparison = aOrderNo.toLowerCase().compareTo(bOrderNo.toLowerCase());
+            comparison = aOrderNo.toLowerCase().compareTo(
+              bOrderNo.toLowerCase(),
+            );
             break;
           case 'description':
-            comparison = a.description.toLowerCase().compareTo(b.description.toLowerCase());
+            comparison = a.description.toLowerCase().compareTo(
+              b.description.toLowerCase(),
+            );
             break;
           default:
             // Default to order date
@@ -383,7 +438,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               comparison = a.orderDate!.compareTo(b.orderDate!);
             }
         }
-        
+
         // Reverse if descending
         return _sortAscending ? comparison : -comparison;
       });
@@ -393,10 +448,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   Future<void> _updateOrderStatus(Order order, OrderStatus newStatus) async {
     try {
       final token = AuthService.currentToken;
+      final currentUser = AuthService.currentUser;
       if (token != null) {
         await OrderService.updateOrderStatus(
           orderId: order.id,
           newStatus: newStatus,
+          userId: currentUser?.id,
           token: token,
         );
         _loadData();
@@ -480,7 +537,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     if (token == null || _selectedOrderIds.isEmpty) return;
 
     // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
+    final Casted = await showDialog<bool>(
       context: context,
       builder:
           (context) => AlertDialog(
@@ -511,7 +568,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Are you sure you want to update ${_selectedOrderIds.length} orders to "${status.toString().split('.').last}"?',
+                  'Are you sure you want to update ${_selectedOrderIds.length} orders to "${_getStatusText(status)}"?',
                   style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 12),
@@ -533,7 +590,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'New Status: ${status.toString().split('.').last}',
+                        'New Status: ${_getStatusText(status)}',
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                     ],
@@ -571,7 +628,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           ),
     );
 
-    if (confirmed != true) return;
+    if (Casted != true) return;
 
     // Show loading indicator
     showDialog(
@@ -650,7 +707,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   }
 
   Future<void> _deleteOrder(String orderId) async {
-    final confirmed = await showDialog<bool>(
+    final Casted = await showDialog<bool>(
       context: context,
       builder:
           (context) => AlertDialog(
@@ -702,7 +759,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           ),
     );
 
-    if (confirmed == true) {
+    if (Casted == true) {
       try {
         final token = AuthService.currentToken;
         if (token != null) {
@@ -771,8 +828,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           _selectionMode
               ? '${_selectedOrderIds.length} selected'
               : _selectedUserName != null
-                  ? 'Orders - $_selectedUserName'
-                  : 'Manage Orders',
+              ? 'Orders - $_selectedUserName'
+              : 'Manage Orders',
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 20),
         ),
         bottom: PreferredSize(
@@ -802,11 +859,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               icon: const Icon(Icons.deselect_rounded),
               onPressed: _selectNoneOrders,
             ),
-            IconButton(
-              tooltip: 'Clear Selection',
-              icon: const Icon(Icons.clear_all_rounded),
-              onPressed: _clearSelection,
-            ),
+            // IconButton(
+            //   tooltip: 'Clear Selection',
+            //   icon: const Icon(Icons.clear_all_rounded),
+            //   onPressed: _clearSelection,
+            // ),
             Container(
               margin: const EdgeInsets.only(right: 8),
               child: PopupMenuButton<OrderStatus>(
@@ -822,25 +879,27 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 onSelected: (st) => _bulkChangeStatus(st),
                 itemBuilder:
                     (context) => [
-                      ...OrderStatus.values.map(
-                        (s) => PopupMenuItem(
-                          value: s,
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 12,
-                                height: 12,
-                                margin: const EdgeInsets.only(right: 12),
-                                decoration: BoxDecoration(
-                                  color: _getStatusColor(s),
-                                  shape: BoxShape.circle,
-                                ),
+                      ...OrderStatus.values
+                          .where((s) => s != OrderStatus.partialDelivery)
+                          .map(
+                            (s) => PopupMenuItem(
+                              value: s,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 12,
+                                    height: 12,
+                                    margin: const EdgeInsets.only(right: 12),
+                                    decoration: BoxDecoration(
+                                      color: _getStatusColor(s),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  Text(_getStatusText(s)),
+                                ],
                               ),
-                              Text(s.toString().split('.').last),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
                     ],
               ),
             ),
@@ -869,7 +928,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       ),
       body: Column(
         children: [
-          // Search Bar - Always Visible
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -882,7 +940,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Search orders, clients, descriptions...',
+                  hintText: 'Search orders',
                   hintStyle: TextStyle(color: Colors.grey.shade500),
                   prefixIcon: Icon(
                     Icons.search_rounded,
@@ -1008,7 +1066,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                   .map(
                     (s) => DropdownMenuItem<OrderStatus>(
                       value: s,
-                      child: Text(s.toString().split('.').last),
+                      child: Text(_getStatusText(s)),
                     ),
                   )
                   .toList(),
@@ -1097,7 +1155,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                         .map(
                           (s) => DropdownMenuItem<OrderStatus>(
                             value: s,
-                            child: Text(s.toString().split('.').last),
+                            child: Text(_getStatusText(s)),
                           ),
                         )
                         .toList(),
@@ -1292,64 +1350,68 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.grey.shade300),
           ),
-          child: _loadingUsers
-              ? Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppConstants.primaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('Loading customers...'),
-                    ],
-                  ),
-                )
-              : DropdownButtonFormField<String>(
-                  value: _selectedUserId,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+          child:
+              _loadingUsers
+                  ? Container(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
                     ),
-                  ),
-                  items: [
-                    const DropdownMenuItem<String>(
-                      value: null,
-                      child: Text(
-                        'All Parties',
-                        style: TextStyle(color: Colors.grey),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppConstants.primaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Loading customers...'),
+                      ],
+                    ),
+                  )
+                  : DropdownButtonFormField<String>(
+                    value: _selectedUserId,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
                       ),
                     ),
-                    ..._allUsers.map(
-                      (user) => DropdownMenuItem<String>(
-                        value: user.id,
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
                         child: Text(
-                          '${user.name}',
-                          overflow: TextOverflow.ellipsis,
+                          'All Parties',
+                          style: TextStyle(color: Colors.grey),
                         ),
                       ),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedUserId = value;
-                      _selectedUserName = value != null
-                          ? _allUsers.firstWhere((u) => u.id == value).name
-                          : null;
-                    });
-                    _loadData(); // Reload data from API with new user filter
-                  },
-                ),
+                      ..._allUsers.map(
+                        (user) => DropdownMenuItem<String>(
+                          value: user.id,
+                          child: Text(
+                            '${user.name}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedUserId = value;
+                        _selectedUserName =
+                            value != null
+                                ? _allUsers
+                                    .firstWhere((u) => u.id == value)
+                                    .name
+                                : null;
+                      });
+                      _loadData(); // Reload data from API with new user filter
+                    },
+                  ),
         ),
       ],
     );
@@ -1434,12 +1496,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   }
 
   Widget _buildSummaryBar() {
-    if (_filteredOrders.isEmpty && !_hasActiveFilters())
+    if (_allOrders.isEmpty && !_hasActiveFilters())
       return const SizedBox.shrink();
 
+    // Always show all statuses, with counts from _allOrders
     final statusCounts = <OrderStatus, int>{};
-    for (final order in _filteredOrders) {
-      statusCounts[order.status] = (statusCounts[order.status] ?? 0) + 1;
+    for (final status in OrderStatus.values) {
+      statusCounts[status] =
+          _allOrders.where((order) => order.status == status).length;
     }
 
     return Container(
@@ -1472,14 +1536,16 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: _selectedStatus == null 
-                            ? AppConstants.primaryColor.withOpacity(0.2)
-                            : Colors.grey.withOpacity(0.1),
+                        color:
+                            _selectedStatus == null
+                                ? AppConstants.primaryColor.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: _selectedStatus == null
-                              ? AppConstants.primaryColor
-                              : Colors.grey.withOpacity(0.3),
+                          color:
+                              _selectedStatus == null
+                                  ? AppConstants.primaryColor
+                                  : Colors.grey.withOpacity(0.3),
                           width: _selectedStatus == null ? 2 : 1,
                         ),
                       ),
@@ -1490,9 +1556,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             width: 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: _selectedStatus == null 
-                                  ? AppConstants.primaryColor 
-                                  : Colors.grey,
+                              color:
+                                  _selectedStatus == null
+                                      ? AppConstants.primaryColor
+                                      : Colors.grey,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -1501,70 +1568,80 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             'All: ${_allOrders.length}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: _selectedStatus == null 
-                                  ? AppConstants.primaryColor 
-                                  : Colors.grey,
-                              fontWeight: _selectedStatus == null ? FontWeight.w600 : FontWeight.w500,
+                              color:
+                                  _selectedStatus == null
+                                      ? AppConstants.primaryColor
+                                      : Colors.grey,
+                              fontWeight:
+                                  _selectedStatus == null
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  // Status-specific buttons
-                  ...statusCounts.entries.map((entry) {
-                      final isSelected = _selectedStatus == entry.key;
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            // Toggle filter: if already selected, clear it; otherwise set it
-                            _selectedStatus = isSelected ? null : entry.key;
-                          });
-                          _loadData(); // Reload data from API
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 12),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected 
-                                ? _getStatusColor(entry.key).withOpacity(0.2)
-                                : _getStatusColor(entry.key).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected
-                                  ? _getStatusColor(entry.key)
-                                  : _getStatusColor(entry.key).withOpacity(0.3),
-                              width: isSelected ? 2 : 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: _getStatusColor(entry.key),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${_getStatusText(entry.key)}: ${entry.value}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: _getStatusColor(entry.key),
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                  // Status-specific buttons (always show all statuses)
+                  ...OrderStatus.values.map((status) {
+                    final isSelected = _selectedStatus == status;
+                    final count = statusCounts[status] ?? 0;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          // Toggle filter: if already selected, clear it; otherwise set it
+                          _selectedStatus = isSelected ? null : status;
+                        });
+                        _loadData(); // Reload data from API
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              isSelected
+                                  ? _getStatusColor(status).withOpacity(0.2)
+                                  : _getStatusColor(status).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color:
+                                isSelected
+                                    ? _getStatusColor(status)
+                                    : _getStatusColor(status).withOpacity(0.3),
+                            width: isSelected ? 2 : 1,
                           ),
                         ),
-                      );
-                    }).toList(),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: _getStatusColor(status),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${_getStatusText(status)}: $count',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _getStatusColor(status),
+                                fontWeight:
+                                    isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ],
               ),
             ),
@@ -1811,7 +1888,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     const SizedBox(height: 8),
                     Text(
                       order.description,
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1913,7 +1993,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             const SizedBox(width: 8),
                           ],
                           // Show party name for bulk orders
-                          if (order.orderType == 'Bulk' && order.partynameDisplay != null) ...[
+                          if (order.orderType == 'Bulk' ||
+                              order.orderType == 'Single' &&
+                                  order.partynameDisplay != null) ...[
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 6,
@@ -1922,7 +2004,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                               decoration: BoxDecoration(
                                 color: Colors.purple.shade50,
                                 borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: Colors.purple.shade200),
+                                border: Border.all(
+                                  color: Colors.purple.shade200,
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -1947,6 +2031,66 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             const SizedBox(width: 8),
                           ],
                         ],
+                      ),
+                    ],
+                    // Show delivery count for partial delivery orders
+                    if (order.status == OrderStatus.partialDelivery) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppConstants.partialDeliveryColor.withOpacity(
+                            0.1,
+                          ),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: AppConstants.partialDeliveryColor
+                                .withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.local_shipping_outlined,
+                              size: 14,
+                              color: AppConstants.partialDeliveryColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Delivered: ${order.totalDeliveryCount}/${order.totalQuantity}',
+                              style: TextStyle(
+                                color: AppConstants.partialDeliveryColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (order.shouldBeDelivered) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'READY FOR COMPLETION',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ],
                     if (_selectionMode) ...[
@@ -2018,14 +2162,15 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                               (context) => OrderImageGenerator(order: order),
                         ),
                       );
-                    } else if (value == 'generate_pdf') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PDFViewerScreen(order: order),
-                        ),
-                      );
                     }
+                    // else if (value == 'generate_pdf') {
+                    //   Navigator.push(
+                    //     context,
+                    //     MaterialPageRoute(
+                    //       builder: (context) => PDFViewerScreen(order: order),
+                    //     ),
+                    //   );
+                    // }
                   },
 
                   itemBuilder:
@@ -2086,20 +2231,20 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             ],
                           ),
                         ),
-                        PopupMenuItem(
-                          value: 'generate_pdf',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.picture_as_pdf_outlined,
-                                size: 18,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 12),
-                              const Text('Generate PDF'),
-                            ],
-                          ),
-                        ),
+                        // PopupMenuItem(
+                        //   value: 'generate_pdf',
+                        //   child: Row(
+                        //     children: [
+                        //       Icon(
+                        //         Icons.picture_as_pdf_outlined,
+                        //         size: 18,
+                        //         color: Colors.grey.shade600,
+                        //       ),
+                        //       const SizedBox(width: 12),
+                        //       const Text('Generate PDF'),
+                        //     ],
+                        //   ),
+                        // ),
                         if (order.orderType == 'Single')
                           PopupMenuItem(
                             value: 'delete',
@@ -2492,7 +2637,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                 ),
                               ),
                               child: Text(
-                                order.status.toString().split('.').last,
+                                _getStatusText(order.status),
                                 style: TextStyle(
                                   color: _getStatusColor(order.status),
                                   fontSize: 12,
@@ -2528,6 +2673,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           value: selectedStatus,
                           items:
                               OrderStatus.values
+                                  .where(
+                                    (status) =>
+                                        status != OrderStatus.partialDelivery,
+                                  )
                                   .map(
                                     (status) => DropdownMenuItem(
                                       value: status,
@@ -2544,9 +2693,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                               shape: BoxShape.circle,
                                             ),
                                           ),
-                                          Text(
-                                            status.toString().split('.').last,
-                                          ),
+                                          Text(_getStatusText(status)),
                                         ],
                                       ),
                                     ),
@@ -2636,20 +2783,24 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     switch (status) {
       case OrderStatus.pending:
         return const Color(0xFFFF9800); // Orange
-      case OrderStatus.confirmed:
+      case OrderStatus.Casted:
         return const Color(0xFF2196F3); // Blue
-      case OrderStatus.inProgress:
+      case OrderStatus.Wax:
         return const Color(0xFF9C27B0); // Purple
-      case OrderStatus.completed:
+      case OrderStatus.DC:
         return const Color(0xFF4CAF50); // Green
       case OrderStatus.cancelled:
         return const Color(0xFFF44336); // Red
       case OrderStatus.delay:
-        return const Color(0xFFF44336); // Red
+        return const Color.fromARGB(255, 0, 0, 0); // Red
       case OrderStatus.due:
         return const Color(0xFFF44336); // Red
       case OrderStatus.partialDelivery:
-        return AppConstants.partialDeliveryColor;
+        return const Color.fromARGB(255, 75, 121, 118);
+      case OrderStatus.PendingDisp:
+        return AppConstants.PendingDisp;
+      case OrderStatus.completed:
+        return AppConstants.Completed;
     }
   }
 
@@ -2657,12 +2808,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     switch (status) {
       case OrderStatus.pending:
         return 'Pending';
-      case OrderStatus.confirmed:
-        return 'Confirmed';
-      case OrderStatus.inProgress:
-        return 'In Progress';
-      case OrderStatus.completed:
-        return 'Completed';
+      case OrderStatus.Casted:
+        return 'Casted';
+      case OrderStatus.Wax:
+        return 'Wax';
+      case OrderStatus.DC:
+        return 'DC';
       case OrderStatus.cancelled:
         return 'Cancelled';
       case OrderStatus.delay:
@@ -2671,6 +2822,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         return 'Due';
       case OrderStatus.partialDelivery:
         return 'Partial Delivery';
+      case OrderStatus.PendingDisp:
+        return 'PendingDisp';
+      case OrderStatus.completed:
+        return 'Completed';
     }
   }
 }
@@ -2737,20 +2892,20 @@ class FullScreenImageViewer extends StatelessWidget {
                       strokeWidth: 2,
                     ),
                   ),
-                  PopupMenuItem(
-                    value: 'pdf',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.picture_as_pdf_outlined,
-                          size: 18,
-                          color: Colors.grey.shade600,
-                        ),
-                        const SizedBox(width: 12),
-                        const Text('Generate PDF'),
-                      ],
-                    ),
-                  ),
+                  // PopupMenuItem(
+                  //   value: 'pdf',
+                  //   child: Row(
+                  //     children: [
+                  //       Icon(
+                  //         Icons.picture_as_pdf_outlined,
+                  //         size: 18,
+                  //         color: Colors.grey.shade600,
+                  //       ),
+                  //       const SizedBox(width: 12),
+                  //       const Text('Generate PDF'),
+                  //     ],
+                  //   ),
+                  // ),
                   const SizedBox(height: 16),
                   const Text(
                     'Loading image...',

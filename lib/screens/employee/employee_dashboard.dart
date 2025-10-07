@@ -15,6 +15,9 @@ import '../client/create_order_screen.dart';
 import 'order_detailed_screen.dart' show OrderDetailsScreen;
 import 'package:intl/intl.dart';
 
+// Add enum for sort options
+enum OrderSortOption { dateDesc, dateAsc, priority }
+
 class EmployeeDashboard extends StatefulWidget {
   const EmployeeDashboard({super.key});
 
@@ -26,6 +29,16 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   List<Order> _assignedOrders = [];
   List<Order> _pendingOrders = [];
   bool _isLoading = true;
+  OrderSortOption _pendingSortOption = OrderSortOption.dateDesc;
+
+  @override
+  void initState() {
+    super.initState();
+    // Defer to after first frame so Provider context is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadOrders();
+    });
+  }
 
   bool _isUrgent(Order order) {
     final p = (order.orderPriority ?? '').toLowerCase().trim();
@@ -37,9 +50,19 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppConstants.errorColor,
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(8),
+          bottomRight: Radius.circular(8),
+        ),
       ),
-      child: const Text('URGENT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+      child: const Text(
+        'URGENT',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
+      ),
     );
   }
 
@@ -48,9 +71,19 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppConstants.warningColor,
-        borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomLeft: Radius.circular(8)),
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(8),
+          bottomLeft: Radius.circular(8),
+        ),
       ),
-      child: const Text('PENDING', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+      child: const Text(
+        'PENDING',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
+      ),
     );
   }
 
@@ -58,12 +91,12 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
     switch (status) {
       case OrderStatus.pending:
         return 'Pending';
-      case OrderStatus.confirmed:
-        return 'Confirmed';
-      case OrderStatus.inProgress:
-        return 'In Progress';
-      case OrderStatus.completed:
-        return 'Completed';
+      case OrderStatus.Casted:
+        return 'Casted';
+      case OrderStatus.Wax:
+        return 'Wax';
+      case OrderStatus.DC:
+        return 'DC';
       case OrderStatus.cancelled:
         return 'Cancelled';
       case OrderStatus.delay:
@@ -72,6 +105,10 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         return 'Due';
       case OrderStatus.partialDelivery:
         return 'Partial Delivery';
+      case OrderStatus.PendingDisp:
+        return 'PendingDisp';
+        case OrderStatus.completed:
+        return 'Completed';
     }
   }
 
@@ -79,20 +116,24 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
     switch (status) {
       case OrderStatus.pending:
         return const Color(0xFFFF9800); // Orange
-      case OrderStatus.confirmed:
+      case OrderStatus.Casted:
         return const Color(0xFF2196F3); // Blue
-      case OrderStatus.inProgress:
+      case OrderStatus.Wax:
         return const Color(0xFF9C27B0); // Purple
-      case OrderStatus.completed:
+      case OrderStatus.DC:
         return const Color(0xFF4CAF50); // Green
       case OrderStatus.cancelled:
         return const Color(0xFFF44336); // Red
       case OrderStatus.delay:
-        return const Color(0xFFF44336); // Red
+        return const Color.fromARGB(255, 0, 0, 0); // Red
       case OrderStatus.due:
         return const Color(0xFFF44336); // Red
       case OrderStatus.partialDelivery:
         return AppConstants.partialDeliveryColor;
+      case OrderStatus.PendingDisp:
+        return AppConstants.PendingDisp;
+             case OrderStatus.completed:
+        return AppConstants.Completed;
     }
   }
 
@@ -144,6 +185,28 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
     }
   }
 
+  // Helper to get sorted pending orders
+  List<Order> get _sortedPendingOrders {
+    List<Order> sorted = List.from(_pendingOrders);
+    switch (_pendingSortOption) {
+      case OrderSortOption.dateDesc:
+        sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case OrderSortOption.dateAsc:
+        sorted.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+      case OrderSortOption.priority:
+        sorted.sort((a, b) {
+          final aUrgent = _isUrgent(a) ? 0 : 1;
+          final bUrgent = _isUrgent(b) ? 0 : 1;
+          if (aUrgent != bUrgent) return aUrgent - bUrgent;
+          return b.createdAt.compareTo(a.createdAt);
+        });
+        break;
+    }
+    return sorted;
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = context.read<AuthProvider>().currentUser;
@@ -167,7 +230,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildWelcomeSection(currentUser!),
+                      if (currentUser != null)
+                        _buildWelcomeSection(currentUser),
                       const SizedBox(height: AppConstants.spacingL),
                       _buildQuickActions(),
                       const SizedBox(height: AppConstants.spacingL),
@@ -334,15 +398,45 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Pending Orders', style: AppConstants.headingSmall),
-            TextButton(
-              onPressed:
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ManageOrdersScreen(),
+            Row(
+              children: [
+                DropdownButton<OrderSortOption>(
+                  value: _pendingSortOption,
+                  underline: SizedBox.shrink(),
+                  style: TextStyle(color: Colors.black, fontSize: 13),
+                  items: const [
+                    DropdownMenuItem(
+                      value: OrderSortOption.dateDesc,
+                      child: Text('Newest'),
                     ),
-                  ),
-              child: const Text('View All'),
+                    DropdownMenuItem(
+                      value: OrderSortOption.dateAsc,
+                      child: Text('Oldest'),
+                    ),
+                    DropdownMenuItem(
+                      value: OrderSortOption.priority,
+                      child: Text('Urgent First'),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _pendingSortOption = val;
+                      });
+                    }
+                  },
+                ),
+                TextButton(
+                  onPressed:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ManageOrdersScreen(),
+                        ),
+                      ),
+                  child: const Text('View All'),
+                ),
+              ],
             ),
           ],
         ),
@@ -368,7 +462,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               ],
             ),
           ),
-        ..._pendingOrders.take(3).map((order) => _buildOrderCard(order)),
+        ..._sortedPendingOrders.map((order) => _buildOrderCard(order)),
       ],
     );
   }
@@ -437,7 +531,9 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                                   ),
                             )
                             : Container(
-                              color: _getStatusColor(order.status).withOpacity(0.1),
+                              color: _getStatusColor(
+                                order.status,
+                              ).withOpacity(0.1),
                               child: Icon(
                                 Icons.shopping_bag_outlined,
                                 color: _getStatusColor(order.status),
@@ -468,10 +564,14 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(order.status).withOpacity(0.1),
+                            color: _getStatusColor(
+                              order.status,
+                            ).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color: _getStatusColor(order.status).withOpacity(0.3),
+                              color: _getStatusColor(
+                                order.status,
+                              ).withOpacity(0.3),
                             ),
                           ),
                           child: Text(
@@ -516,7 +616,10 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                     const SizedBox(height: 8),
                     Text(
                       order.description,
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -643,7 +746,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                         context,
                         MaterialPageRoute(
                           builder:
-                              (context) => CreateOrderScreen(orderToEdit: order),
+                              (context) =>
+                                  CreateOrderScreen(orderToEdit: order),
                         ),
                       ).then((_) => _loadOrders());
                     } else if (value == 'status') {
@@ -654,17 +758,19 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => OrderDetailsScreen(order: order),
-                        ),
-                      );
-                    } else if (value == 'pdf') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PDFViewerScreen(order: order),
+                          builder:
+                              (context) => OrderDetailsScreen(order: order),
                         ),
                       );
                     }
+                    //  else if (value == 'pdf') {
+                    //   Navigator.push(
+                    //     context,
+                    //     MaterialPageRoute(
+                    //       builder: (context) => PDFViewerScreen(order: order),
+                    //     ),
+                    //   );
+                    // }
                   },
                   itemBuilder:
                       (context) => [
@@ -728,20 +834,20 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                               ],
                             ),
                           ),
-                        PopupMenuItem(
-                          value: 'pdf',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.picture_as_pdf_outlined,
-                                size: 18,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 12),
-                              const Text('Generate PDF'),
-                            ],
-                          ),
-                        ),
+                        // PopupMenuItem(
+                        //   value: 'pdf',
+                        //   child: Row(
+                        //     children: [
+                        //       Icon(
+                        //         Icons.picture_as_pdf_outlined,
+                        //         size: 18,
+                        //         color: Colors.grey.shade600,
+                        //       ),
+                        //       const SizedBox(width: 12),
+                        //       const Text('Generate PDF'),
+                        //     ],
+                        //   ),
+                        // ),
                       ],
                 ),
                 children: [_buildExpandedContent(order)],
@@ -791,7 +897,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
             _buildDetailSection('Ornament Details', []),
             const SizedBox(height: 8),
             ...order.ornamentDetails.map((detail) {
-              final images = detail.images.isNotEmpty ? detail.images : order.images;
+              final images =
+                  detail.images.isNotEmpty ? detail.images : order.images;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -834,7 +941,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                                   fontSize: 12,
                                 ),
                               ),
-                              if (detail.remarks != null && detail.remarks!.isNotEmpty) ...[
+                              if (detail.remarks != null &&
+                                  detail.remarks!.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   'Remarks: ${detail.remarks!}',
@@ -879,7 +987,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                                     return Container(
                                       color: Colors.grey.shade100,
                                       child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Icon(
                                             Icons.broken_image_outlined,
@@ -909,7 +1018,10 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                     const SizedBox(height: 6),
                     Text(
                       'No images for this ornament',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
 
@@ -1266,7 +1378,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   }
 
   Future<void> _deleteOrder(String orderId) async {
-    final confirmed = await showDialog<bool>(
+    final Casted = await showDialog<bool>(
       context: context,
       builder:
           (context) => AlertDialog(
@@ -1317,7 +1429,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
             ],
           ),
     );
-    if (confirmed == true) {
+    if (Casted == true) {
       try {
         final token = AuthService.currentToken;
         if (token != null) {

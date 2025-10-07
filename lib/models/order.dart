@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:soloshine/constants/app_constants.dart';
 
-enum OrderStatus { pending, confirmed, inProgress, completed, cancelled,delay, due,partialDelivery}
+enum OrderStatus {
+  pending,
+  Casted,
+  Wax,
+  DC,
+  cancelled,
+  delay,
+  due,
+  partialDelivery,
+  PendingDisp,
+  completed,
+}
 
 class OrnamentDetail {
   final String id;
@@ -77,9 +88,10 @@ class OrnamentDetail {
       colorstone: json['colorstone']?.toString(),
       rhodium: json['rhodium']?.toString(),
       dull: json['dull']?.toString(),
-      deliverycount: json['deliverycount'] != null 
-          ? int.tryParse(json['deliverycount'].toString()) 
-          : null,
+      deliverycount:
+          json['deliverycount'] != null
+              ? int.tryParse(json['deliverycount'].toString())
+              : null,
     );
   }
 
@@ -238,13 +250,15 @@ class Order {
     switch (s) {
       case 'pending':
         return OrderStatus.pending;
-      case 'confirmed':
-        return OrderStatus.confirmed;
-      case 'inprogress': // handles "in progress", "in_progress"
+      case 'pendingdisp':
+        return OrderStatus.PendingDisp;
+      case 'casted':
+        return OrderStatus.Casted;
+      case 'wax': // handles "Wax", "in_progress"
       case 'processing':
-        return OrderStatus.inProgress;
-      case 'completed':
-        return OrderStatus.completed;
+        return OrderStatus.Wax;
+      case 'dc':
+        return OrderStatus.DC;
       case 'cancelled':
       case 'canceled':
         return OrderStatus.cancelled;
@@ -255,6 +269,8 @@ class Order {
       case 'partialdelivery': // handles "partial delivery", "partial_delivery"
       case 'partiallydelivered':
         return OrderStatus.partialDelivery;
+      case 'completed':
+        return OrderStatus.completed;
       default:
         return OrderStatus.pending;
     }
@@ -273,7 +289,8 @@ class Order {
   // Parse party name from partyname field (can be string or object)
   static String? _parsePartyName(dynamic partyname) {
     if (partyname == null) return null;
-    if (partyname is String) return null; // If it's just ID, we don't have the name
+    if (partyname is String)
+      return null; // If it's just ID, we don't have the name
     if (partyname is Map<String, dynamic>) {
       return partyname['name']?.toString();
     }
@@ -295,12 +312,12 @@ class Order {
     switch (status) {
       case OrderStatus.pending:
         return 'Pending';
-      case OrderStatus.confirmed:
-        return 'Confirmed';
-      case OrderStatus.inProgress:
-        return 'InProgress';
-      case OrderStatus.completed:
-        return 'Completed';
+      case OrderStatus.Casted:
+        return 'Casted';
+      case OrderStatus.Wax:
+        return 'Wax';
+      case OrderStatus.DC:
+        return 'DC';
       case OrderStatus.cancelled:
         return 'Cancelled';
       case OrderStatus.delay:
@@ -309,6 +326,10 @@ class Order {
         return 'Due';
       case OrderStatus.partialDelivery:
         return 'Partial Delivery';
+      case OrderStatus.PendingDisp:
+        return 'PendingDisp';
+          case OrderStatus.completed:
+        return 'Completed';
     }
   }
 
@@ -386,12 +407,12 @@ class Order {
     switch (status) {
       case OrderStatus.pending:
         return 'Pending';
-      case OrderStatus.confirmed:
-        return 'Confirmed';
-      case OrderStatus.inProgress:
-        return 'In Progress';
-      case OrderStatus.completed:
-        return 'Completed';
+      case OrderStatus.Casted:
+        return 'Casted';
+      case OrderStatus.Wax:
+        return 'Wax';
+      case OrderStatus.DC:
+        return 'DC';
       case OrderStatus.cancelled:
         return 'Cancelled';
       case OrderStatus.delay:
@@ -400,6 +421,10 @@ class Order {
         return 'Due';
       case OrderStatus.partialDelivery:
         return 'Partial Delivery';
+      case OrderStatus.PendingDisp:
+        return 'PendingDisp';
+      case OrderStatus.completed:
+        return 'Completed';
     }
   }
 
@@ -407,20 +432,51 @@ class Order {
     switch (status) {
       case OrderStatus.pending:
         return Colors.orange;
-      case OrderStatus.confirmed:
+      case OrderStatus.Casted:
         return Colors.blue;
-      case OrderStatus.inProgress:
+      case OrderStatus.Wax:
         return Colors.purple;
-      case OrderStatus.completed:
+      case OrderStatus.DC:
         return Colors.green;
       case OrderStatus.cancelled:
         return Colors.red;
       case OrderStatus.delay:
-        return Colors.red;
+        return Colors.black;
       case OrderStatus.due:
         return Colors.red;
       case OrderStatus.partialDelivery:
         return AppConstants.partialDeliveryColor;
+      case OrderStatus.PendingDisp:
+        return AppConstants.PendingDisp;
+      case OrderStatus.completed:
+        return AppConstants.Completed;
     }
+  }
+
+  // Check if order should be automatically marked as delivered
+  bool get shouldBeDelivered {
+    if (status != OrderStatus.partialDelivery) return false;
+
+    // Check if all ornament details have delivery count >= quantity
+    for (final detail in ornamentDetails) {
+      if (detail.deliverycount == null ||
+          detail.deliverycount! < detail.quantity) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Get total delivery count across all ornament details
+  int get totalDeliveryCount {
+    return ornamentDetails.fold(
+      0,
+      (sum, detail) => sum + (detail.deliverycount ?? 0),
+    );
+  }
+
+  // Get total quantity across all ornament details
+  int get totalQuantity {
+    return ornamentDetails.fold(0, (sum, detail) => sum + detail.quantity);
   }
 }
