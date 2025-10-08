@@ -1557,7 +1557,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                       setState(() {
                         _selectedStatus = null;
                       });
-                      _applyFilters(); // Apply client-side filtering only
+                      _loadData(); // Reload data from API
                     },
                     child: Container(
                       margin: const EdgeInsets.only(right: 12),
@@ -1595,7 +1595,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'All: ${_allOrders.length}',
+                            'All',
                             style: TextStyle(
                               fontSize: 12,
                               color:
@@ -1622,7 +1622,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           // Toggle filter: if already selected, clear it; otherwise set it
                           _selectedStatus = isSelected ? null : status;
                         });
-                        _applyFilters(); // Apply client-side filtering only
+                        _loadData(); // Reload data from API
                       },
                       child: Container(
                         margin: const EdgeInsets.only(right: 12),
@@ -1630,7 +1630,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           horizontal: 8,
                           vertical: 4,
                         ),
-{{ ... }}
                         decoration: BoxDecoration(
                           color:
                               isSelected
@@ -1658,7 +1657,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              '${_getStatusText(status)}: $count',
+                              '${_getStatusText(status)}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: _getStatusColor(status),
