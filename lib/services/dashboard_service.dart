@@ -4,7 +4,7 @@ import 'api_service.dart';
 class AdminDashboardService {
   static Future<Map<String, dynamic>> getDashboardStatistics(
     String token,
-  ) async {
+  ) async {   
     try {
       // Validate token
       if (token.isEmpty) {

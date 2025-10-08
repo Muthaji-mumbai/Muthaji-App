@@ -116,18 +116,18 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               );
             },
           ),
-          IconButton(
-            tooltip: 'Generate PDF',
-            icon: const Icon(Icons.picture_as_pdf_outlined),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PDFViewerScreen(order: widget.order),
-                ),
-              );
-            },
-          ),
+          // IconButton(
+          //   tooltip: 'Generate PDF',
+          //   icon: const Icon(Icons.picture_as_pdf_outlined),
+          //   onPressed: () {
+          //     Navigator.push(
+          //       context,
+          //       MaterialPageRoute(
+          //         builder: (context) => PDFViewerScreen(order: widget.order),
+          //       ),
+          //     );
+          //   },
+          // ),
         ],
       ),
       body: LayoutBuilder(

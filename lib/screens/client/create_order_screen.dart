@@ -103,6 +103,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   static const List<String> _orderTypeOptions = ['Single', 'Bulk'];
   static const List<String> _priorityOptions = ['Regular', 'Urgent'];
   String _selectedPriority = 'Regular';
+  String? _orderNo; // <-- Add this field to store the order number
 
   List<String> get _availableOrderTypes {
     final currentUser = context.read<AuthProvider>().currentUser;
@@ -165,6 +166,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           if (_selectedOrderType == 'Bulk' ||
               _selectedOrderType == 'Single' && _selectedPartyId != null)
             'partyname': _selectedPartyId,
+          if (_orderNo != null && _orderNo!.isNotEmpty)
+            'orderno': _orderNo, // <-- Pass orderNo to API
         };
 
         // Include status in update only for admin/employee users
@@ -218,6 +221,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     if (_shouldShowOrderTypeSelection()) {
       _fetchParties();
     }
+    // Prefill orderNo if editing
+    if (widget.orderToEdit != null && widget.orderToEdit!.orderNo != null) {
+      _orderNo = widget.orderToEdit!.orderNo;
+    }
   }
 
   @override
@@ -245,6 +252,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     _selectedOrderType = order.orderType ?? 'Single';
     _selectedStatus = order.status;
     _selectedPriority = order.orderPriority ?? 'Regular';
+    _orderNo = order.orderNo; // <-- Prefill orderNo
 
     // Handle party information for bulk orders
     if (order.partyname != null && order.orderType == 'Bulk' ||
@@ -543,6 +551,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     ? _selectedPartyId
                     : currentUser.id,
             token: token,
+            orderno: _orderNo, // <-- Pass orderNo to API
           );
 
           if (mounted) {
@@ -1004,9 +1013,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     });
                   },
                   validator: (value) {
-                    if (_selectedOrderType == 'Bulk' ||
-                        _selectedOrderType == 'Single' &&
-                            (value == null || value.isEmpty)) {
+                    if ((_selectedOrderType == 'Bulk' || _selectedOrderType == 'Single') &&
+                        (value == null || value.isEmpty)) {
                       return 'Please select a party';
                     }
                     return null;
@@ -1140,7 +1148,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      'Order No: ${_existingOrder!.orderNo}',
+                      'Order No:  ${_existingOrder!.orderNo}',
                       style: TextStyle(
                         color: AppConstants.primaryColor,
                         fontWeight: FontWeight.w600,
@@ -1150,6 +1158,35 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               ],
             ),
             const SizedBox(height: AppConstants.spacingM),
+            // --- Order No field for Bulk orders (admin/employee only) ---
+            if (_shouldShowOrderTypeSelection() && _selectedOrderType == 'Bulk') ...[
+              Text(
+                'Order No',
+                style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: AppConstants.spacingS),
+              TextFormField(
+                initialValue: _orderNo ?? '',
+                decoration: InputDecoration(
+                  labelText: 'Enter Order No',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingS,
+                    vertical: AppConstants.spacingS,
+                  ),
+                ),
+                onChanged: (val) => setState(() => _orderNo = val),
+                validator: (val) {
+                  if (_selectedOrderType == 'Bulk' && (val == null || val.isEmpty)) {
+                    return 'Order No is required for bulk orders';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppConstants.spacingM),
+            ],
             GestureDetector(
               onTap: _selectDate,
               child: CustomTextField(
