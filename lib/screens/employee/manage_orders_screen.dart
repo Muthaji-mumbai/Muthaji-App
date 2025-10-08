@@ -1557,7 +1557,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                       setState(() {
                         _selectedStatus = null;
                       });
-                      _loadData(); // Reload data from API
+                      _applyFilters(); // Apply client-side filtering only
                     },
                     child: Container(
                       margin: const EdgeInsets.only(right: 12),
@@ -1622,7 +1622,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           // Toggle filter: if already selected, clear it; otherwise set it
                           _selectedStatus = isSelected ? null : status;
                         });
-                        _loadData(); // Reload data from API
+                        _applyFilters(); // Apply client-side filtering only
                       },
                       child: Container(
                         margin: const EdgeInsets.only(right: 12),
@@ -1630,6 +1630,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           horizontal: 8,
                           vertical: 4,
                         ),
+{{ ... }}
                         decoration: BoxDecoration(
                           color:
                               isSelected
