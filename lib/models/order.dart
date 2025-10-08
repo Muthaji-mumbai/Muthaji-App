@@ -12,6 +12,7 @@ enum OrderStatus {
   partialDelivery,
   PendingDisp,
   Completed,
+  Delivered, // <-- Added new status
 }
 
 class OrnamentDetail {
@@ -271,6 +272,8 @@ class Order {
         return OrderStatus.partialDelivery;
       case 'completed':
         return OrderStatus.Completed;
+      case 'delivered':
+        return OrderStatus.Delivered;
       default:
         return OrderStatus.pending;
     }
@@ -328,8 +331,10 @@ class Order {
         return 'Partial Delivery';
       case OrderStatus.PendingDisp:
         return 'PendingDisp';
-          case OrderStatus.Completed:
+      case OrderStatus.Completed:
         return 'Completed';
+      case OrderStatus.Delivered:
+        return 'Delivered';
     }
   }
 
@@ -425,6 +430,8 @@ class Order {
         return 'PendingDisp';
       case OrderStatus.Completed:
         return 'Completed';
+      case OrderStatus.Delivered:
+        return 'Delivered';
     }
   }
 
@@ -450,6 +457,8 @@ class Order {
         return AppConstants.PendingDisp;
       case OrderStatus.Completed:
         return AppConstants.Completed;
+      case OrderStatus.Delivered:
+        return AppConstants.deliveredColor; // Add this to AppConstants
     }
   }
 

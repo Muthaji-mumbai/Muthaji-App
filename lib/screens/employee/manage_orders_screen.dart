@@ -172,7 +172,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading data: $e'),
+            content: Text('Failed loading data:'),
             backgroundColor: AppConstants.errorColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -705,7 +705,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             children: [
               const Icon(Icons.done_all, color: Colors.white, size: 20),
               const SizedBox(width: 12),
-              Text('Updated ${_selectedOrderIds.length} orders successfully'),
+              Text('Updated  orders successfully'),
             ],
           ),
           backgroundColor: AppConstants.successColor,
@@ -1545,11 +1545,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
-          Text(
-            'Summary',
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-          ),
-          const SizedBox(width: 16),
+          
           Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -2575,7 +2571,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 children: [
                   const Icon(Icons.error, color: Colors.white, size: 20),
                   const SizedBox(width: 12),
-                  Text('Error opening PDF: $e'),
+                  Text('Error opening PDF'),
                 ],
               ),
               backgroundColor: AppConstants.errorColor,
@@ -2833,6 +2829,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         return AppConstants.PendingDisp;
       case OrderStatus.Completed:
         return AppConstants.Completed;
+         case OrderStatus.Delivered:
+        return AppConstants.deliveredColor;
     }
   }
 
@@ -2858,6 +2856,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         return 'PendingDisp';
       case OrderStatus.Completed:
         return 'Completed';
+       case OrderStatus.Delivered:
+        return 'Delivered';
     }
   }
 }

@@ -25,41 +25,6 @@ class AdminDashboard extends StatefulWidget {
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
-class _WelcomeChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _WelcomeChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.spacingS,
-        vertical: AppConstants.spacingXS,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(AppConstants.radiusS),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: AppConstants.bodySmall.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _AdminDashboardState extends State<AdminDashboard> {
   Map<String, dynamic> _orderStats = {};
   Map<String, dynamic> _userStats = {};
@@ -1839,12 +1804,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
           case OrderStatus.partialDelivery:
             toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
             break;
-
           case OrderStatus.PendingDisp:
             toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
             break;
           case OrderStatus.Completed:
             toSingle ? singleCompleted++ : bulkCompleted++;
+            break;
+          case OrderStatus.Delivered:
+            // Add handling for Delivered status
             break;
         }
       }
@@ -2046,6 +2013,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             break;
           case OrderStatus.Completed:
             toSingle ? singleCompleted++ : bulkCompleted++;
+            break;
+          case OrderStatus.Delivered:
+            // Add handling for Delivered status
             break;
         }
       }
@@ -2941,71 +2911,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
-  // Widget _buildWelcomeSection(User user) {
-  //   final displayName = user.email.split('@')[0];
-  //   return ClipRRect(
-  //     borderRadius: BorderRadius.circular(AppConstants.radiusL),
-  //     child: Stack(
-  //       children: [
-  //         Container(
-  //           width: double.infinity,
-  //           padding: const EdgeInsets.all(50),
-  //           decoration: BoxDecoration(
-  //             gradient: LinearGradient(
-  //               colors: [
-  //                 AppConstants.primaryColor,
-  //                 AppConstants.secondaryColor,
-  //               ],
-  //               begin: Alignment.topLeft,
-  //               end: Alignment.bottomRight,
-  //             ),
-  //             boxShadow: AppConstants.cardShadow,
-  //           ),
-  //         ),
-  //         Positioned(
-  //           right: -20,
-  //           bottom: -20,
-  //           child: Opacity(
-  //             opacity: 0.08,
-  //             child: Image.asset(
-  //               'assets/icons/logo.png',
-  //               width: 180,
-  //               height: 180,
-  //               fit: BoxFit.contain,
-  //             ),
-  //           ),
-  //         ),
-  //         Positioned.fill(
-  //           child: Column(
-  //             crossAxisAlignment: CrossAxisAlignment.start,
-  //             children: [
-  //               Text(
-  //                 'Welcome back, $displayName!',
-  //                 style: AppConstants.headingLarge.copyWith(
-  //                   color: Colors.white,
-  //                   fontWeight: FontWeight.bold,
-  //                 ),
-  //               ),
-  //               const SizedBox(height: AppConstants.spacingS),
-  //               Text(
-  //                 'Manage your business operations from this central dashboard',
-  //                 style: AppConstants.bodyLarge.copyWith(
-  //                   color: Colors.white.withOpacity(0.9),
-  //                 ),
-  //               ),
-  //               const SizedBox(height: AppConstants.spacingM),
-  //               _WelcomeChip(
-  //                 icon: Icons.admin_panel_settings,
-  //                 label: 'Administrator Dashboard',
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 
   // Helper methods remain the same
   // Removed unused helpers (_formatDate, _getStatusText, _getStatusColor) to satisfy lints

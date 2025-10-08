@@ -109,6 +109,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         return 'PendingDisp';
         case OrderStatus.Completed:
         return 'Completed';
+       case OrderStatus.Delivered:
+        return 'Delivered';
     }
   }
 
@@ -134,6 +136,9 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         return AppConstants.PendingDisp;
              case OrderStatus.Completed:
         return AppConstants.Completed;
+         case OrderStatus.Delivered:
+        return AppConstants.deliveredColor;
+      
     }
   }
 

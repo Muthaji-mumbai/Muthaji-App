@@ -964,8 +964,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
         return 'Partial Delivery';
       case OrderStatus.PendingDisp:
         return 'PendingDisp';
-        case OrderStatus.Completed:
+      case OrderStatus.Completed:
         return 'Completed';
+      case OrderStatus.Delivered:
+        return 'Delivered';
     }
   }
 
@@ -982,15 +984,17 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
       case OrderStatus.cancelled:
         return const Color(0xFFF44336); // Red
       case OrderStatus.delay:
-        return const ui.Color.fromARGB(255, 0, 0, 0); // Red
+        return const ui.Color.fromARGB(255, 0, 0, 0); // Black
       case OrderStatus.due:
         return const Color(0xFFF44336); // Red
       case OrderStatus.partialDelivery:
         return Colors.teal; // fallback
       case OrderStatus.PendingDisp:
-        return Colors.amber; 
-          case OrderStatus.Completed:
+        return Colors.amber;
+      case OrderStatus.Completed:
         return AppConstants.Completed;
+      case OrderStatus.Delivered:
+        return AppConstants.deliveredColor;
     }
   }
 }

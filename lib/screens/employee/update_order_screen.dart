@@ -702,6 +702,8 @@ class _UpdateOrderScreenState extends State<UpdateOrderScreen> {
         return 'PendingDisp';
              case OrderStatus.Completed:
         return '  Completed';
+      case OrderStatus.Delivered:
+      return 'Delivered';
     }
   }
 }
