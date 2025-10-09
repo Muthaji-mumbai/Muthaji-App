@@ -308,15 +308,47 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final token = authProvider.currentUser?.token;
       if (token != null) {
         final users = await UserService.getAllUsers(token);
-        // Show all users for party selection (customers, employees, admins)
+        // Show only customers for party selection
         setState(() {
-          _allUsers = users;
+          _allUsers = users.where((u) => u.role == UserRole.customer).toList();
           _loadingUsers = false;
         });
       }
     } catch (e) {
       setState(() => _loadingUsers = false);
       // Silently fail for user loading as it's not critical
+    }
+  }
+
+  Future<void> _loadOrdersWithPartyFilter() async {
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final token = authProvider.currentUser?.token;
+      
+      if (token != null) {
+        // Call API with partyname parameter if a party is selected
+        final allOrders = await OrderService.getAllOrders(
+          token,
+          partyId: _selectedUserId,
+          startDate: _startDate,
+          endDate: _endDate,
+        );
+        
+        setState(() {
+          _allOrders = allOrders;
+        });
+      }
+    } catch (e) {
+      print('Error loading orders with party filter: $e');
+      // Show error to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load orders: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
     }
   }
 
@@ -1581,13 +1613,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       (user) => DropdownMenuItem<String>(
                         value: user.id,
                         child: Text(
-                          '${user.name} (${user.email})',
+                          user.name,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
                   ],
-                  onChanged: (value) {
+                  onChanged: (value) async {
                     setState(() {
                       _selectedUserId = value;
                       _selectedUserName =
@@ -1595,8 +1627,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ? _allUsers.firstWhere((u) => u.id == value).name
                               : null;
                     });
-                    // The pie charts will automatically update since they use _allOrders
-                    // which will be filtered by the selected user in the chart calculation
+                    // Reload orders with party filter
+                    await _loadOrdersWithPartyFilter();
                   },
                 ),
               ),

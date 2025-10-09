@@ -150,7 +150,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           status: _selectedStatus,
           startDate: apiStartDate,
           endDate: apiEndDate,
-          userId: _selectedUserId, // Pass selected user ID for filtering
+          partyname : _selectedUserId, 
         );
 
         setState(() {

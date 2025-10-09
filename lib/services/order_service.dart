@@ -19,6 +19,7 @@ class OrderService {
     String? userId, // Add user-based filtering
     String? orderType, // 'Single' | 'Bulk'
     String? partyId, // For APIs that expect partyname instead of userid
+    String? partyname, // Direct partyname parameter
   }) async {
     try {
       // Validate token
@@ -55,7 +56,10 @@ class OrderService {
       }
 
       // Some endpoints expect partyname for client-scoped lookups
-      if (partyId != null && partyId.isNotEmpty) {
+      // Priority: partyname > partyId (use whichever is provided)
+      if (partyname != null && partyname.isNotEmpty) {
+        queryParams['partyname'] = partyname;
+      } else if (partyId != null && partyId.isNotEmpty) {
         queryParams['partyname'] = partyId;
       }
 
