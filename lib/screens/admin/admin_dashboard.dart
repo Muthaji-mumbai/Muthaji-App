@@ -287,12 +287,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'pendingOrders': 0,
         'WaxOrders': 0,
         'DCOrders': 0,
+        'DeliveredOrders': 0,
         'cancelledOrders': 0,
+
         'totalRevenue': 0.0,
       };
       _dashboardStats = {
         'orderTypeCounts': {'single': 0, 'bulk': 0, 'total': 0},
-        'statusCounts': {'pending': 0, 'Wax': 0, 'DC': 0, 'cancelled': 0},
+        'statusCounts': {'pending': 0, 'Wax': 0, 'DC': 0, 'cancelled': 0 ,'Delivered': 0},
       };
     }
 
@@ -1794,6 +1796,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         singleDC = 0,
         singleCancelled = 0,
         singleCompleted = 0,
+        singleDelivered = 0,
         singleCasted = 0;
 
     int singleDelay = 0, singleDue = 0, singlePartialDelivery = 0;
@@ -1802,7 +1805,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         bulkDC = 0,
         bulkCompleted = 0,
         bulkCancelled = 0,
+        bulkDelivered =0 ,
         bulkCasted = 0;
+
     int bulkDelay = 0, bulkDue = 0, bulkPartialDelivery = 0;
 
     for (final o in filteredOrders) {
@@ -1843,7 +1848,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             toSingle ? singleCompleted++ : bulkCompleted++;
             break;
           case OrderStatus.Delivered:
-            // Add handling for Delivered status
+             toSingle ? singleDelivered++ : bulkDelivered++;
             break;
         }
       }
@@ -1878,6 +1883,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'value': singleCancelled.toDouble(),
         'color': AppConstants.errorColor,
       },
+      {
+        'label': 'Delivered',
+        'value': singleDelivered.toDouble(),
+        'color': AppConstants.deliveredColor,
+      },
     ];
 
     final bulkData = [
@@ -1910,6 +1920,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'label': 'Partial Delivery',
         'value': bulkPartialDelivery.toDouble(),
         'color': AppConstants.partialDeliveryColor,
+      },
+         {
+        'label': 'Delivered',
+        'value': bulkDelivered.toDouble(),
+        'color': AppConstants.deliveredColor,
       },
     ];
 
@@ -2000,13 +2015,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
         singleDC = 0,
         singleCompleted = 0,
         singleCancelled = 0,
+        singleDelivered=0,
         singleCasted = 0;
+        
     int singleDelay = 0, singleDue = 0, singlePartialDelivery = 0;
     int bulkPending = 0,
         bulkWax = 0,
         bulkDC = 0,
         bulkCancelled = 0,
         bulkCompleted = 0,
+        bulkDelivered = 0,
         bulkCasted = 0;
     int bulkDelay = 0, bulkDue = 0, bulkPartialDelivery = 0;
     for (final o in filteredOrders) {
@@ -2047,7 +2065,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             toSingle ? singleCompleted++ : bulkCompleted++;
             break;
           case OrderStatus.Delivered:
-            // Add handling for Delivered status
+            toSingle ? singleDelivered++ : bulkDelivered++;
             break;
         }
       }
@@ -2077,6 +2095,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'value': singleDC.toDouble(),
         'color': AppConstants.successColor,
       },
+       {
+        'label': 'Delivered',
+        'value': singleDelivered.toDouble(),
+        'color': AppConstants.deliveredColor,
+      },
       {
         'label': 'Cancelled',
         'value': singleCancelled.toDouble(),
@@ -2104,6 +2127,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'label': 'DC',
         'value': bulkDC.toDouble(),
         'color': AppConstants.successColor,
+      },
+       {
+        'label': 'Delivered',
+        'value': bulkDelivered.toDouble(),
+        'color': AppConstants.deliveredColor,
       },
       {
         'label': 'Cancelled',
@@ -2284,6 +2312,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
           filteredOrders.where((o) => o.status == OrderStatus.pending).length,
       'Wax': filteredOrders.where((o) => o.status == OrderStatus.Wax).length,
       'DC': filteredOrders.where((o) => o.status == OrderStatus.DC).length,
+      'Delivered':
+          filteredOrders.where((o) => o.status == OrderStatus.Delivered).length,
       'cancelled':
           filteredOrders.where((o) => o.status == OrderStatus.cancelled).length,
     };
@@ -2313,6 +2343,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       'label': 'DC',
                       'value': statusCounts['DC']!.toDouble(),
                       'color': AppConstants.successColor,
+                    },
+                    {
+                      'label': 'Delivered',
+                      'value': statusCounts['Delivered']!.toDouble(),
+                      'color': AppConstants.deliveredColor,
                     },
                     {
                       'label': 'Cancelled',
@@ -2362,6 +2397,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         'label': 'DC',
                         'value': statusCounts['DC']!.toDouble(),
                         'color': AppConstants.successColor,
+                      },
+                      {
+                        'label': 'Delivered',
+                        'value': statusCounts['Delivered']!.toDouble(),
+                        'color': AppConstants.deliveredColor,
                       },
                       {
                         'label': 'Cancelled',
@@ -2731,6 +2771,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       'label': 'DC',
                       'value': _orderStats['DCOrders']?.toString() ?? '0',
                     },
+                     {
+                      'label': 'Delivered',
+                      'value':
+                          _orderStats['Delivered']?.toString() ?? '0',
+                    },
                     {
                       'label': 'Cancelled',
                       'value':
@@ -2800,6 +2845,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       {
                         'label': 'DC',
                         'value': _orderStats['DCOrders']?.toString() ?? '0',
+                      },
+                              {
+                        'label': 'Delivered',
+                        'value': _orderStats['Delivered']?.toString() ?? '0',
                       },
                       {
                         'label': 'Cancelled',
@@ -3010,6 +3059,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 'partial delivery':
         status = OrderStatus.partialDelivery;
         break;
+      case 'Delivered':
+        status = OrderStatus.Delivered;
+        break;
       case 'pendingdisp':
         status = OrderStatus.PendingDisp;
         break;
@@ -3077,6 +3129,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 'due':
         status = OrderStatus.due;
         break;
+        case 'Delivered':
+        status = OrderStatus.Delivered;
+        break;
       case 'partial delivery':
         status = OrderStatus.partialDelivery;
         break;
@@ -3134,6 +3189,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         break;
       case 'pendingdisp':
         status = OrderStatus.PendingDisp;
+        break;
+        case 'Delivered':
+        status = OrderStatus.Delivered;
         break;
       default:
         status = null;

@@ -1160,84 +1160,82 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     );
   }
 
-  Widget _buildActionButtonsSection(Order order) {
-    final isBulk = (order.orderType?.toLowerCase() == 'bulk');
-    final isSingle = !isBulk;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Actions',
-          style: AppConstants.bodyLarge.copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppConstants.primaryColor,
-          ),
+ Widget _buildActionButtonsSection(Order order) {
+  final isBulk = (order.orderType?.toLowerCase() == 'bulk');
+  final isSingle = !isBulk;
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(
+        'Actions',
+        style: AppConstants.bodyLarge.copyWith(
+          fontWeight: FontWeight.w600,
+          color: AppConstants.primaryColor,
         ),
-        const SizedBox(height: AppConstants.spacingS),
-        Wrap(
-          spacing: AppConstants.spacingS,
-          runSpacing: AppConstants.spacingS,
-          children: [
-            if (isSingle)
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final created = await Navigator.push<bool>(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => CreateOrderScreen(
-                            orderToEdit: order,
-                            cloneFromOrder: true,
-                          ),
+      ),
+      const SizedBox(height: AppConstants.spacingS),
+      Wrap(
+        spacing: AppConstants.spacingS,
+        runSpacing: AppConstants.spacingS,
+        children: [
+          if (isSingle)
+            OutlinedButton.icon(
+              onPressed: () async {
+                final created = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CreateOrderScreen(
+                      orderToEdit: order,
+                      cloneFromOrder: true,
                     ),
-                  );
-                  if (created == true) {
-                    _loadOrders();
-                  }
-                },
-                icon: const Icon(Icons.content_copy_outlined, size: 18),
-                label: const Text('Clone'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacingM,
-                    vertical: AppConstants.spacingS,
                   ),
-                ),
-              ),
-            // No edit/cancel for single, nothing for bulk
-          ],
-        ),
-        const SizedBox(height: AppConstants.spacingM),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => OrderImageGenerator(order: order),
-                      ),
-                    ),
-                icon: const Icon(Icons.image_outlined),
-                label: const Text('Generate Image'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.accentColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppConstants.spacingM,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                );
+                if (created == true) {
+                  _loadOrders();
+                }
+              },
+              icon: const Icon(Icons.content_copy_outlined, size: 18),
+              label: const Text('Clone'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingM,
+                  vertical: AppConstants.spacingS,
                 ),
               ),
             ),
-          ],
-        ),
-      ],
-    );
-  }
+          // No edit/cancel for single, nothing for bulk
+        ],
+      ),
+      const SizedBox(height: AppConstants.spacingM),
+      Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => OrderImageGenerator(order: order),
+                ),
+              ),
+              icon: const Icon(Icons.image_outlined),
+              label: const Text('Generate Image'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.accentColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppConstants.spacingM,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
+}
 
   Widget _buildEmptyState() {
     return Center(
