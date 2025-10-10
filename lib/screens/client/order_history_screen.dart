@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart'; // For loading asset images
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
 import '../../providers/auth_provider.dart';
@@ -47,10 +48,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         return isBulk ? 'Partially Delivered' : 'In Progress';
       case OrderStatus.cancelled:
         return 'Cancelled';
-      // Delivered: treat DC as delivered
+      // Delivered: treat DC and Delivered as delivered
       case OrderStatus.DC:
+      case OrderStatus.Delivered:
+      case OrderStatus.Completed:
         return 'Delivered';
-      // In Progress: all other statuses
+      // In Progress: all other statuses (Casted, Wax, PendingDisp, etc.)
       default:
         return 'In Progress';
     }
@@ -1073,6 +1076,132 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                         ),
                         const SizedBox(height: AppConstants.spacingXS),
                         Text(detail.remarks!, style: AppConstants.bodySmall),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Partial Delivery
+                if (detail.partialDelivery != null && detail.partialDelivery!.isNotEmpty) ...[
+                  const SizedBox(height: AppConstants.spacingM),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppConstants.spacingS),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.teal.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.local_shipping_outlined,
+                              size: 16,
+                              color: Colors.teal,
+                            ),
+                            const SizedBox(width: AppConstants.spacingXS),
+                            Text(
+                              'Partial Delivery (${detail.partialDelivery!.length})',
+                              style: AppConstants.bodySmall.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.teal,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppConstants.spacingS),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Column(
+                            children: [
+                              // Header row
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppConstants.spacingS,
+                                  vertical: AppConstants.spacingXS,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.teal.withOpacity(0.1),
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(6),
+                                    topRight: Radius.circular(6),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Delivery Date',
+                                        style: AppConstants.bodySmall.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 60,
+                                      child: Text(
+                                        'Qty',
+                                        textAlign: TextAlign.right,
+                                        style: AppConstants.bodySmall.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Data rows
+                              ...detail.partialDelivery!.asMap().entries.map((entry) {
+                                final pd = entry.value;
+                                final isLast = entry.key == detail.partialDelivery!.length - 1;
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppConstants.spacingS,
+                                    vertical: AppConstants.spacingS,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: isLast ? null : Border(
+                                      bottom: BorderSide(
+                                        color: Colors.grey.withOpacity(0.2),
+                                        width: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          DateFormat('dd MMM yyyy').format(pd.deliverydate),
+                                          style: AppConstants.bodySmall,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 60,
+                                        child: Text(
+                                          pd.qty.toString(),
+                                          textAlign: TextAlign.right,
+                                          style: AppConstants.bodySmall.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.teal,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
