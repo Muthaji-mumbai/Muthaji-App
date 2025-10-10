@@ -15,6 +15,36 @@ enum OrderStatus {
   Delivered, // <-- Added new status
 }
 
+class PartialDeliveryEntry {
+  final DateTime deliverydate;
+  final int qty;
+  final String id;
+
+  PartialDeliveryEntry({
+    required this.deliverydate,
+    required this.qty,
+    required this.id,
+  });
+
+  factory PartialDeliveryEntry.fromJson(Map<String, dynamic> json) {
+    return PartialDeliveryEntry(
+      deliverydate: DateTime.parse((json['deliverydate'] ?? json['date']).toString()),
+      qty: (json['qty'] ?? json['quantity'] ?? 0) is int
+          ? (json['qty'] ?? json['quantity'] ?? 0)
+          : int.tryParse((json['qty'] ?? json['quantity'] ?? '0').toString()) ?? 0,
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'deliverydate': deliverydate.toIso8601String(),
+      'qty': qty,
+      '_id': id,
+    };
+  }
+}
+
 class OrnamentDetail {
   final String id;
   // For new API: name is an object with id and categoryname. We store both.
@@ -32,6 +62,7 @@ class OrnamentDetail {
   final String? rhodium; // rhodium option
   final String? dull; // dull option
   final int? deliverycount; // delivery count for partial delivery
+  final List<PartialDeliveryEntry>? partialDelivery; // detailed partial delivery entries
 
   OrnamentDetail({
     required this.id,
@@ -49,6 +80,7 @@ class OrnamentDetail {
     this.rhodium,
     this.dull,
     this.deliverycount,
+    this.partialDelivery,
   });
 
   factory OrnamentDetail.fromJson(Map<String, dynamic> json) {
@@ -69,6 +101,15 @@ class OrnamentDetail {
     List<String> itemImages = [];
     if (json['image'] is List) {
       itemImages = List<String>.from(json['image']);
+    }
+
+    // Partial delivery list (if provided by API)
+    List<PartialDeliveryEntry> entries = [];
+    if (json['partialdelivery'] is List) {
+      entries = (json['partialdelivery'] as List)
+          .whereType<dynamic>()
+          .map((e) => PartialDeliveryEntry.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
     }
 
     return OrnamentDetail(
@@ -93,6 +134,7 @@ class OrnamentDetail {
           json['deliverycount'] != null
               ? int.tryParse(json['deliverycount'].toString())
               : null,
+      partialDelivery: entries,
     );
   }
 
@@ -112,6 +154,8 @@ class OrnamentDetail {
       if (rhodium != null) 'rhodium': rhodium,
       if (dull != null) 'dull': dull,
       if (deliverycount != null) 'deliverycount': deliverycount,
+      if (partialDelivery != null && partialDelivery!.isNotEmpty)
+        'partialdelivery': partialDelivery!.map((e) => e.toJson()).toList(),
     };
   }
 }
@@ -128,6 +172,7 @@ class Order {
   final String? notes;
   final String? assignedEmployeeId;
   final String? updatedBy;
+  
 
   // New fields from API
   final String? orderType; // server may set it to "Single"
@@ -137,6 +182,7 @@ class Order {
   final String? partyname; // Party ID for bulk orders
   final String? partynameDisplay; // Party name for display
   final List<OrnamentDetail> ornamentDetails;
+  
   final List<String>
   images; // kept for backward compatibility if order-level images exist
   final List<String> pdfs;

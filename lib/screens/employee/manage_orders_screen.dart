@@ -159,10 +159,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           _isLoading = false;
         });
 
-        // Check for orders that should be automatically marked as delivered
         await _checkAndUpdateDeliveredOrders(token);
 
-        // Apply additional client-side filters (search, order type, sorting)
         _applyFilters();
       } else {
         throw Exception('No authentication token');
@@ -205,7 +203,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           }
         }
 
-        // Reload data to reflect the changes
         await _loadData();
 
         if (mounted) {
@@ -2403,6 +2400,77 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 12,
+                        ),
+                      ),
+                    ],
+                    // Partial Delivery entries
+                    if (detail.partialDelivery != null && detail.partialDelivery!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Partial Delivery (${detail.partialDelivery!.length})',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withOpacity(0.03),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.teal.withOpacity(0.15)),
+                        ),
+                        child: Column(
+                          children: [
+                            // Header row
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              child: Row(
+                                children: const [
+                                  Expanded(
+                                    child: Text(
+                                      'Date',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  SizedBox(
+                                    width: 60,
+                                    child: Text(
+                                      'Qty',
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(height: 1),
+                            ...detail.partialDelivery!.map((pd) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        DateFormat('dd/MM/yyyy').format(pd.deliverydate),
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    SizedBox(
+                                      width: 60,
+                                      child: Text(
+                                        pd.qty.toString(),
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ],
                         ),
                       ),
                     ],

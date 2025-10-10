@@ -19,7 +19,6 @@ class AuthService {
   static String? get currentToken => _currentToken;
   static bool get isLoggedIn => _currentUser != null;
 
-  // Login method using real API
   static Future<Map<String, dynamic>> login(
     String email,
     String password,
