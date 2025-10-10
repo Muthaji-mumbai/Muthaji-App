@@ -159,7 +159,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           _isLoading = false;
         });
 
-        await _checkAndUpdateDeliveredOrders(token);
+        // await _checkAndUpdateDeliveredOrders(token);
 
         _applyFilters();
       } else {
@@ -193,7 +193,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           try {
             await OrderService.updateOrderStatus(
               orderId: order.id,
-              newStatus: OrderStatus.DC, // Mark as delivered
+              newStatus: OrderStatus.Delivered, // Mark as delivered
               userId: currentUser?.id,
               token: token,
             );
