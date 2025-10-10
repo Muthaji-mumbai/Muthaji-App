@@ -324,6 +324,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Future<void> _loadOrdersWithPartyFilter() async {
     try {
+      print('Selected party ID: $_selectedUserId');
       final authProvider = context.read<AuthProvider>();
       final token = authProvider.currentUser?.token;
       
@@ -331,7 +332,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // Call API with partyname parameter if a party is selected
         final allOrders = await OrderService.getAllOrders(
           token,
-          partyId: _selectedUserId,
+          partyname: _selectedUserId,
           startDate: _startDate,
           endDate: _endDate,
         );
@@ -1879,6 +1880,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'color': AppConstants.successColor,
       },
       {
+        'label': 'Completed',
+        'value': singleCompleted.toDouble(),
+        'color': AppConstants.Completed,
+      },
+      {
         'label': 'Cancelled',
         'value': singleCancelled.toDouble(),
         'color': AppConstants.errorColor,
@@ -1910,6 +1916,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'label': 'DC',
         'value': bulkDC.toDouble(),
         'color': AppConstants.successColor,
+      },
+      {
+        'label': 'Completed',
+        'value': bulkCompleted.toDouble(),
+        'color': AppConstants.Completed,
       },
       {
         'label': 'Cancelled',
@@ -2095,6 +2106,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'value': singleDC.toDouble(),
         'color': AppConstants.successColor,
       },
+      {
+        'label': 'Completed',
+        'value': singleCompleted.toDouble(),
+        'color': AppConstants.Completed,
+      },
        {
         'label': 'Delivered',
         'value': singleDelivered.toDouble(),
@@ -2127,6 +2143,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'label': 'DC',
         'value': bulkDC.toDouble(),
         'color': AppConstants.successColor,
+      },
+      {
+        'label': 'Completed',
+        'value': bulkCompleted.toDouble(),
+        'color': AppConstants.Completed,
       },
        {
         'label': 'Delivered',
@@ -2262,7 +2283,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildPieChartsSection() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
 
-    // Filter orders by selected party and date range
     var filteredOrders = _allOrders;
 
     // Filter by party
