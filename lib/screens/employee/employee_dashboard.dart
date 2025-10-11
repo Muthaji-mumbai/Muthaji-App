@@ -638,7 +638,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _formatDate(order.createdAt),
+                         _formatDate(order.orderDate!),
                           style: TextStyle(
                             color: Colors.grey.shade500,
                             fontSize: 12,
