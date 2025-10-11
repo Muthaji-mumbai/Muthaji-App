@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/employee/order_detailed_screen.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
+import 'package:soloshine/screens/common/pdf_viewer_screen.dart';
 import '../../models/order.dart';
 import '../../services/order_service.dart';
 import '../../services/auth_service.dart';
@@ -2603,54 +2604,16 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     
     // Check if the URL is a PDF
     if (imageUrl.toLowerCase().endsWith('.pdf')) {
-      // Open PDF in external viewer
-      try {
-        final uri = Uri.parse(imageUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(
-            uri,
-            mode: LaunchMode.externalApplication,
-          );
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Row(
-                  children: [
-                    Icon(Icons.error, color: Colors.white, size: 20),
-                    SizedBox(width: 12),
-                    Text('Unable to open PDF'),
-                  ],
-                ),
-                backgroundColor: AppConstants.errorColor,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.error, color: Colors.white, size: 20),
-                  const SizedBox(width: 12),
-                  Text('Error opening PDF'),
-                ],
-              ),
-              backgroundColor: AppConstants.errorColor,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
-        }
-      }
+      // Open PDF in built-in viewer
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfViewerScreen(
+            pdfUrl: imageUrl,
+            title: 'Order Document',
+          ),
+        ),
+      );
     } else {
       // Open image in full screen viewer
       Navigator.push(

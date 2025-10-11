@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart'; // For loading asset images
+import 'package:soloshine/screens/common/pdf_viewer_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
@@ -1514,48 +1515,16 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   void _showImagePreview(String url) async {
     // Check if the URL is a PDF
     if (url.toLowerCase().endsWith('.pdf')) {
-      // Open PDF in external viewer
-      try {
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(
-            uri,
-            mode: LaunchMode.externalApplication,
-          );
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Row(
-                  children: [
-                    Icon(Icons.error, color: Colors.white, size: 20),
-                    SizedBox(width: 12),
-                    Text('Unable to open PDF'),
-                  ],
-                ),
-                backgroundColor: AppConstants.errorColor,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.error, color: Colors.white, size: 20),
-                  const SizedBox(width: 12),
-                  Text('Error opening PDF: $e'),
-                ],
-              ),
-              backgroundColor: AppConstants.errorColor,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfViewerScreen(
+            pdfUrl: url,
+            title: 'Order Document',
+          ),
+        ),
+      );
+
     } else {
       // Show image preview dialog
       showDialog(

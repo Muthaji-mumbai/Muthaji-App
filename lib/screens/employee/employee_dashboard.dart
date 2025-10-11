@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:responsive_framework/responsive_framework.dart';
-import 'package:soloshine/screens/client/pdfview.dart';
+import 'package:soloshine/screens/common/pdf_viewer_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../widgets/custom_button.dart';
@@ -974,6 +974,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                         itemCount: images.length,
                         itemBuilder: (context, index) {
                           final imageUrl = images[index];
+                          final isPdf = imageUrl.toLowerCase().endsWith('.pdf');
+                          
                           return GestureDetector(
                             onTap: () => _showFullScreenImage(images, index),
                             child: Container(
@@ -985,33 +987,56 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(11),
-                                child: Image.network(
-                                  imageUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      color: Colors.grey.shade100,
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.broken_image_outlined,
-                                            color: Colors.grey.shade400,
-                                            size: 32,
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Error',
-                                            style: TextStyle(
-                                              color: Colors.grey.shade400,
-                                              fontSize: 10,
+                                child: isPdf
+                                    ? Container(
+                                        color: Colors.red.shade50,
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.picture_as_pdf,
+                                              color: Colors.red.shade400,
+                                              size: 40,
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'PDF',
+                                              style: TextStyle(
+                                                color: Colors.red.shade400,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    : Image.network(
+                                        imageUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            color: Colors.grey.shade100,
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.broken_image_outlined,
+                                                  color: Colors.grey.shade400,
+                                                  size: 32,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'Error',
+                                                  style: TextStyle(
+                                                    color: Colors.grey.shade400,
+                                                    fontSize: 10,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
                                 ),
                               ),
                             ),
@@ -1046,6 +1071,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                 itemCount: order.images.length,
                 itemBuilder: (context, index) {
                   final imageUrl = order.images[index];
+                  final isPdf = imageUrl.toLowerCase().endsWith('.pdf');
+                  
                   return GestureDetector(
                     onTap: () => _showFullScreenImage(order.images, index),
                     child: Container(
@@ -1057,33 +1084,56 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(11),
-                        child: Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey.shade100,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.broken_image_outlined,
-                                    color: Colors.grey.shade400,
-                                    size: 32,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Error',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade400,
-                                      fontSize: 10,
+                        child: isPdf
+                            ? Container(
+                                color: Colors.red.shade50,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.picture_as_pdf,
+                                      color: Colors.red.shade400,
+                                      size: 40,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'PDF',
+                                      style: TextStyle(
+                                        color: Colors.red.shade400,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey.shade100,
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.broken_image_outlined,
+                                          color: Colors.grey.shade400,
+                                          size: 32,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Error',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade400,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        ),
                       ),
                     ),
                   );
@@ -1144,16 +1194,33 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   }
 
   void _showFullScreenImage(List<String> images, int initialIndex) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => FullScreenImageViewer(
-              images: images,
-              initialIndex: initialIndex,
-            ),
-      ),
-    );
+    final imageUrl = images[initialIndex];
+    
+    // Check if the URL is a PDF
+    if (imageUrl.toLowerCase().endsWith('.pdf')) {
+      // Open PDF viewer
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfViewerScreen(
+            pdfUrl: imageUrl,
+            title: 'Order Document',
+          ),
+        ),
+      );
+    } else {
+      // Open image viewer
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => FullScreenImageViewer(
+                images: images,
+                initialIndex: initialIndex,
+              ),
+        ),
+      );
+    }
   }
 
   void _showStatusUpdateDialog(Order order) {
