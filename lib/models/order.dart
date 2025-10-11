@@ -18,12 +18,12 @@ enum OrderStatus {
 class PartialDeliveryEntry {
   final DateTime deliverydate;
   final int qty;
-  final String id;
+
 
   PartialDeliveryEntry({
     required this.deliverydate,
     required this.qty,
-    required this.id,
+  
   });
 
   factory PartialDeliveryEntry.fromJson(Map<String, dynamic> json) {
@@ -32,7 +32,7 @@ class PartialDeliveryEntry {
       qty: (json['qty'] ?? json['quantity'] ?? 0) is int
           ? (json['qty'] ?? json['quantity'] ?? 0)
           : int.tryParse((json['qty'] ?? json['quantity'] ?? '0').toString()) ?? 0,
-      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      
     );
   }
 
@@ -40,7 +40,7 @@ class PartialDeliveryEntry {
     return {
       'deliverydate': deliverydate.toIso8601String(),
       'qty': qty,
-      '_id': id,
+     
     };
   }
 }

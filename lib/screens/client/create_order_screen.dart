@@ -59,6 +59,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       'deliverycount': null,
       'deliveryqty': null,
       'deliverydate': null,
+      'partialdelivery': [], // Store existing partial delivery entries
     },
   ];
   List<List<PlatformFile>> _ornamentImages = [[]];
@@ -105,7 +106,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   static const List<String> _orderTypeOptions = ['Single', 'Bulk'];
   static const List<String> _priorityOptions = ['Regular', 'Urgent'];
   String _selectedPriority = 'Regular';
-  String? _orderNo; // <-- Add this field to store the order number
+  String? _orderNo; 
+
 
   List<String> get _availableOrderTypes {
     final currentUser = context.read<AuthProvider>().currentUser;
@@ -153,27 +155,43 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                             : (d['dull'] ?? 'Same as image'),
                     if ((d['remarks'] as String).isNotEmpty)
                       'remarks': d['remarks'],
-                    if (d['deliverycount'] != null)
+                    // Update delivery count to include new delivery qty
+                    if (_selectedStatus == OrderStatus.partialDelivery &&
+                        d['deliveryqty'] != null)
+                      'deliverycount': (d['deliverycount'] ?? 0) + (d['deliveryqty'] as int)
+                    else if (d['deliverycount'] != null)
                       'deliverycount': d['deliverycount'],
                     // Add partial delivery data when status is partial delivery
                     if (_selectedStatus == OrderStatus.partialDelivery &&
                         d['deliveryqty'] != null &&
                         d['deliverydate'] != null)
                       'partialdelivery': [
+                        // Include existing partial delivery entries
+                        ...List<Map<String, dynamic>>.from(d['partialdelivery'] ?? []),
+                        // Append the new delivery entry
                         {
                           'qty': d['deliveryqty'],
                           'deliverydate': (d['deliverydate'] as DateTime).toIso8601String(),
                         }
                       ],
+                    // If not adding new partial delivery, preserve existing ones
+                    if (_selectedStatus == OrderStatus.partialDelivery &&
+                        (d['deliveryqty'] == null || d['deliverydate'] == null) &&
+                        d['partialdelivery'] != null &&
+                        (d['partialdelivery'] as List).isNotEmpty)
+                      'partialdelivery': d['partialdelivery'],
                   },
                 )
                 .toList();
 
+        final currentUser = context.read<AuthProvider>().currentUser;
+        
         final updateData = <String, dynamic>{
           'orderdate': (_selectedOrderDate ?? DateTime.now()).toIso8601String(),
           'ordertype': _selectedOrderType,
           'ornamentDetails': detailsPayload,
           'orderpriority': _selectedPriority,
+          'updatedby': currentUser?.id,
           // Include party ID for bulk orders
           if (_selectedOrderType == 'Bulk' ||
               _selectedOrderType == 'Single' && _selectedPartyId != null)
@@ -187,6 +205,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           updateData['status'] = Order.statusToApiString(_selectedStatus!);
         }
         print("ORDER PRIORTY=========>$_selectedPriority");
+        print("UPDATE DATA=========>$updateData");
+        print("ORNAMENT DETAILS=========>$detailsPayload");
         final updated = await OrderService.updateOrder(
           orderId: _existingOrder!.id,
           updateData: updateData,
@@ -308,6 +328,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   'deliverycount': d.deliverycount,
                   'deliveryqty': null,
                   'deliverydate': null,
+                  'partialdelivery': d.partialDelivery?.map((e) => e.toJson()).toList() ?? [],
                 },
               )
               .toList();
@@ -416,6 +437,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         'deliverycount': null,
         'deliveryqty': null,
         'deliverydate': null,
+        'partialdelivery': [],
       });
       _ornamentImages.add([]);
     });
@@ -1748,11 +1770,6 @@ Widget _buildOrderDetailsSection() {
                   (value) => setState(() {
                     final qty = value.isEmpty ? null : int.tryParse(value);
                     _ornamentDetails[index]['deliveryqty'] = qty;
-                    // Update delivery count by adding the new qty
-                    if (qty != null && qty > 0) {
-                      final currentDeliveryCount = detail['deliverycount'] ?? 0;
-                      _ornamentDetails[index]['deliverycount'] = currentDeliveryCount + qty;
-                    }
                   }),
               validator: (value) {
                 if (_selectedStatus == OrderStatus.partialDelivery) {

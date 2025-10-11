@@ -639,17 +639,17 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
                           ],
                         ),
                       ),
-                      if (order.status == OrderStatus.pending)
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_outlined, size: 18),
-                              SizedBox(width: 8),
-                              Text('Edit'),
-                            ],
-                          ),
-                        ),
+                      // if (order.status == OrderStatus.pending)
+                      //   const PopupMenuItem(
+                      //     value: 'edit',
+                      //     child: Row(
+                      //       children: [
+                      //         Icon(Icons.edit_outlined, size: 18),
+                      //         SizedBox(width: 8),
+                      //         Text('Edit'),
+                      //       ],
+                      //     ),
+                      //   ),
                       if (_isSingleOrder(order)) // Add condition for clone
                         const PopupMenuItem(
                           value: 'clone',
@@ -673,23 +673,23 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
                       ),
                       if (order.status == OrderStatus.pending) ...[
                       
-                        const PopupMenuItem(
-                          value: 'cancel',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.cancel_outlined,
-                                size: 18,
-                                color: Colors.red,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Cancel',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ],
-                          ),
-                        ),
+                        // const PopupMenuItem(
+                        //   value: 'cancel',
+                        //   child: Row(
+                        //     children: [
+                        //       Icon(
+                        //         Icons.cancel_outlined,
+                        //         size: 18,
+                        //         color: Colors.red,
+                        //       ),
+                        //       SizedBox(width: 8),
+                        //       Text(
+                        //         'Cancel',
+                        //         style: TextStyle(color: Colors.red),
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
                       ],
                     ];
                     return items;
