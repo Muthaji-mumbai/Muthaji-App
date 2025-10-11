@@ -193,7 +193,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     return _tabs;
   }
 
-  // removed legacy tab builder (not used)
 
   @override
   void dispose() {

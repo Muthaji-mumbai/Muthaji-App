@@ -197,7 +197,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Order updated successfully! Order ID: ${updated.id}',
+              'Order updated successfully!',
             ),
             backgroundColor: AppConstants.successColor,
           ),
