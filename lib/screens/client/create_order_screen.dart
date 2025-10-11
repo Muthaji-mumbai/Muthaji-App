@@ -57,6 +57,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       'dull': 'Same as image',
       'remarks': '',
       'deliverycount': null,
+      'deliveryqty': null,
+      'deliverydate': null,
     },
   ];
   List<List<PlatformFile>> _ornamentImages = [[]];
@@ -153,6 +155,16 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       'remarks': d['remarks'],
                     if (d['deliverycount'] != null)
                       'deliverycount': d['deliverycount'],
+                    // Add partial delivery data when status is partial delivery
+                    if (_selectedStatus == OrderStatus.partialDelivery &&
+                        d['deliveryqty'] != null &&
+                        d['deliverydate'] != null)
+                      'partialdelivery': [
+                        {
+                          'qty': d['deliveryqty'],
+                          'deliverydate': (d['deliverydate'] as DateTime).toIso8601String(),
+                        }
+                      ],
                   },
                 )
                 .toList();
@@ -294,6 +306,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   'dull': d.dull ?? 'Same as image',
                   'remarks': d.remarks ?? '',
                   'deliverycount': d.deliverycount,
+                  'deliveryqty': null,
+                  'deliverydate': null,
                 },
               )
               .toList();
@@ -400,6 +414,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         'dull': 'Same as image',
         'remarks': '',
         'deliverycount': null,
+        'deliveryqty': null,
+        'deliverydate': null,
       });
       _ornamentImages.add([]);
     });
@@ -1301,7 +1317,17 @@ Widget _buildOrderDetailsSection() {
                     ),
                   )
                   .toList(),
-              onChanged: (val) => setState(() => _selectedStatus = val),
+              onChanged: (val) => setState(() {
+                _selectedStatus = val;
+                // Set default delivery date to today when status changes to partial delivery
+                if (val == OrderStatus.partialDelivery) {
+                  for (var detail in _ornamentDetails) {
+                    if (detail['deliverydate'] == null) {
+                      detail['deliverydate'] = DateTime.now();
+                    }
+                  }
+                }
+              }),
             ),
           ],
         ],
@@ -1673,14 +1699,37 @@ Widget _buildOrderDetailsSection() {
           ),
           const SizedBox(height: AppConstants.spacingM),
 
-          // Delivery Count field - only show when status is partialDelivery
+          // Partial Delivery fields - only show when status is partialDelivery
           if (_isEditMode &&
               _selectedStatus == OrderStatus.partialDelivery) ...[
+            // Delivery Count (Read-only display)
             TextFormField(
-              initialValue: detail['deliverycount']?.toString() ?? '',
+              initialValue: detail['deliverycount']?.toString() ?? '0',
               decoration: InputDecoration(
-                labelText: 'Delivery Count',
-                hintText: 'Enter delivered quantity',
+                labelText: 'Total Delivery Count',
+                hintText: 'Total delivered quantity',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingS,
+                  vertical: AppConstants.spacingS,
+                ),  
+                suffixIcon: Icon(
+                  Icons.inventory_outlined,
+                  color: AppConstants.primaryColor,
+                ),
+              ),
+              enabled: false,
+              style: TextStyle(color: Colors.grey[700]),
+            ),
+            const SizedBox(height: AppConstants.spacingM),
+            // Delivery Qty (Input field for new delivery)
+            TextFormField(
+              initialValue: detail['deliveryqty']?.toString() ?? '',
+              decoration: InputDecoration(
+                labelText: 'Delivery Qty',
+                hintText: 'Enter quantity to deliver now',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppConstants.radiusS),
                 ),
@@ -1692,32 +1741,101 @@ Widget _buildOrderDetailsSection() {
                   Icons.local_shipping_outlined,
                   color: AppConstants.primaryColor,
                 ),
+                helperText: 'This will be added to total delivery count',
               ),
               keyboardType: TextInputType.number,
               onChanged:
                   (value) => setState(() {
-                    _ornamentDetails[index]['deliverycount'] =
-                        value.isEmpty ? null : int.tryParse(value);
+                    final qty = value.isEmpty ? null : int.tryParse(value);
+                    _ornamentDetails[index]['deliveryqty'] = qty;
+                    // Update delivery count by adding the new qty
+                    if (qty != null && qty > 0) {
+                      final currentDeliveryCount = detail['deliverycount'] ?? 0;
+                      _ornamentDetails[index]['deliverycount'] = currentDeliveryCount + qty;
+                    }
                   }),
               validator: (value) {
                 if (_selectedStatus == OrderStatus.partialDelivery) {
                   if (value == null || value.isEmpty) {
-                    return 'Enter delivery count for partial delivery';
+                    return 'Enter delivery qty for partial delivery';
                   }
-                  final deliveryCount = int.tryParse(value);
-                  if (deliveryCount == null) {
+                  final deliveryQty = int.tryParse(value);
+                  if (deliveryQty == null) {
                     return 'Enter valid number';
                   }
-                  final quantity = detail['quantity'] as int;
-                  if (deliveryCount > quantity) {
-                    return 'Cannot exceed total quantity ($quantity)';
-                  }
-                  if (deliveryCount <= 0) {
+                  if (deliveryQty <= 0) {
                     return 'Must be greater than 0';
+                  }
+                  final quantity = detail['quantity'] as int;
+                  final currentDeliveryCount = detail['deliverycount'] ?? 0;
+                  final newTotal = currentDeliveryCount + deliveryQty;
+                  if (newTotal > quantity) {
+                    return 'Total delivery ($newTotal) cannot exceed quantity ($quantity)';
                   }
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: AppConstants.spacingM),
+            // Delivery Date
+            GestureDetector(
+              onTap: () async {
+                final DateTime? picked = await showDatePicker(
+                  context: context,
+                  initialDate: detail['deliverydate'] ?? DateTime.now(),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                  builder: (context, child) {
+                    return Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: ColorScheme.light(
+                          primary: AppConstants.primaryColor,
+                          onPrimary: Colors.white,
+                          surface: AppConstants.surfaceColor,
+                        ),
+                        dialogBackgroundColor: AppConstants.backgroundColor,
+                      ),
+                      child: child!,
+                    );
+                  },
+                );
+                if (picked != null) {
+                  setState(() {
+                    _ornamentDetails[index]['deliverydate'] = picked;
+                  });
+                }
+              },
+              child: AbsorbPointer(
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Delivery Date',
+                    hintText: 'Select delivery date',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingS,
+                      vertical: AppConstants.spacingS,
+                    ),
+                    suffixIcon: Icon(
+                      Icons.calendar_today,
+                      color: AppConstants.primaryColor,
+                    ),
+                  ),
+                  controller: TextEditingController(
+                    text: detail['deliverydate'] != null
+                        ? _formatDateDDMMYYYY(detail['deliverydate'])
+                        : _formatDateDDMMYYYY(DateTime.now()),
+                  ),
+                  validator: (value) {
+                    if (_selectedStatus == OrderStatus.partialDelivery &&
+                        (value == null || value.isEmpty)) {
+                      return 'Please select delivery date';
+                    }
+                    return null;
+                  },
+                ),
+              ),
             ),
             const SizedBox(height: AppConstants.spacingM),
           ],
