@@ -49,8 +49,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         return isBulk ? 'Partially Delivered' : 'In Progress';
       case OrderStatus.cancelled:
         return 'Cancelled';
-      // Delivered: treat DC and Delivered as delivered
-      case OrderStatus.DC:
+      
       case OrderStatus.Delivered:
       case OrderStatus.Completed:
         return 'Delivered';
