@@ -72,7 +72,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   List<Datum> _categories = [];
   bool _loadingCategories = true;
   String? _categoriesError;
-  
+
   // Sharing intent listeners
   StreamSubscription? _intentDataStreamSubscription;
 
@@ -111,8 +111,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   static const List<String> _orderTypeOptions = ['Single', 'Bulk'];
   static const List<String> _priorityOptions = ['Regular', 'Urgent'];
   String _selectedPriority = 'Regular';
-  String? _orderNo; 
-
+  String? _orderNo;
 
   List<String> get _availableOrderTypes {
     final currentUser = context.read<AuthProvider>().currentUser;
@@ -163,7 +162,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     // Update delivery count to include new delivery qty
                     if (_selectedStatus == OrderStatus.partialDelivery &&
                         d['deliveryqty'] != null)
-                      'deliverycount': (d['deliverycount'] ?? 0) + (d['deliveryqty'] as int)
+                      'deliverycount':
+                          (d['deliverycount'] ?? 0) + (d['deliveryqty'] as int)
                     else if (d['deliverycount'] != null)
                       'deliverycount': d['deliverycount'],
                     // Add partial delivery data when status is partial delivery
@@ -172,16 +172,20 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         d['deliverydate'] != null)
                       'partialdelivery': [
                         // Include existing partial delivery entries
-                        ...List<Map<String, dynamic>>.from(d['partialdelivery'] ?? []),
+                        ...List<Map<String, dynamic>>.from(
+                          d['partialdelivery'] ?? [],
+                        ),
                         // Append the new delivery entry
                         {
                           'qty': d['deliveryqty'],
-                          'deliverydate': (d['deliverydate'] as DateTime).toIso8601String(),
-                        }
+                          'deliverydate':
+                              (d['deliverydate'] as DateTime).toIso8601String(),
+                        },
                       ],
                     // If not adding new partial delivery, preserve existing ones
                     if (_selectedStatus == OrderStatus.partialDelivery &&
-                        (d['deliveryqty'] == null || d['deliverydate'] == null) &&
+                        (d['deliveryqty'] == null ||
+                            d['deliverydate'] == null) &&
                         d['partialdelivery'] != null &&
                         (d['partialdelivery'] as List).isNotEmpty)
                       'partialdelivery': d['partialdelivery'],
@@ -190,7 +194,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 .toList();
 
         final currentUser = context.read<AuthProvider>().currentUser;
-        
+
         final updateData = <String, dynamic>{
           'orderdate': (_selectedOrderDate ?? DateTime.now()).toIso8601String(),
           'ordertype': _selectedOrderType,
@@ -221,9 +225,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Order updated successfully!',
-            ),
+            content: Text('Order updated successfully!'),
             backgroundColor: AppConstants.successColor,
           ),
         );
@@ -262,7 +264,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     if (widget.orderToEdit != null && widget.orderToEdit!.orderNo != null) {
       _orderNo = widget.orderToEdit!.orderNo;
     }
-    
+
     // Initialize sharing intent listeners
     _initSharingIntent();
   }
@@ -274,7 +276,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     _intentDataStreamSubscription?.cancel();
     super.dispose();
   }
-  
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -285,34 +287,38 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       _selectedOrderType = 'Bulk';
     }
   }
-  
+
   // Initialize sharing intent to receive shared images
   void _initSharingIntent() {
     // Listen to media sharing while app is in memory
-    _intentDataStreamSubscription = ReceiveSharingIntent.instance.getMediaStream().listen(
-      (List<dynamic> sharedFiles) {
-        if (sharedFiles.isNotEmpty) {
-          _handleSharedFiles(sharedFiles);
-        }
-      },
-      onError: (err) {
-        print('Error receiving shared files: $err');
-      },
-    );
+    _intentDataStreamSubscription = ReceiveSharingIntent.instance
+        .getMediaStream()
+        .listen(
+          (List<dynamic> sharedFiles) {
+            if (sharedFiles.isNotEmpty) {
+              _handleSharedFiles(sharedFiles);
+            }
+          },
+          onError: (err) {
+            print('Error receiving shared files: $err');
+          },
+        );
 
     // Get the media that was shared when the app was closed/not running
-    ReceiveSharingIntent.instance.getInitialMedia().then((List<dynamic> sharedFiles) {
+    ReceiveSharingIntent.instance.getInitialMedia().then((
+      List<dynamic> sharedFiles,
+    ) {
       if (sharedFiles.isNotEmpty) {
         _handleSharedFiles(sharedFiles);
       }
     });
   }
-  
+
   // Handle shared files from gallery
   Future<void> _handleSharedFiles(List<dynamic> sharedFiles) async {
     try {
       List<PlatformFile> platformFiles = [];
-      
+
       for (var sharedFile in sharedFiles) {
         if (sharedFile.type == SharedMediaType.image) {
           final file = File(sharedFile.path);
@@ -320,23 +326,25 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             // Read file bytes
             final bytes = await file.readAsBytes();
             final fileName = file.path.split('/').last;
-            
-            platformFiles.add(PlatformFile(
-              name: fileName,
-              size: bytes.length,
-              bytes: bytes,
-              path: sharedFile.path,
-            ));
+
+            platformFiles.add(
+              PlatformFile(
+                name: fileName,
+                size: bytes.length,
+                bytes: bytes,
+                path: sharedFile.path,
+              ),
+            );
           }
         }
       }
-      
+
       if (platformFiles.isNotEmpty) {
         setState(() {
           // Add shared images to the first ornament detail
           _ornamentImages[0].addAll(platformFiles);
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -418,7 +426,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   'deliverycount': d.deliverycount,
                   'deliveryqty': null,
                   'deliverydate': null,
-                  'partialdelivery': d.partialDelivery?.map((e) => e.toJson()).toList() ?? [],
+                  'partialdelivery':
+                      d.partialDelivery?.map((e) => e.toJson()).toList() ?? [],
                 },
               )
               .toList();
@@ -551,7 +560,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_library, color: AppConstants.primaryColor),
+                leading: const Icon(
+                  Icons.photo_library,
+                  color: AppConstants.primaryColor,
+                ),
                 title: const Text('Gallery'),
                 subtitle: const Text('Pick images from gallery'),
                 onTap: () {
@@ -561,7 +573,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               ),
               const Divider(),
               ListTile(
-                leading: const Icon(Icons.folder, color: AppConstants.primaryColor),
+                leading: const Icon(
+                  Icons.folder,
+                  color: AppConstants.primaryColor,
+                ),
                 title: const Text('File Manager'),
                 subtitle: const Text('Pick files from device'),
                 onTap: () {
@@ -586,12 +601,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         List<PlatformFile> platformFiles = [];
         for (var image in images) {
           final bytes = await image.readAsBytes();
-          platformFiles.add(PlatformFile(
-            name: image.name,
-            size: bytes.length,
-            bytes: bytes,
-            path: image.path,
-          ));
+          platformFiles.add(
+            PlatformFile(
+              name: image.name,
+              size: bytes.length,
+              bytes: bytes,
+              path: image.path,
+            ),
+          );
         }
         setState(() {
           _ornamentImages[index].addAll(platformFiles);
@@ -599,7 +616,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${platformFiles.length} image(s) added from gallery'),
+              content: Text(
+                '${platformFiles.length} image(s) added from gallery',
+              ),
               backgroundColor: AppConstants.successColor,
             ),
           );
@@ -607,9 +626,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking images: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking images: $e')));
       }
     } finally {
       if (mounted) setState(() => _isPickingImage = false);
@@ -645,7 +664,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${result.files.length} file(s) added from file manager'),
+              content: Text(
+                '${result.files.length} file(s) added from file manager',
+              ),
               backgroundColor: AppConstants.successColor,
             ),
           );
@@ -882,6 +903,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 suffixIcon: const Icon(Icons.arrow_drop_down),
               ),
               controller: TextEditingController(text: detail['name']),
+                style: const TextStyle(color: Colors.black),
               validator:
                   (value) => value!.isEmpty ? 'Please select a category' : null,
               enabled: false,
@@ -983,6 +1005,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
     if (categoryId.isEmpty || sizes.isEmpty) {
       return DropdownButtonFormField<String>(
+        style: const TextStyle(color: Colors.black),
         value: null,
         decoration: InputDecoration(
           labelText: 'Size',
@@ -1005,6 +1028,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             ? detail['size'] as String
             : null;
     return DropdownButtonFormField<String>(
+      style: const TextStyle(color: Colors.black),
       value: current,
       decoration: InputDecoration(
         labelText: 'Size',
@@ -1041,6 +1065,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
     if (categoryId.isEmpty || units.isEmpty) {
       return DropdownButtonFormField<String>(
+        style: const TextStyle(color: Colors.black),
         value: null,
         decoration: InputDecoration(
           labelText: 'Unit',
@@ -1063,6 +1088,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             ? detail['unit'] as String
             : null;
     return DropdownButtonFormField<String>(
+      style: const TextStyle(color: Colors.black),
       value: current,
       decoration: InputDecoration(
         labelText: 'Unit',
@@ -1103,165 +1129,169 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     return units.isNotEmpty ? units.first : 'g';
   }
 
- Widget _buildPartySelectionField() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        'Select Party',
-        style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600),
-      ),
-      const SizedBox(height: AppConstants.spacingS),
-      // Role filter tabs
-      Row(
-        children: [
-          _buildRoleFilterChip('Customer', UserRole.customer),
-          const SizedBox(width: AppConstants.spacingS),
-        ],
-      ),
-      const SizedBox(height: AppConstants.spacingS),
-      _loadingParties
-          ? const Center(child: CircularProgressIndicator())
-          : _partiesError != null
-              ? Column(
-                  children: [
-                    Text(
-                      _partiesError!,
-                      style: TextStyle(color: AppConstants.errorColor),
-                    ),
-                    const SizedBox(height: AppConstants.spacingS),
-                    ElevatedButton(
-                      onPressed: _fetchParties,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                )
-              : GestureDetector(
-                  onTap: () => _showPartySelectionDialog(),
-                  child: AbsorbPointer(
-                    child: TextFormField(
-                      decoration: InputDecoration(
-                        labelText: 'Party Name',
-                        hintText: 'Select a party',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppConstants.spacingS,
-                          vertical: AppConstants.spacingM,
-                        ),
-                        suffixIcon: const Icon(Icons.arrow_drop_down),
-                      ),
-                      controller: TextEditingController(
-                        text: _selectedPartyName ?? '',
-                      ),
-                      validator: (value) {
-                        if ((_selectedOrderType == 'Bulk' || _selectedOrderType == 'Single') &&
-                            (value == null || value.isEmpty)) {
-                          return 'Please select a party';
-                        }
-                        return null;
-                      },
-                      enabled: false,
-                    ),
-                  ),
+  Widget _buildPartySelectionField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Select Party',
+          style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: AppConstants.spacingS),
+        // Role filter tabs
+        Row(
+          children: [
+            _buildRoleFilterChip('Customer', UserRole.customer),
+            const SizedBox(width: AppConstants.spacingS),
+          ],
+        ),
+        const SizedBox(height: AppConstants.spacingS),
+        _loadingParties
+            ? const Center(child: CircularProgressIndicator())
+            : _partiesError != null
+            ? Column(
+              children: [
+                Text(
+                  _partiesError!,
+                  style: TextStyle(color: AppConstants.errorColor),
                 ),
-    ],
-  );
-}
-
-// New method to show searchable party selection dialog
-Future<void> _showPartySelectionDialog() async {
-  String searchQuery = '';
-  await showDialog(
-    context: context,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setDialogState) {
-          final filteredParties = _allUsers.where((user) {
-            if (_selectedPartyRole != user.role) return false;
-            if (searchQuery.isEmpty) return true;
-            final query = searchQuery.toLowerCase();
-            return user.name.toLowerCase().contains(query) ||
-                user.email.toLowerCase().contains(query);
-          }).toList();
-
-          return AlertDialog(
-            title: const Text('Select Party'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Search by name or email',
-                      hintText: 'Type to search...',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.search),
+                const SizedBox(height: AppConstants.spacingS),
+                ElevatedButton(
+                  onPressed: _fetchParties,
+                  child: const Text('Retry'),
+                ),
+              ],
+            )
+            : GestureDetector(
+              onTap: () => _showPartySelectionDialog(),
+              child: AbsorbPointer(
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Party Name',
+                    hintText: 'Select a party',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
                     ),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        searchQuery = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: AppConstants.spacingS),
-                  SizedBox(
-                    height: 200, // Fixed height for scrollable list
-                    child: ListView.builder(
-                      itemCount: filteredParties.length,
-                      itemBuilder: (context, i) {
-                        final party = filteredParties[i];
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.spacingS,
-                            vertical: 4.0,
-                          ),
-                          title: Text(
-                            party.name,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                          subtitle: Text(
-                            party.email,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          onTap: () {
-                            setState(() {
-                              _selectedPartyId = party.id;
-                              _selectedPartyName = party.name;
-                            });
-                            Navigator.pop(context);
-                          },
-                        );
-                      },
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingS,
+                      vertical: AppConstants.spacingM,
                     ),
+                    suffixIcon: const Icon(Icons.arrow_drop_down),
                   ),
-                ],
+                  controller: TextEditingController(
+                    text: _selectedPartyName ?? '',
+                  ),
+                  style: const TextStyle(color: Colors.black),
+                  validator: (value) {
+                    if ((_selectedOrderType == 'Bulk' ||
+                            _selectedOrderType == 'Single') &&
+                        (value == null || value.isEmpty)) {
+                      return 'Please select a party';
+                    }
+                    return null;
+                  },
+                  enabled: false,
+                ),
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+      ],
+    );
+  }
+
+  // New method to show searchable party selection dialog
+  Future<void> _showPartySelectionDialog() async {
+    String searchQuery = '';
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final filteredParties =
+                _allUsers.where((user) {
+                  if (_selectedPartyRole != user.role) return false;
+                  if (searchQuery.isEmpty) return true;
+                  final query = searchQuery.toLowerCase();
+                  return user.name.toLowerCase().contains(query) ||
+                      user.email.toLowerCase().contains(query);
+                }).toList();
+
+            return AlertDialog(
+              title: const Text('Select Party'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Search by name or email',
+                        hintText: 'Type to search...',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          searchQuery = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: AppConstants.spacingS),
+                    SizedBox(
+                      height: 200, // Fixed height for scrollable list
+                      child: ListView.builder(
+                        itemCount: filteredParties.length,
+                        itemBuilder: (context, i) {
+                          final party = filteredParties[i];
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppConstants.spacingS,
+                              vertical: 4.0,
+                            ),
+                            title: Text(
+                              party.name,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                            subtitle: Text(
+                              party.email,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            onTap: () {
+                              setState(() {
+                                _selectedPartyId = party.id;
+                                _selectedPartyName = party.name;
+                              });
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildRoleFilterChip(String label, UserRole role) {
     final isSelected = _selectedPartyRole == role;
     return FilterChip(
@@ -1357,204 +1387,224 @@ Future<void> _showPartySelectionDialog() async {
       ),
     );
   }
-Widget _buildOrderDetailsSection() {
-  return Card(
-    elevation: 2,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppConstants.radiusM),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(AppConstants.spacingM),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Order Details', style: AppConstants.headingSmall),
-              if (_isEditMode && _existingOrder?.orderNo != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppConstants.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'Order No: ${_existingOrder!.orderNo}',
-                    style: TextStyle(
-                      color: AppConstants.primaryColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppConstants.spacingM),
-          // --- Order No field for Bulk orders (admin/employee only) ---
-          if (_shouldShowOrderTypeSelection() && _selectedOrderType == 'Bulk') ...[
-            Text(
-              'Order No',
-              style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: AppConstants.spacingS),
-            TextFormField(
-              initialValue: _orderNo ?? '',
-              decoration: InputDecoration(
-                labelText: 'Enter Order No',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingS,
-                  vertical: AppConstants.spacingS,
-                ),
-              ),
-              onChanged: (val) => setState(() => _orderNo = val),
-              validator: (val) {
-                if (_selectedOrderType == 'Bulk' && (val == null || val.isEmpty)) {
-                  return 'Order No is required for bulk orders';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: AppConstants.spacingM),
-          ],
-          GestureDetector(
-            onTap: _selectDate,
-            child: CustomTextField(
-              controller: _orderDateController,
-              labelText: 'Order Date',
-              hintText: 'Select date',
-              enabled: false,
-              validator: (value) => value!.isEmpty ? 'Please select a date' : null,
-            ),
-          ),
-          const SizedBox(height: AppConstants.spacingM),
-          Text(
-            'Priority',
-            style: AppConstants.bodyMedium.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppConstants.spacingS),
-          DropdownButtonFormField<String>(
-            value: _selectedPriority,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppConstants.radiusS),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingS,
-                vertical: AppConstants.spacingS,
-              ),
-            ),
-            items: _priorityOptions
-                .map(
-                  (p) => DropdownMenuItem<String>(value: p, child: Text(p)),
-                )
-                .toList(),
-            onChanged: (val) => setState(() => _selectedPriority = val ?? 'Regular'),
-          ),
-          // Show party selection for admin/employee only
-          if (_shouldShowOrderTypeSelection()) ...[
-            const SizedBox(height: AppConstants.spacingM),
-            _buildPartySelectionField(),
-          ],
-          // Show order type selection only for admin and employee users
-          if (_shouldShowOrderTypeSelection()) ...[
-            const SizedBox(height: AppConstants.spacingM),
-            Text(
-              'Order Type',
-              style: AppConstants.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppConstants.spacingS),
-            Wrap(
-              spacing: AppConstants.spacingS,
-              children: _availableOrderTypes.map((type) {
-                final isSelected = _selectedOrderType == type;
-                return FilterChip(
-                  label: Text(type),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedOrderType = type;
-                      // Load parties when switching to bulk orders
-                      if (type == 'Bulk' &&
-                          _allUsers.isEmpty &&
-                          !_loadingParties) {
-                        _fetchParties();
-                      }
-                      // Clear party selection when switching order types
-                      _selectedPartyId = null;
-                      _selectedPartyName = null;
-                      _filterParties();
-                    });
-                  },
-                  backgroundColor: AppConstants.surfaceColor,
-                  selectedColor: AppConstants.primaryColor.withOpacity(0.2),
-                  checkmarkColor: AppConstants.primaryColor,
-                  labelStyle: TextStyle(
-                    color: isSelected
-                        ? AppConstants.primaryColor
-                        : AppConstants.textPrimaryColor,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-          // Show status only for admin/employee in edit mode
-          if (_isEditMode && _shouldShowOrderTypeSelection()) ...[
-            const SizedBox(height: AppConstants.spacingM),
-            Text(
-              'Status',
-              style: AppConstants.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppConstants.spacingS),
-            DropdownButtonFormField<OrderStatus>(
-              value: _selectedStatus,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingS,
-                  vertical: AppConstants.spacingS,
-                ),
-              ),
-              items: OrderStatus.values
-                  .map(
-                    (s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(s.toString().split('.').last),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (val) => setState(() {
-                _selectedStatus = val;
-                // Set default delivery date to today when status changes to partial delivery
-                if (val == OrderStatus.partialDelivery) {
-                  for (var detail in _ornamentDetails) {
-                    if (detail['deliverydate'] == null) {
-                      detail['deliverydate'] = DateTime.now();
-                    }
-                  }
-                }
-              }),
-            ),
-          ],
-        ],
+
+  Widget _buildOrderDetailsSection() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
       ),
-    ),
-  );
-} Widget _buildOrnamentDetailsSection() {
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.spacingM),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Order Details', style: AppConstants.headingSmall),
+                if (_isEditMode && _existingOrder?.orderNo != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppConstants.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Order No: ${_existingOrder!.orderNo}',
+                      style: TextStyle(
+                        color: AppConstants.primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppConstants.spacingM),
+            // --- Order No field for Bulk orders (admin/employee only) ---
+            if (_shouldShowOrderTypeSelection() &&
+                _selectedOrderType == 'Bulk') ...[
+              Text(
+                'Order No',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppConstants.spacingS),
+              TextFormField(
+                initialValue: _orderNo ?? '',
+                decoration: InputDecoration(
+                  labelText: 'Enter Order No',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingS,
+                    vertical: AppConstants.spacingS,
+                  ),
+                ),
+                onChanged: (val) => setState(() => _orderNo = val),
+                validator: (val) {
+                  if (_selectedOrderType == 'Bulk' &&
+                      (val == null || val.isEmpty)) {
+                    return 'Order No is required for bulk orders';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppConstants.spacingM),
+            ],
+            GestureDetector(
+              onTap: _selectDate,
+              child: CustomTextField(
+                controller: _orderDateController,
+                labelText: 'Order Date',
+                hintText: 'Select date',
+                enabled: false,
+                validator:
+                    (value) => value!.isEmpty ? 'Please select a date' : null,
+              ),
+            ),
+            const SizedBox(height: AppConstants.spacingM),
+            Text(
+              'Priority',
+              style: AppConstants.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppConstants.spacingS),
+            DropdownButtonFormField<String>(
+              style: const TextStyle(color: Colors.black),
+              value: _selectedPriority,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingS,
+                  vertical: AppConstants.spacingS,
+                ),
+              ),
+              items:
+                  _priorityOptions
+                      .map(
+                        (p) =>
+                            DropdownMenuItem<String>(value: p, child: Text(p)),
+                      )
+                      .toList(),
+              onChanged:
+                  (val) => setState(() => _selectedPriority = val ?? 'Regular'),
+            ),
+            // Show party selection for admin/employee only
+            if (_shouldShowOrderTypeSelection()) ...[
+              const SizedBox(height: AppConstants.spacingM),
+              _buildPartySelectionField(),
+            ],
+            // Show order type selection only for admin and employee users
+            if (_shouldShowOrderTypeSelection()) ...[
+              const SizedBox(height: AppConstants.spacingM),
+              Text(
+                'Order Type',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppConstants.spacingS),
+              Wrap(
+                spacing: AppConstants.spacingS,
+                children:
+                    _availableOrderTypes.map((type) {
+                      final isSelected = _selectedOrderType == type;
+                      return FilterChip(
+                        label: Text(type),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedOrderType = type;
+                            // Load parties when switching to bulk orders
+                            if (type == 'Bulk' &&
+                                _allUsers.isEmpty &&
+                                !_loadingParties) {
+                              _fetchParties();
+                            }
+                            // Clear party selection when switching order types
+                            _selectedPartyId = null;
+                            _selectedPartyName = null;
+                            _filterParties();
+                          });
+                        },
+                        backgroundColor: AppConstants.surfaceColor,
+                        selectedColor: AppConstants.primaryColor.withOpacity(
+                          0.2,
+                        ),
+                        checkmarkColor: AppConstants.primaryColor,
+                        labelStyle: TextStyle(
+                          color:
+                              isSelected
+                                  ? AppConstants.primaryColor
+                                  : AppConstants.textPrimaryColor,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      );
+                    }).toList(),
+              ),
+            ],
+            // Show status only for admin/employee in edit mode
+            if (_isEditMode && _shouldShowOrderTypeSelection()) ...[
+              const SizedBox(height: AppConstants.spacingM),
+              Text(
+                'Status',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppConstants.spacingS),
+              DropdownButtonFormField<OrderStatus>(
+                style: const TextStyle(color: Colors.black),
+                value: _selectedStatus,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingS,
+                    vertical: AppConstants.spacingS,
+                  ),
+                ),
+                items:
+                    OrderStatus.values
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(s.toString().split('.').last),
+                          ),
+                        )
+                        .toList(),
+                onChanged:
+                    (val) => setState(() {
+                      _selectedStatus = val;
+                      // Set default delivery date to today when status changes to partial delivery
+                      if (val == OrderStatus.partialDelivery) {
+                        for (var detail in _ornamentDetails) {
+                          if (detail['deliverydate'] == null) {
+                            detail['deliverydate'] = DateTime.now();
+                          }
+                        }
+                      }
+                    }),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrnamentDetailsSection() {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -1699,7 +1749,9 @@ Widget _buildOrderDetailsSection() {
               Expanded(
                 flex: 3,
                 child: DropdownButtonFormField<String>(
+                  style: const TextStyle(color: Colors.black),
                   decoration: InputDecoration(
+                    
                     labelText: 'Purity',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppConstants.radiusS),
@@ -1789,6 +1841,7 @@ Widget _buildOrderDetailsSection() {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
+                    style: const TextStyle(color: Colors.black),
                     decoration: InputDecoration(
                       labelText: 'Colorstone',
                       border: OutlineInputBorder(
@@ -1827,6 +1880,7 @@ Widget _buildOrderDetailsSection() {
                 const SizedBox(width: AppConstants.spacingS),
                 Expanded(
                   child: DropdownButtonFormField<String>(
+                    style: const TextStyle(color: Colors.black),
                     decoration: InputDecoration(
                       labelText: 'Rhodium',
                       border: OutlineInputBorder(
@@ -1868,6 +1922,7 @@ Widget _buildOrderDetailsSection() {
 
             // Dull Row
             DropdownButtonFormField<String>(
+              style: const TextStyle(color: Colors.black),
               decoration: InputDecoration(
                 labelText: 'Dull',
                 border: OutlineInputBorder(
@@ -1934,7 +1989,7 @@ Widget _buildOrderDetailsSection() {
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: AppConstants.spacingS,
                   vertical: AppConstants.spacingS,
-                ),  
+                ),
                 suffixIcon: Icon(
                   Icons.inventory_outlined,
                   color: AppConstants.primaryColor,
@@ -2038,9 +2093,10 @@ Widget _buildOrderDetailsSection() {
                     ),
                   ),
                   controller: TextEditingController(
-                    text: detail['deliverydate'] != null
-                        ? _formatDateDDMMYYYY(detail['deliverydate'])
-                        : _formatDateDDMMYYYY(DateTime.now()),
+                    text:
+                        detail['deliverydate'] != null
+                            ? _formatDateDDMMYYYY(detail['deliverydate'])
+                            : _formatDateDDMMYYYY(DateTime.now()),
                   ),
                   validator: (value) {
                     if (_selectedStatus == OrderStatus.partialDelivery &&
