@@ -5,6 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:listen_sharing_intent/listen_sharing_intent.dart';
+import 'dart:async';
 import '../../providers/auth_provider.dart';
 import '../../models/order.dart';
 import '../../constants/app_constants.dart';
@@ -70,6 +72,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   List<Datum> _categories = [];
   bool _loadingCategories = true;
   String? _categoriesError;
+  
+  // Sharing intent listeners
+  StreamSubscription? _intentDataStreamSubscription;
 
   // Party selection for bulk orders
   List<User> _allUsers = [];
@@ -257,8 +262,19 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     if (widget.orderToEdit != null && widget.orderToEdit!.orderNo != null) {
       _orderNo = widget.orderToEdit!.orderNo;
     }
+    
+    // Initialize sharing intent listeners
+    _initSharingIntent();
   }
 
+  @override
+  void dispose() {
+    _orderDateController.dispose();
+    _pageController.dispose();
+    _intentDataStreamSubscription?.cancel();
+    super.dispose();
+  }
+  
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -267,6 +283,80 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     if (currentUser?.role == UserRole.employee &&
         _selectedOrderType == 'Single') {
       _selectedOrderType = 'Bulk';
+    }
+  }
+  
+  // Initialize sharing intent to receive shared images
+  void _initSharingIntent() {
+    // Listen to media sharing while app is in memory
+    _intentDataStreamSubscription = ReceiveSharingIntent.instance.getMediaStream().listen(
+      (List<dynamic> sharedFiles) {
+        if (sharedFiles.isNotEmpty) {
+          _handleSharedFiles(sharedFiles);
+        }
+      },
+      onError: (err) {
+        print('Error receiving shared files: $err');
+      },
+    );
+
+    // Get the media that was shared when the app was closed/not running
+    ReceiveSharingIntent.instance.getInitialMedia().then((List<dynamic> sharedFiles) {
+      if (sharedFiles.isNotEmpty) {
+        _handleSharedFiles(sharedFiles);
+      }
+    });
+  }
+  
+  // Handle shared files from gallery
+  Future<void> _handleSharedFiles(List<dynamic> sharedFiles) async {
+    try {
+      List<PlatformFile> platformFiles = [];
+      
+      for (var sharedFile in sharedFiles) {
+        if (sharedFile.type == SharedMediaType.image) {
+          final file = File(sharedFile.path);
+          if (await file.exists()) {
+            // Read file bytes
+            final bytes = await file.readAsBytes();
+            final fileName = file.path.split('/').last;
+            
+            platformFiles.add(PlatformFile(
+              name: fileName,
+              size: bytes.length,
+              bytes: bytes,
+              path: sharedFile.path,
+            ));
+          }
+        }
+      }
+      
+      if (platformFiles.isNotEmpty) {
+        setState(() {
+          // Add shared images to the first ornament detail
+          _ornamentImages[0].addAll(platformFiles);
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${platformFiles.length} image(s) added to Item 1'),
+              backgroundColor: AppConstants.successColor,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error handling shared files: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load shared images: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
     }
   }
 
@@ -450,7 +540,84 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     });
   }
 
-  Future<void> _pickImagesForItem(int index) async {
+  // Show dialog to choose between Gallery and File Manager
+  Future<void> _showFilePickerOptions(int index) async {
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Source'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: AppConstants.primaryColor),
+                title: const Text('Gallery'),
+                subtitle: const Text('Pick images from gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickFromGallery(index);
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.folder, color: AppConstants.primaryColor),
+                title: const Text('File Manager'),
+                subtitle: const Text('Pick files from device'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickFromFileManager(index);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Pick images from gallery using ImagePicker
+  Future<void> _pickFromGallery(int index) async {
+    if (_isPickingImage) return;
+    setState(() => _isPickingImage = true);
+    try {
+      final List<XFile> images = await _picker.pickMultiImage();
+      if (images.isNotEmpty) {
+        List<PlatformFile> platformFiles = [];
+        for (var image in images) {
+          final bytes = await image.readAsBytes();
+          platformFiles.add(PlatformFile(
+            name: image.name,
+            size: bytes.length,
+            bytes: bytes,
+            path: image.path,
+          ));
+        }
+        setState(() {
+          _ornamentImages[index].addAll(platformFiles);
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${platformFiles.length} image(s) added from gallery'),
+              backgroundColor: AppConstants.successColor,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking images: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isPickingImage = false);
+    }
+  }
+
+  // Pick files from file manager using FilePicker
+  Future<void> _pickFromFileManager(int index) async {
     if (_isPickingImage) return;
     setState(() => _isPickingImage = true);
     try {
@@ -475,6 +642,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           // Accept both images (with bytes) and PDFs (may have bytes or only path)
           _ornamentImages[index].addAll(result.files);
         });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${result.files.length} file(s) added from file manager'),
+              backgroundColor: AppConstants.successColor,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -621,13 +796,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         }
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _orderDateController.dispose();
-    _pageController.dispose();
-    super.dispose();
   }
 
   bool _shouldShowOrderTypeSelection() {
@@ -1876,7 +2044,7 @@ Widget _buildOrderDetailsSection() {
                     ),
                   ),
                 OutlinedButton.icon(
-                  onPressed: () => _pickImagesForItem(index),
+                  onPressed: () => _showFilePickerOptions(index),
                   icon: const Icon(Icons.attach_file),
                   label: const Text('Add Files'),
                 ),
