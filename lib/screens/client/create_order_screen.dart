@@ -1103,135 +1103,165 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     return units.isNotEmpty ? units.first : 'g';
   }
 
-  // Build party selection dropdown for bulk orders
-  Widget _buildPartySelectionField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Select Party',
-          style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: AppConstants.spacingS),
-
-        // Role filter tabs
-        Row(
-          children: [
-            _buildRoleFilterChip('Customer', UserRole.customer),
-            const SizedBox(width: AppConstants.spacingS),
-          ],
-        ),
-        const SizedBox(height: AppConstants.spacingS),
-
-        _loadingParties
-            ? const Center(child: CircularProgressIndicator())
-            : _partiesError != null
-            ? Column(
-              children: [
-                Text(
-                  _partiesError!,
-                  style: TextStyle(color: AppConstants.errorColor),
-                ),
-                const SizedBox(height: AppConstants.spacingS),
-                ElevatedButton(
-                  onPressed: _fetchParties,
-                  child: const Text('Retry'),
-                ),
-              ],
-            )
-            : Column(
-              children: [
-                // Search field
-                TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Search by name or email',
-                    hintText: 'Type to search...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
+ Widget _buildPartySelectionField() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Select Party',
+        style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+      ),
+      const SizedBox(height: AppConstants.spacingS),
+      // Role filter tabs
+      Row(
+        children: [
+          _buildRoleFilterChip('Customer', UserRole.customer),
+          const SizedBox(width: AppConstants.spacingS),
+        ],
+      ),
+      const SizedBox(height: AppConstants.spacingS),
+      _loadingParties
+          ? const Center(child: CircularProgressIndicator())
+          : _partiesError != null
+              ? Column(
+                  children: [
+                    Text(
+                      _partiesError!,
+                      style: TextStyle(color: AppConstants.errorColor),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingS,
-                      vertical: AppConstants.spacingS,
+                    const SizedBox(height: AppConstants.spacingS),
+                    ElevatedButton(
+                      onPressed: _fetchParties,
+                      child: const Text('Retry'),
                     ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _partySearchQuery = value;
-                    });
-                    _filterParties();
-                  },
-                ),
-                const SizedBox(height: AppConstants.spacingS),
-
-                // Party dropdown
-                DropdownButtonFormField<String>(
-                  value: _selectedPartyId,
-                  decoration: InputDecoration(
-                    labelText: 'Party Name',
-                    hintText: 'Select a party',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingS,
-                      vertical: AppConstants.spacingS,
+                  ],
+                )
+              : GestureDetector(
+                  onTap: () => _showPartySelectionDialog(),
+                  child: AbsorbPointer(
+                    child: TextFormField(
+                      decoration: InputDecoration(
+                        labelText: 'Party Name',
+                        hintText: 'Select a party',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppConstants.spacingS,
+                          vertical: AppConstants.spacingM,
+                        ),
+                        suffixIcon: const Icon(Icons.arrow_drop_down),
+                      ),
+                      controller: TextEditingController(
+                        text: _selectedPartyName ?? '',
+                      ),
+                      validator: (value) {
+                        if ((_selectedOrderType == 'Bulk' || _selectedOrderType == 'Single') &&
+                            (value == null || value.isEmpty)) {
+                          return 'Please select a party';
+                        }
+                        return null;
+                      },
+                      enabled: false,
                     ),
                   ),
-                  items:
-                      _filteredParties
-                          .map(
-                            (party) => DropdownMenuItem<String>(
-                              value: party.id,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    party.name,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    party.email,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
+                ),
+    ],
+  );
+}
+
+// New method to show searchable party selection dialog
+Future<void> _showPartySelectionDialog() async {
+  String searchQuery = '';
+  await showDialog(
+    context: context,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          final filteredParties = _allUsers.where((user) {
+            if (_selectedPartyRole != user.role) return false;
+            if (searchQuery.isEmpty) return true;
+            final query = searchQuery.toLowerCase();
+            return user.name.toLowerCase().contains(query) ||
+                user.email.toLowerCase().contains(query);
+          }).toList();
+
+          return AlertDialog(
+            title: const Text('Select Party'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Search by name or email',
+                      hintText: 'Type to search...',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        searchQuery = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: AppConstants.spacingS),
+                  SizedBox(
+                    height: 200, // Fixed height for scrollable list
+                    child: ListView.builder(
+                      itemCount: filteredParties.length,
+                      itemBuilder: (context, i) {
+                        final party = filteredParties[i];
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.spacingS,
+                            vertical: 4.0,
+                          ),
+                          title: Text(
+                            party.name,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
                             ),
-                          )
-                          .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedPartyId = value;
-                      _selectedPartyName =
-                          value != null
-                              ? _filteredParties
-                                  .firstWhere((p) => p.id == value)
-                                  .name
-                              : null;
-                    });
-                  },
-                  validator: (value) {
-                    if ((_selectedOrderType == 'Bulk' || _selectedOrderType == 'Single') &&
-                        (value == null || value.isEmpty)) {
-                      return 'Please select a party';
-                    }
-                    return null;
-                  },
-                ),
-              ],
+                          ),
+                          subtitle: Text(
+                            party.email,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          onTap: () {
+                            setState(() {
+                              _selectedPartyId = party.id;
+                              _selectedPartyName = party.name;
+                            });
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
-      ],
-    );
-  }
-
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
   Widget _buildRoleFilterChip(String label, UserRole role) {
     final isSelected = _selectedPartyRole == role;
     return FilterChip(

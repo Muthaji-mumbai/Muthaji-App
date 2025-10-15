@@ -115,7 +115,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
       },
     );
-  }
+  } 
   
   void _navigateToCreateOrder() {
     // Wait for auth to complete, then navigate
