@@ -122,9 +122,20 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   }
 
   Future<void> _updateOrder() async {
-    if (_formKey.currentState!.validate() &&
-        !_isLoading &&
-        _existingOrder != null) {
+   if (_formKey.currentState!.validate() && !_isLoading && _existingOrder != null) {
+    // Check if at least one file is uploaded for each ornament detail
+    bool hasFiles = _ornamentImages.every((files) => files.isNotEmpty);
+    if (!hasFiles) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please upload at least one file for each item.'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
+      return;
+    }
       setState(() => _isLoading = true);
       try {
         final token = AuthService.currentToken;
@@ -715,8 +726,21 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
   Future<void> _createOrder() async {
     if (_formKey.currentState!.validate() && !_isLoading) {
+      bool hasFiles = _ornamentImages.every((files) => files.isNotEmpty);
+    if (!hasFiles) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please upload at least one file for each item.'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
+      return;
+    }
       setState(() {
         _isLoading = true;
+
       });
       try {
         final currentUser = context.read<AuthProvider>().currentUser;
