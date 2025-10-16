@@ -121,8 +121,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     return _orderTypeOptions; // Admin sees all options
   }
 
-  Future<void> _updateOrder() async {
-   if (_formKey.currentState!.validate() && !_isLoading && _existingOrder != null) {
+  
+Future<void> _updateOrder() async {
+  if (_formKey.currentState!.validate() && !_isLoading && _existingOrder != null) {
     // Check if at least one file is uploaded for each ornament detail
     bool hasFiles = _ornamentImages.every((files) => files.isNotEmpty);
     if (!hasFiles) {
@@ -136,126 +137,119 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       }
       return;
     }
-      setState(() => _isLoading = true);
-      try {
-        final token = AuthService.currentToken;
-        if (token == null) throw Exception('User not authenticated');
 
-        final detailsPayload =
-            _ornamentDetails
-                .map(
-                  (d) => {
-                    'name': d['categoryId'],
-                    // For bulk orders, pass empty strings for hidden fields
-                    'size':
-                        _isBulkOrderSimplifiedForm() ? '' : (d['size'] ?? ''),
-                    'unit':
-                        _isBulkOrderSimplifiedForm()
-                            ? ''
-                            : _getUnitForDetail(d),
-                    'weight': _isBulkOrderSimplifiedForm() ? 0.0 : d['weight'],
-                    'purity': d['purity'],
-                    'quantity': d['quantity'],
-                    'colorstone':
-                        _isBulkOrderSimplifiedForm()
-                            ? ''
-                            : (d['colorstone'] ?? 'Same as image'),
-                    'rhodium':
-                        _isBulkOrderSimplifiedForm()
-                            ? ''
-                            : (d['rhodium'] ?? 'Same as image'),
-                    'dull':
-                        _isBulkOrderSimplifiedForm()
-                            ? ''
-                            : (d['dull'] ?? 'Same as image'),
-                    if ((d['remarks'] as String).isNotEmpty)
-                      'remarks': d['remarks'],
-                    // Update delivery count to include new delivery qty
-                    if (_selectedStatus == OrderStatus.partialDelivery &&
-                        d['deliveryqty'] != null)
-                      'deliverycount':
-                          (d['deliverycount'] ?? 0) + (d['deliveryqty'] as int)
-                    else if (d['deliverycount'] != null)
-                      'deliverycount': d['deliverycount'],
-                    // Add partial delivery data when status is partial delivery
-                    if (_selectedStatus == OrderStatus.partialDelivery &&
-                        d['deliveryqty'] != null &&
-                        d['deliverydate'] != null)
-                      'partialdelivery': [
-                        // Include existing partial delivery entries
-                        ...List<Map<String, dynamic>>.from(
-                          d['partialdelivery'] ?? [],
-                        ),
-                        // Append the new delivery entry
-                        {
-                          'qty': d['deliveryqty'],
-                          'deliverydate':
-                              (d['deliverydate'] as DateTime).toIso8601String(),
-                        },
-                      ],
-                    // If not adding new partial delivery, preserve existing ones
-                    if (_selectedStatus == OrderStatus.partialDelivery &&
-                        (d['deliveryqty'] == null ||
-                            d['deliverydate'] == null) &&
-                        d['partialdelivery'] != null &&
-                        (d['partialdelivery'] as List).isNotEmpty)
-                      'partialdelivery': d['partialdelivery'],
-                  },
-                )
-                .toList();
+    setState(() => _isLoading = true);
+    try {
+      final token = AuthService.currentToken;
+      if (token == null) throw Exception('User not authenticated');
 
-        final currentUser = context.read<AuthProvider>().currentUser;
+      final detailsPayload =
+          _ornamentDetails
+              .map(
+                (d) => {
+                  'name': d['categoryId'],
+                  // For bulk orders, pass empty strings for hidden fields
+                  'size':
+                      _isBulkOrderSimplifiedForm() ? '' : (d['size'] ?? ''),
+                  'unit':
+                      _isBulkOrderSimplifiedForm()
+                          ? ''
+                          : _getUnitForDetail(d),
+                  'weight': _isBulkOrderSimplifiedForm() ? 0.0 : d['weight'],
+                  'purity': d['purity'],
+                  'quantity': d['quantity'],
+                  'colorstone':
+                      _isBulkOrderSimplifiedForm()
+                          ? ''
+                          : (d['colorstone'] ?? 'Same as image'),
+                  'rhodium':
+                      _isBulkOrderSimplifiedForm()
+                          ? ''
+                          : (d['rhodium'] ?? 'Same as image'),
+                  'dull':
+                      _isBulkOrderSimplifiedForm()
+                          ? ''
+                          : (d['dull'] ?? 'Same as image'),
+                  if ((d['remarks'] as String).isNotEmpty)
+                    'remarks': d['remarks'],
+                  // Update delivery count to include new delivery qty
+                  if (_selectedStatus == OrderStatus.partialDelivery &&
+                      d['deliveryqty'] != null)
+                    'deliverycount':
+                        (d['deliverycount'] ?? 0) + (d['deliveryqty'] as int)
+                  else if (d['deliverycount'] != null)
+                    'deliverycount': d['deliverycount'],
+                  // Add partial delivery data when status is partial delivery
+                  if (_selectedStatus == OrderStatus.partialDelivery &&
+                      d['deliveryqty'] != null &&
+                      d['deliverydate'] != null)
+                    'partialdelivery': [
+                      ...List<Map<String, dynamic>>.from(
+                        d['partialdelivery'] ?? [],
+                      ),
+                      {
+                        'qty': d['deliveryqty'],
+                        'deliverydate':
+                            (d['deliverydate'] as DateTime).toIso8601String(),
+                      },
+                    ],
+                  // If not adding new partial delivery, preserve existing ones
+                  if (_selectedStatus == OrderStatus.partialDelivery &&
+                      (d['deliveryqty'] == null ||
+                          d['deliverydate'] == null) &&
+                      d['partialdelivery'] != null &&
+                      (d['partialdelivery'] as List).isNotEmpty)
+                    'partialdelivery': d['partialdelivery'],
+                },
+              )
+              .toList();
 
-        final updateData = <String, dynamic>{
-          'orderdate': (_selectedOrderDate ?? DateTime.now()).toIso8601String(),
-          'ordertype': _selectedOrderType,
-          'ornamentDetails': detailsPayload,
-          'orderpriority': _selectedPriority,
-          'updatedby': currentUser?.id,
-          // Include party ID for bulk orders
-          if (_selectedOrderType == 'Bulk' ||
-              _selectedOrderType == 'Single' && _selectedPartyId != null)
-            'partyname': _selectedPartyId,
-          if (_orderNo != null && _orderNo!.isNotEmpty)
-            'orderno': _orderNo, // <-- Pass orderNo to API
-        };
+      final currentUser = context.read<AuthProvider>().currentUser;
 
-        // Include status in update only for admin/employee users
-        if (_selectedStatus != null && _shouldShowOrderTypeSelection()) {
-          updateData['status'] = Order.statusToApiString(_selectedStatus!);
-        }
-        print("ORDER PRIORTY=========>$_selectedPriority");
-        print("UPDATE DATA=========>$updateData");
-        print("ORNAMENT DETAILS=========>$detailsPayload");
-        final updated = await OrderService.updateOrder(
-          orderId: _existingOrder!.id,
-          updateData: updateData,
-          token: token,
-        );
+      final updateData = <String, dynamic>{
+        'orderdate': (_selectedOrderDate ?? DateTime.now()).toIso8601String(),
+        'ordertype': _selectedOrderType,
+        'ornamentDetails': detailsPayload,
+        'orderpriority': _selectedPriority,
+        'updatedby': currentUser?.id,
+        if (_orderNo != null && _orderNo!.isNotEmpty)
+          'orderno': _orderNo, // <-- Pass orderNo to API
+      };
 
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Order updated successfully!'),
-            backgroundColor: AppConstants.successColor,
-          ),
-        );
-        Navigator.pop(context, true);
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update order: $e'),
-            backgroundColor: AppConstants.errorColor,
-          ),
-        );
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
+      // Include status in update only for admin/employee users
+      if (_selectedStatus != null && _shouldShowOrderTypeSelection()) {
+        updateData['status'] = Order.statusToApiString(_selectedStatus!);
       }
+      print("ORDER PRIORTY=========>$_selectedPriority");
+      print("UPDATE DATA=========>$updateData");
+      print("ORNAMENT DETAILS=========>$detailsPayload");
+      final updated = await OrderService.updateOrder(
+        orderId: _existingOrder!.id,
+        updateData: updateData,
+        token: token,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Order updated successfully!'),
+          backgroundColor: AppConstants.successColor,
+        ),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update order: $e'),
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
-
-  @override
+}  @override
   void initState() {
     super.initState();
     if (widget.orderToEdit != null) {
@@ -385,77 +379,52 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     final yyyy = d.year.toString();
     return '$dd/$mm/$yyyy';
   }
+void _prefillFromExistingOrder() {
+  final order = _existingOrder!;
+  _selectedOrderDate = order.orderDate ?? order.createdAt;
+  _orderDateController.text = _formatDateDDMMYYYY(_selectedOrderDate!);
+  _selectedOrderType = order.orderType ?? 'Single';
+  _selectedStatus = order.status;
+  _selectedPriority = order.orderPriority ?? 'Regular';
+  _orderNo = order.orderNo; // <-- Prefill orderNo
 
-  void _prefillFromExistingOrder() {
-    final order = _existingOrder!;
-    _selectedOrderDate = order.orderDate ?? order.createdAt;
-    _orderDateController.text = _formatDateDDMMYYYY(_selectedOrderDate!);
-    _selectedOrderType = order.orderType ?? 'Single';
-    _selectedStatus = order.status;
-    _selectedPriority = order.orderPriority ?? 'Regular';
-    _orderNo = order.orderNo; // <-- Prefill orderNo
-
-    // Handle party information for bulk orders
-    if (order.partyname != null && order.orderType == 'Bulk' ||
-        order.partyname != null && order.orderType == 'Single') {
-      _selectedPartyId = order.partyname;
-      // Load parties to get the party name
-      if (_shouldShowOrderTypeSelection()) {
-        _fetchParties().then((_) {
-          // Find and set the party name after parties are loaded
-          final party =
-              _allUsers.where((p) => p.id == order.partyname).firstOrNull;
-          if (party != null) {
-            setState(() {
-              _selectedPartyName = party.name;
-              // Set the correct role filter based on the party's role
-              _selectedPartyRole = party.role;
-              _filterParties();
-            });
-          }
-        });
-      }
-    }
-
-    // Map ornament details
-    if (order.ornamentDetails.isNotEmpty) {
-      _ornamentDetails =
-          order.ornamentDetails
-              .map(
-                (d) => {
-                  'name': d.name, // display name for the dropdown field
-                  'categoryId': d.nameId, // id to send to API
-                  'size': d.size ?? '', // from existing order if available
-                  'unit': d.unit ?? '',
-                  'weight': d.weight,
-                  'purity': d.purity,
-                  'quantity': d.quantity,
-                  'colorstone': d.colorstone ?? 'Same as image',
-                  'rhodium': d.rhodium ?? 'Same as image',
-                  'dull': d.dull ?? 'Same as image',
-                  'remarks': d.remarks ?? '',
-                  'deliverycount': d.deliverycount,
-                  'deliveryqty': null,
-                  'deliverydate': null,
-                  'partialdelivery':
-                      d.partialDelivery?.map((e) => e.toJson()).toList() ?? [],
-                },
-              )
-              .toList();
-      // Setup image lists: existing URLs and empty new files
-      _existingOrnamentImageUrls =
-          order.ornamentDetails
-              .map((d) => List<String>.from(d.images))
-              .toList();
-      _ornamentImages = List.generate(_ornamentDetails.length, (_) => []);
-    } else {
-      // Fallback to order-level images if any
-      _existingOrnamentImageUrls = [List<String>.from(order.images)];
-      _ornamentImages = [[]];
-    }
+  // Map ornament details
+  if (order.ornamentDetails.isNotEmpty) {
+    _ornamentDetails =
+        order.ornamentDetails
+            .map(
+              (d) => {
+                'name': d.name, // display name for the dropdown field
+                'categoryId': d.nameId, // id to send to API
+                'size': d.size ?? '', // from existing order if available
+                'unit': d.unit ?? '',
+                'weight': d.weight,
+                'purity': d.purity,
+                'quantity': d.quantity,
+                'colorstone': d.colorstone ?? 'Same as image',
+                'rhodium': d.rhodium ?? 'Same as image',
+                'dull': d.dull ?? 'Same as image',
+                'remarks': d.remarks ?? '',
+                'deliverycount': d.deliverycount,
+                'deliveryqty': null,
+                'deliverydate': null,
+                'partialdelivery':
+                    d.partialDelivery?.map((e) => e.toJson()).toList() ?? [],
+              },
+            )
+            .toList();
+    // Setup image lists: existing URLs and empty new files
+    _existingOrnamentImageUrls =
+        order.ornamentDetails
+            .map((d) => List<String>.from(d.images))
+            .toList();
+    _ornamentImages = List.generate(_ornamentDetails.length, (_) => []);
+  } else {
+    // Fallback to order-level images if any
+    _existingOrnamentImageUrls = [List<String>.from(order.images)];
+    _ornamentImages = [[]];
   }
-
-  Future<void> _fetchCategories() async {
+}  Future<void> _fetchCategories() async {
     try {
       final token = AuthService.currentToken;
       if (token == null) {
@@ -1411,98 +1380,197 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       ),
     );
   }
-
-  Widget _buildOrderDetailsSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.spacingM),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Order Details', style: AppConstants.headingSmall),
-                if (_isEditMode && _existingOrder?.orderNo != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppConstants.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'Order No: ${_existingOrder!.orderNo}',
-                      style: TextStyle(
-                        color: AppConstants.primaryColor,
-                        fontWeight: FontWeight.w600,
+Widget _buildOrderDetailsSection() {
+  return Card(
+    elevation: 2,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppConstants.radiusM),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(AppConstants.spacingM),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Order Details', style: AppConstants.headingSmall),
+              if (_isEditMode && _existingOrder?.orderNo != null)
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
+                      decoration: BoxDecoration(
+                        color: AppConstants.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Order No: ${_existingOrder!.orderNo}',
+                        style: TextStyle(
+                          color: AppConstants.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      
+                      
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppConstants.spacingM),
-            // --- Order No field for Bulk orders (admin/employee only) ---
-            if (_shouldShowOrderTypeSelection() &&
-                _selectedOrderType == 'Bulk') ...[
-              Text(
-                'Order No',
-                style: AppConstants.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
+                    SizedBox(width: 5,),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppConstants.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Party Name: ${_existingOrder!.clientName}',
+                        style: TextStyle(
+                          color: AppConstants.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      
+                      
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: AppConstants.spacingS),
-              TextFormField(
-                initialValue: _orderNo ?? '',
-                decoration: InputDecoration(
-                  labelText: 'Enter Order No',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacingS,
-                    vertical: AppConstants.spacingS,
-                  ),
-                ),
-                onChanged: (val) => setState(() => _orderNo = val),
-                validator: (val) {
-                  if (_selectedOrderType == 'Bulk' &&
-                      (val == null || val.isEmpty)) {
-                    return 'Order No is required for bulk orders';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: AppConstants.spacingM),
             ],
-            GestureDetector(
-              onTap: _selectDate,
-              child: CustomTextField(
-                controller: _orderDateController,
-                labelText: 'Order Date',
-                hintText: 'Select date',
-                enabled: false,
-                validator:
-                    (value) => value!.isEmpty ? 'Please select a date' : null,
-              ),
-            ),
-            const SizedBox(height: AppConstants.spacingM),
+          ),
+          const SizedBox(height: AppConstants.spacingM),
+          // --- Order No field for Bulk orders (admin/employee only) ---
+          if (_shouldShowOrderTypeSelection() &&
+              _selectedOrderType == 'Bulk') ...[
             Text(
-              'Priority',
+              'Order No',
               style: AppConstants.bodyMedium.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: AppConstants.spacingS),
-            DropdownButtonFormField<String>(
-              style: const TextStyle(color: Colors.black),
-              value: _selectedPriority,
+            TextFormField(
+              initialValue: _orderNo ?? '',
+              decoration: InputDecoration(
+                labelText: 'Enter Order No',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingS,
+                  vertical: AppConstants.spacingS,
+                ),
+              ),
+              onChanged: (val) => setState(() => _orderNo = val),
+              validator: (val) {
+                if (_selectedOrderType == 'Bulk' &&
+                    (val == null || val.isEmpty)) {
+                  return 'Order No is required for bulk orders';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: AppConstants.spacingM),
+          ],
+          GestureDetector(
+            onTap: _selectDate,
+            child: CustomTextField(
+              controller: _orderDateController,
+              labelText: 'Order Date',
+              hintText: 'Select date',
+              enabled: false,
+              validator:
+                  (value) => value!.isEmpty ? 'Please select a date' : null,
+            ),
+          ),
+          const SizedBox(height: AppConstants.spacingM),
+          Text(
+            'Priority',
+            style: AppConstants.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppConstants.spacingS),
+          DropdownButtonFormField<String>(
+            value: _selectedPriority,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusS),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingS,
+                vertical: AppConstants.spacingS,
+              ),
+            ),
+            items:
+                _priorityOptions
+                    .map(
+                      (p) =>
+                          DropdownMenuItem<String>(value: p, child: Text(p)),
+                    )
+                    .toList(),
+            onChanged:
+                (val) => setState(() => _selectedPriority = val ?? 'Regular'),
+          ),
+          // Show order type selection only for admin and employee users
+          if (_shouldShowOrderTypeSelection()) ...[
+            const SizedBox(height: AppConstants.spacingM),
+            Text(
+              'Order Type',
+              style: AppConstants.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppConstants.spacingS),
+            Wrap(
+              spacing: AppConstants.spacingS,
+              children:
+                  _availableOrderTypes.map((type) {
+                    final isSelected = _selectedOrderType == type;
+                    return FilterChip(
+                      label: Text(type),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          _selectedOrderType = type;
+                          // Load parties when switching to bulk orders
+                          if (type == 'Bulk' &&
+                              _allUsers.isEmpty &&
+                              !_loadingParties) {
+                            _fetchParties();
+                          }
+                        });
+                      },
+                      backgroundColor: AppConstants.surfaceColor,
+                      selectedColor: AppConstants.primaryColor.withOpacity(0.2),
+                      checkmarkColor: AppConstants.primaryColor,
+                      labelStyle: TextStyle(
+                        color:
+                            isSelected
+                                ? AppConstants.primaryColor
+                                : AppConstants.textPrimaryColor,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    );
+                  }).toList(),
+            ),
+          ],
+          // Show status only for admin/employee in edit mode
+          if (_isEditMode && _shouldShowOrderTypeSelection()) ...[
+            const SizedBox(height: AppConstants.spacingM),
+            Text(
+              'Status',
+              style: AppConstants.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppConstants.spacingS),
+            DropdownButtonFormField<OrderStatus>(
+              value: _selectedStatus,
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppConstants.radiusS),
@@ -1513,122 +1581,33 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 ),
               ),
               items:
-                  _priorityOptions
+                  OrderStatus.values
                       .map(
-                        (p) =>
-                            DropdownMenuItem<String>(value: p, child: Text(p)),
+                        (s) => DropdownMenuItem(
+                          value: s,
+                          child: Text(s.toString().split('.').last),
+                        ),
                       )
                       .toList(),
               onChanged:
-                  (val) => setState(() => _selectedPriority = val ?? 'Regular'),
-            ),
-            // Show party selection for admin/employee only
-            if (_shouldShowOrderTypeSelection()) ...[
-              const SizedBox(height: AppConstants.spacingM),
-              _buildPartySelectionField(),
-            ],
-            // Show order type selection only for admin and employee users
-            if (_shouldShowOrderTypeSelection()) ...[
-              const SizedBox(height: AppConstants.spacingM),
-              Text(
-                'Order Type',
-                style: AppConstants.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: AppConstants.spacingS),
-              Wrap(
-                spacing: AppConstants.spacingS,
-                children:
-                    _availableOrderTypes.map((type) {
-                      final isSelected = _selectedOrderType == type;
-                      return FilterChip(
-                        label: Text(type),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedOrderType = type;
-                            // Load parties when switching to bulk orders
-                            if (type == 'Bulk' &&
-                                _allUsers.isEmpty &&
-                                !_loadingParties) {
-                              _fetchParties();
-                            }
-                            // Clear party selection when switching order types
-                            _selectedPartyId = null;
-                            _selectedPartyName = null;
-                            _filterParties();
-                          });
-                        },
-                        backgroundColor: AppConstants.surfaceColor,
-                        selectedColor: AppConstants.primaryColor.withOpacity(
-                          0.2,
-                        ),
-                        checkmarkColor: AppConstants.primaryColor,
-                        labelStyle: TextStyle(
-                          color:
-                              isSelected
-                                  ? AppConstants.primaryColor
-                                  : AppConstants.textPrimaryColor,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      );
-                    }).toList(),
-              ),
-            ],
-            // Show status only for admin/employee in edit mode
-            if (_isEditMode && _shouldShowOrderTypeSelection()) ...[
-              const SizedBox(height: AppConstants.spacingM),
-              Text(
-                'Status',
-                style: AppConstants.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: AppConstants.spacingS),
-              DropdownButtonFormField<OrderStatus>(
-                style: const TextStyle(color: Colors.black),
-                value: _selectedStatus,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacingS,
-                    vertical: AppConstants.spacingS,
-                  ),
-                ),
-                items:
-                    OrderStatus.values
-                        .map(
-                          (s) => DropdownMenuItem(
-                            value: s,
-                            child: Text(s.toString().split('.').last),
-                          ),
-                        )
-                        .toList(),
-                onChanged:
-                    (val) => setState(() {
-                      _selectedStatus = val;
-                      // Set default delivery date to today when status changes to partial delivery
-                      if (val == OrderStatus.partialDelivery) {
-                        for (var detail in _ornamentDetails) {
-                          if (detail['deliverydate'] == null) {
-                            detail['deliverydate'] = DateTime.now();
-                          }
+                  (val) => setState(() {
+                    _selectedStatus = val;
+                    // Set default delivery date to today when status changes to partial delivery
+                    if (val == OrderStatus.partialDelivery) {
+                      for (var detail in _ornamentDetails) {
+                        if (detail['deliverydate'] == null) {
+                          detail['deliverydate'] = DateTime.now();
                         }
                       }
-                    }),
-              ),
-            ],
+                    }
+                  }),
+            ),
           ],
-        ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildOrnamentDetailsSection() {
+    ),
+  );
+}  Widget _buildOrnamentDetailsSection() {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
