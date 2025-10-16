@@ -53,6 +53,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   String? _selectedUserName;
   List<User> _allUsers = [];
   bool _loadingUsers = false;
+bool _isLoadingOrders = false;
 
   // Date filtering for reports
   DateTime? _startDate;
@@ -321,80 +322,83 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // Silently fail for user loading as it's not critical
     }
   }
+Future<void> _loadOrdersWithPartyFilter() async {
+  setState(() {
+    _isLoadingOrders = true; // Show loader
+  });
+  try {
+    print('Selected party ID: $_selectedUserId');
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.currentUser?.token;
+    
+    if (token != null) {
+      // Call API with partyname parameter if a party is selected
+      final allOrders = await OrderService.getAllOrders(
+        token,
+        partyname: _selectedUserId,
+        startDate: _startDate,
+        endDate: _endDate,
+      );
+      print('Fetched orders: $allOrders');
+      if (!mounted) return;
 
-  Future<void> _loadOrdersWithPartyFilter() async {
-    try {
-      print('Selected party ID: $_selectedUserId');
-      final authProvider = context.read<AuthProvider>();
-      final token = authProvider.currentUser?.token;
-      
-      if (token != null) {
-        // Call API with partyname parameter if a party is selected
-        final allOrders = await OrderService.getAllOrders(
-          token,
-          partyname: _selectedUserId,
-          startDate: _startDate,
-          endDate: _endDate,
-        );
-        
-        setState(() {
-          _allOrders = allOrders;
-        });
-      }
-    } catch (e) {
-      print('Error loading orders with party filter: $e');
-      // Show error to user
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load orders: $e'),
-            backgroundColor: AppConstants.errorColor,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _selectDate({required bool isStartDate}) async {
-    final initialDate =
-        isStartDate
-            ? (_startDate ?? DateTime.now())
-            : (_endDate ?? DateTime.now());
-
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-
-    if (pickedDate != null) {
       setState(() {
-        if (isStartDate) {
-          _startDate = pickedDate;
-          // If end date is before start date, adjust it
-          if (_endDate != null && _endDate!.isBefore(_startDate!)) {
-            _endDate = _startDate;
-          }
-        } else {
-          _endDate = pickedDate;
-          // If start date is after end date, adjust it
-          if (_startDate != null && _startDate!.isAfter(_endDate!)) {
-            _startDate = _endDate;
-          }
-        }
+        _allOrders = allOrders;
+        _isLoadingOrders = false; // Hide loader after data is loaded
       });
-      // Charts will automatically update since they use the filtered data
+    }
+  } catch (e) {
+    print('Error loading orders with party filter: $e');
+    if (mounted) {
+      setState(() {
+        _isLoadingOrders = false; // Hide loader on error
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load orders: $e'),
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
     }
   }
+}  
+Future<void> _selectDate({required bool isStartDate}) async {
+  final initialDate = isStartDate
+      ? (_startDate ?? DateTime.now())
+      : (_endDate ?? DateTime.now());
 
-  void _clearDateFilters() {
+  final pickedDate = await showDatePicker(
+    context: context,
+    initialDate: initialDate,
+    firstDate: DateTime(2020),
+    lastDate: DateTime(2030),
+  );
+
+  if (pickedDate != null) {
     setState(() {
-      _startDate = null;
-      _endDate = null;
+      if (isStartDate) {
+        _startDate = pickedDate;
+        if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+          _endDate = _startDate;
+        }
+      } else {
+        _endDate = pickedDate;
+        if (_startDate != null && _startDate!.isAfter(_endDate!)) {
+          _startDate = _endDate;
+        }
+      }
     });
-    // Charts will automatically update since they use the filtered data
+    await _loadOrdersWithPartyFilter(); // Reload orders with new dates
   }
+}
+
+void _clearDateFilters() {
+  setState(() {
+    _startDate = null;
+    _endDate = null;
+  });
+  _loadOrdersWithPartyFilter(); // Reload orders without date filters
+}
 
   @override
   Widget build(BuildContext context) {
@@ -1521,14 +1525,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
   Widget _buildReportsView() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildPartySelectionSection(), // Party selection for filtering reports
-        const SizedBox(height: AppConstants.spacingL),
-        _buildDetailedStatistics(), // Moved detailed stats higher for priority
+  print('Rendering Reports - Orders count: ${_allOrders.length}');
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildPartySelectionSection(),
+      const SizedBox(height: AppConstants.spacingL),
+      if (_isLoadingOrders)
+        const Center(
+          child: CircularProgressIndicator(
+            color: AppConstants.primaryColor,
+          ),
+        )
+      else if (_allOrders.isEmpty)
+        const Center(
+          child: Text(
+            'No orders available for the selected party.',
+         
+          ),
+        )
+      else ...[
+        _buildDetailedStatistics(),
         const SizedBox(height: AppConstants.spacingL),
         _buildTypePieChartsSection(),
         const SizedBox(height: AppConstants.spacingL),
@@ -1536,10 +1554,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         const SizedBox(height: AppConstants.spacingL),
         _buildPieChartsSection(),
       ],
-    );
-  }
-
-  Widget _buildPartySelectionSection() {
+    ],
+  );
+}  Widget _buildPartySelectionSection() {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingM),
       decoration: BoxDecoration(
@@ -1630,6 +1647,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ? _allUsers.firstWhere((u) => u.id == value).name
                               : null;
                     });
+                    print('Selected User ID: $_selectedUserId');
                     // Reload orders with party filter
                     await _loadOrdersWithPartyFilter();
                   },
