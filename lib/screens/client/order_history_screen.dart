@@ -37,28 +37,25 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   // Tab definitions
   late List<String> _tabs;
   int _selectedTabIndex = 0;
-
-  // Helper: Map backend status to UI status
-  String _mapOrderToUiStatus(Order order) {
-    // Bulk orders: allow Partial Delivery tab
-    final isBulk = (order.orderType?.toLowerCase() == 'bulk');
-    switch (order.status) {
-      case OrderStatus.pending:
-        return 'Pending';
-      case OrderStatus.partialDelivery:
-        return isBulk ? 'Partially Delivered' : 'In Progress';
-      case OrderStatus.cancelled:
-        return 'Cancelled';
-      
-      case OrderStatus.Delivered:
-      case OrderStatus.Completed:
-        return 'Delivered';
-      // In Progress: all other statuses (Casted, Wax, PendingDisp, etc.)
-      default:
-        return 'In Progress';
-    }
+String _mapOrderToUiStatus(Order order) {
+  // Bulk orders: allow Partial Delivery tab
+  final isBulk = (order.orderType?.toLowerCase() == 'bulk');
+  switch (order.status) {
+    case OrderStatus.pending:
+      return 'Pending';
+    case OrderStatus.partialDelivery:
+      return isBulk ? 'Partially Delivered' : 'In Progress';
+    case OrderStatus.cancelled:
+      return 'Cancelled';
+    case OrderStatus.Delivered:
+      return 'Delivered';
+    case OrderStatus.Completed:
+      return 'Completed'; // Separate status for Completed
+    // In Progress: all other statuses (Casted, Wax, PendingDisp, etc.)
+    default:
+      return 'In Progress';
   }
-
+}
   bool _isUrgent(Order order) {
     final p = (order.orderPriority ?? '').toLowerCase().trim();
     return p == 'urgent' || p.contains('urgent');
@@ -165,6 +162,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       'In Progress',
       'Partially Delivered',
       'Delivered',
+      'Completed',
       'Cancelled',
     ];
     _tabController = TabController(length: _tabs.length, vsync: this);
@@ -177,23 +175,26 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     _loadOrders();
   }
 
-  _updateTabs() {
-    if (_orderType?.toLowerCase() == 'Bulk') {
-      _tabs = [
-        'All',
-        'Pending',
-        'In Progress',
-        'Partially Delivered',
-        'Delivered',
-        'Cancelled',
-      ];
-    } else {
-      _tabs = ['All', 'Pending', 'In Progress', 'Delivered', 'Cancelled'];
-    }
-    return _tabs;
+_updateTabs() {
+  if (_orderType?.toLowerCase() == 'Bulk') {
+    _tabs = [
+      'All',
+      'Pending',
+      'In Progress',
+      'Partially Delivered',
+      'Delivered',
+      'Completed',
+      'Cancelled',
+    ];
+  } else {
+    _tabs = ['All', 'Pending', 'In Progress', 'Delivered', 'Completed', 'Cancelled'];
   }
-
-
+  if (_tabController.length != _tabs.length) {
+    _tabController.dispose();
+    // _initializeTabController(); // Reinitialize with new length
+  }
+  setState(() {}); // Refresh UI
+}
   @override
   void dispose() {
     _tabController.dispose();
@@ -253,114 +254,100 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         );
       }
     }
+  }void _applyFilters() {
+  // Filter by tab
+  String? tabStatus;
+  if (_selectedTabIndex > 0) {
+    tabStatus = _tabs[_selectedTabIndex];
   }
-
-  void _applyFilters() {
-    // Filter by tab
-    String? tabStatus;
-    if (_selectedTabIndex > 0) {
-      tabStatus = _tabs[_selectedTabIndex];
+  _filteredOrders = _allOrders.where((order) {
+    final uiStatus = _mapOrderToUiStatus(order);
+    // Tab filter
+    if (tabStatus != null && tabStatus != 'All' && uiStatus != tabStatus) {
+      return false;
     }
-    _filteredOrders =
-        _allOrders.where((order) {
-          final uiStatus = _mapOrderToUiStatus(order);
-          // Tab filter
-          if (tabStatus != null &&
-              tabStatus != 'All' &&
-              uiStatus != tabStatus) {
-            return false;
-          }
-          // Status dropdown filter (legacy, can be removed if not needed)
-          if (_selectedStatus != null && order.status != _selectedStatus) {
-            return false;
-          }
-          // Order type filter
-          if (_orderType != null &&
-              (order.orderType ?? 'Single') != _orderType) {
-            return false;
-          }
-          // Search filter
-          if (_searchQuery.isNotEmpty) {
-            final query = _searchQuery.toLowerCase();
-            final matches =
-                order.description.toLowerCase().contains(query) ||
-                order.id.toLowerCase().contains(query) ||
-                (order.orderNo?.toLowerCase().contains(query) ?? false) ||
-                order.statusText.toLowerCase().contains(query);
-            if (!matches) return false;
-          }
-          return true;
-        }).toList();
-    // Sort by creation date (newest first)
-    _filteredOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-  }
-
-  @override
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
-      appBar: AppBar(
-        title: const Text('Order History'),
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadOrders),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: Container(
-            color: AppConstants.primaryColor,
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              indicatorColor: Colors.white,
-              indicatorWeight: 3,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              labelStyle: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              tabs: _tabs.map((t) => Tab(
-                text: t,
-                height: 48,
-              )).toList(),
+    // Status dropdown filter (legacy, can be removed if not needed)
+    if (_selectedStatus != null && order.status != _selectedStatus) {
+      return false;
+    }
+    // Order type filter
+    if (_orderType != null && (order.orderType ?? 'Single') != _orderType) {
+      return false;
+    }
+    // Search filter
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      final matches = order.description.toLowerCase().contains(query) ||
+          order.id.toLowerCase().contains(query) ||
+          (order.orderNo?.toLowerCase().contains(query) ?? false) ||
+          order.statusText.toLowerCase().contains(query);
+      if (!matches) return false;
+    }
+    return true;
+  }).toList();
+  // Sort by creation date (newest first)
+  _filteredOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+}
+  @override@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: AppConstants.backgroundColor,
+    appBar: AppBar(
+      title: const Text('Order History'),
+      backgroundColor: AppConstants.primaryColor,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      actions: [
+        IconButton(icon: const Icon(Icons.refresh), onPressed: _loadOrders),
+      ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(48),
+        child: Container(
+          color: AppConstants.primaryColor,
+          child: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            indicatorColor: Colors.white,
+            indicatorWeight: 3,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            labelStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
+            unselectedLabelStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            tabs: _tabs.map((t) => Tab(
+              text: t,
+              height: 48,
+            )).toList(),
           ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: List.generate(_tabs.length, (tabIdx) {
-          // Apply tab filter dynamically
-          if (_selectedTabIndex == tabIdx) {
-            _applyFilters(); // Ensure filters are applied for the current tab
-          }
-          return Column(
-            children: [
-              _buildSearchAndFilterSection(),
-              // Add date filter section
-              _buildDateFilterSection(),
-              Expanded(
-                child:
-                    _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _filteredOrders.isEmpty
-                        ? _buildEmptyState()
-                        : RefreshIndicator(
+    ),
+    body: TabBarView(
+      controller: _tabController,
+      children: List.generate(_tabs.length, (tabIdx) {
+        if (_selectedTabIndex == tabIdx) {
+          _applyFilters(); // Ensure filters are applied for the current tab
+        }
+        return Column(
+          children: [
+            _buildSearchAndFilterSection(),
+            _buildDateFilterSection(),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filteredOrders.isEmpty
+                      ? _buildEmptyState()
+                      : RefreshIndicator(
                           onRefresh: () async => _loadOrders(),
                           child: ListView.builder(
-                            padding: const EdgeInsets.all(
-                              AppConstants.spacingM,
-                            ),
+                            padding: const EdgeInsets.all(AppConstants.spacingM),
                             itemCount: _filteredOrders.length + 1,
                             itemBuilder: (context, index) {
                               if (index == 0) return const SizedBox.shrink();
@@ -370,15 +357,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                             },
                           ),
                         ),
-              ),
-            ],
-          );
-        }),
-      ),
-    );
-  }
-
-  // New method for date filter section
+            ),
+          ],
+        );
+      }),
+    ),
+  );
+}
   Widget _buildDateFilterSection() {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingM),
@@ -588,52 +573,58 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         if (_isUrgent(order))
           Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
         // Status ribbon positioned on the right end
-        Positioned(
-          top: 0,
-          right: 0,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: order.statusColor,
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(AppConstants.radiusM),
-                bottomLeft: Radius.circular(8),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: order.statusColor.withOpacity(0.3),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child:
-                ([
-                      OrderStatus.Casted,
-                      OrderStatus.DC,
-                      OrderStatus.PendingDisp,
-                      OrderStatus.Wax,
-                    ].contains(order.status))
-                    ? Text(
-                      "In Progress",
-                      style: AppConstants.bodySmall.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                        letterSpacing: 0.5,
-                      ),
-                    )
-                    : Text(
-                      order.statusText.toUpperCase(),
-                      style: AppConstants.bodySmall.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-          ),
+       Positioned(
+  top: 0,
+  right: 0,
+  child: Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: order.status == OrderStatus.Completed
+          ? Colors.green.shade600 // Distinct color for Completed
+          : order.statusColor,
+      borderRadius: const BorderRadius.only(
+        topRight: Radius.circular(AppConstants.radiusM),
+        bottomLeft: Radius.circular(8),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: (order.status == OrderStatus.Completed
+                  ? Colors.green.shade600
+                  : order.statusColor)
+              .withOpacity(0.3),
+          blurRadius: 4,
+          offset: const Offset(0, 2),
         ),
+      ],
+    ),
+    child: ([
+          OrderStatus.Casted,
+          OrderStatus.DC,
+          OrderStatus.PendingDisp,
+          OrderStatus.Wax,
+        ].contains(order.status))
+        ? Text(
+            "In Progress",
+            style: AppConstants.bodySmall.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 10,
+              letterSpacing: 0.5,
+            ),
+          )
+        : Text(
+            order.status == OrderStatus.Completed
+                ? "COMPLETED"
+                : order.statusText.toUpperCase(),
+            style: AppConstants.bodySmall.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 10,
+              letterSpacing: 0.5,
+            ),
+          ),
+  ),
+),
         // Show Delay over Due when both conditions could be true (positioned below status ribbon)
         if (_isDelay(order))
           Positioned(top: 30, right: 0, child: _buildDelayRibbon())
