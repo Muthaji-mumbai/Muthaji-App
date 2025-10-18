@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart'; // For loading asset images
 import 'package:soloshine/screens/common/pdf_viewer_screen.dart';
+import 'package:soloshine/screens/employee/manage_orders_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
@@ -11,6 +12,8 @@ import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
 import '../../services/auth_service.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -37,25 +40,26 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   // Tab definitions
   late List<String> _tabs;
   int _selectedTabIndex = 0;
-String _mapOrderToUiStatus(Order order) {
-  // Bulk orders: allow Partial Delivery tab
-  final isBulk = (order.orderType?.toLowerCase() == 'bulk');
-  switch (order.status) {
-    case OrderStatus.pending:
-      return 'Pending';
-    case OrderStatus.partialDelivery:
-      return isBulk ? 'Partially Delivered' : 'In Progress';
-    case OrderStatus.cancelled:
-      return 'Cancelled';
-    case OrderStatus.Delivered:
-      return 'Delivered';
-    case OrderStatus.Completed:
-      return 'Completed'; // Separate status for Completed
-    // In Progress: all other statuses (Casted, Wax, PendingDisp, etc.)
-    default:
-      return 'In Progress';
+  String _mapOrderToUiStatus(Order order) {
+    // Bulk orders: allow Partial Delivery tab
+    final isBulk = (order.orderType?.toLowerCase() == 'bulk');
+    switch (order.status) {
+      case OrderStatus.pending:
+        return 'Pending';
+      case OrderStatus.partialDelivery:
+        return isBulk ? 'Partially Delivered' : 'In Progress';
+      case OrderStatus.cancelled:
+        return 'Cancelled';
+      case OrderStatus.Delivered:
+        return 'Delivered';
+      case OrderStatus.Completed:
+        return 'Completed'; // Separate status for Completed
+      // In Progress: all other statuses (Casted, Wax, PendingDisp, etc.)
+      default:
+        return 'In Progress';
+    }
   }
-}
+
   bool _isUrgent(Order order) {
     final p = (order.orderPriority ?? '').toLowerCase().trim();
     return p == 'urgent' || p.contains('urgent');
@@ -175,26 +179,34 @@ String _mapOrderToUiStatus(Order order) {
     _loadOrders();
   }
 
-_updateTabs() {
-  if (_orderType?.toLowerCase() == 'Bulk') {
-    _tabs = [
-      'All',
-      'Pending',
-      'In Progress',
-      'Partially Delivered',
-      'Delivered',
-      'Completed',
-      'Cancelled',
-    ];
-  } else {
-    _tabs = ['All', 'Pending', 'In Progress', 'Delivered', 'Completed', 'Cancelled'];
+  _updateTabs() {
+    if (_orderType?.toLowerCase() == 'Bulk') {
+      _tabs = [
+        'All',
+        'Pending',
+        'In Progress',
+        'Partially Delivered',
+        'Delivered',
+        'Completed',
+        'Cancelled',
+      ];
+    } else {
+      _tabs = [
+        'All',
+        'Pending',
+        'In Progress',
+        'Delivered',
+        'Completed',
+        'Cancelled',
+      ];
+    }
+    if (_tabController.length != _tabs.length) {
+      _tabController.dispose();
+      // _initializeTabController(); // Reinitialize with new length
+    }
+    setState(() {}); // Refresh UI
   }
-  if (_tabController.length != _tabs.length) {
-    _tabController.dispose();
-    // _initializeTabController(); // Reinitialize with new length
-  }
-  setState(() {}); // Refresh UI
-}
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -254,100 +266,109 @@ _updateTabs() {
         );
       }
     }
-  }void _applyFilters() {
-  // Filter by tab
-  String? tabStatus;
-  if (_selectedTabIndex > 0) {
-    tabStatus = _tabs[_selectedTabIndex];
   }
-  _filteredOrders = _allOrders.where((order) {
-    final uiStatus = _mapOrderToUiStatus(order);
-    // Tab filter
-    if (tabStatus != null && tabStatus != 'All' && uiStatus != tabStatus) {
-      return false;
+
+  void _applyFilters() {
+    // Filter by tab
+    String? tabStatus;
+    if (_selectedTabIndex > 0) {
+      tabStatus = _tabs[_selectedTabIndex];
     }
-    // Status dropdown filter (legacy, can be removed if not needed)
-    if (_selectedStatus != null && order.status != _selectedStatus) {
-      return false;
-    }
-    // Order type filter
-    if (_orderType != null && (order.orderType ?? 'Single') != _orderType) {
-      return false;
-    }
-    // Search filter
-    if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase();
-      final matches = order.description.toLowerCase().contains(query) ||
-          order.id.toLowerCase().contains(query) ||
-          (order.orderNo?.toLowerCase().contains(query) ?? false) ||
-          order.statusText.toLowerCase().contains(query);
-      if (!matches) return false;
-    }
-    return true;
-  }).toList();
-  // Sort by creation date (newest first)
-  _filteredOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-}
-  @override@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: AppConstants.backgroundColor,
-    appBar: AppBar(
-      title: const Text('Order History'),
-      backgroundColor: AppConstants.primaryColor,
-      foregroundColor: Colors.white,
-      elevation: 0,
-      actions: [
-        IconButton(icon: const Icon(Icons.refresh), onPressed: _loadOrders),
-      ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(48),
-        child: Container(
-          color: AppConstants.primaryColor,
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            indicatorColor: Colors.white,
-            indicatorWeight: 3,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            labelStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+    _filteredOrders =
+        _allOrders.where((order) {
+          final uiStatus = _mapOrderToUiStatus(order);
+          // Tab filter
+          if (tabStatus != null &&
+              tabStatus != 'All' &&
+              uiStatus != tabStatus) {
+            return false;
+          }
+          // Status dropdown filter (legacy, can be removed if not needed)
+          if (_selectedStatus != null && order.status != _selectedStatus) {
+            return false;
+          }
+          // Order type filter
+          if (_orderType != null &&
+              (order.orderType ?? 'Single') != _orderType) {
+            return false;
+          }
+          // Search filter
+          if (_searchQuery.isNotEmpty) {
+            final query = _searchQuery.toLowerCase();
+            final matches =
+                order.description.toLowerCase().contains(query) ||
+                order.id.toLowerCase().contains(query) ||
+                (order.orderNo?.toLowerCase().contains(query) ?? false) ||
+                order.statusText.toLowerCase().contains(query);
+            if (!matches) return false;
+          }
+          return true;
+        }).toList();
+    // Sort by creation date (newest first)
+    _filteredOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  @override
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppConstants.backgroundColor,
+      appBar: AppBar(
+        title: const Text('Order History'),
+        backgroundColor: AppConstants.primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadOrders),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            color: AppConstants.primaryColor,
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              indicatorColor: Colors.white,
+              indicatorWeight: 3,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              tabs: _tabs.map((t) => Tab(text: t, height: 48)).toList(),
             ),
-            unselectedLabelStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            tabs: _tabs.map((t) => Tab(
-              text: t,
-              height: 48,
-            )).toList(),
           ),
         ),
       ),
-    ),
-    body: TabBarView(
-      controller: _tabController,
-      children: List.generate(_tabs.length, (tabIdx) {
-        if (_selectedTabIndex == tabIdx) {
-          _applyFilters(); // Ensure filters are applied for the current tab
-        }
-        return Column(
-          children: [
-            _buildSearchAndFilterSection(),
-            _buildDateFilterSection(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _filteredOrders.isEmpty
-                      ? _buildEmptyState()
-                      : RefreshIndicator(
+      body: TabBarView(
+        controller: _tabController,
+        children: List.generate(_tabs.length, (tabIdx) {
+          if (_selectedTabIndex == tabIdx) {
+            _applyFilters(); // Ensure filters are applied for the current tab
+          }
+          return Column(
+            children: [
+              _buildSearchAndFilterSection(),
+              _buildDateFilterSection(),
+              Expanded(
+                child:
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _filteredOrders.isEmpty
+                        ? _buildEmptyState()
+                        : RefreshIndicator(
                           onRefresh: () async => _loadOrders(),
                           child: ListView.builder(
-                            padding: const EdgeInsets.all(AppConstants.spacingM),
+                            padding: const EdgeInsets.all(
+                              AppConstants.spacingM,
+                            ),
                             itemCount: _filteredOrders.length + 1,
                             itemBuilder: (context, index) {
                               if (index == 0) return const SizedBox.shrink();
@@ -357,13 +378,14 @@ Widget build(BuildContext context) {
                             },
                           ),
                         ),
-            ),
-          ],
-        );
-      }),
-    ),
-  );
-}
+              ),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
   Widget _buildDateFilterSection() {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingM),
@@ -573,58 +595,62 @@ Widget build(BuildContext context) {
         if (_isUrgent(order))
           Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
         // Status ribbon positioned on the right end
-       Positioned(
-  top: 0,
-  right: 0,
-  child: Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    decoration: BoxDecoration(
-      color: order.status == OrderStatus.Completed
-          ? Colors.green.shade600 // Distinct color for Completed
-          : order.statusColor,
-      borderRadius: const BorderRadius.only(
-        topRight: Radius.circular(AppConstants.radiusM),
-        bottomLeft: Radius.circular(8),
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: (order.status == OrderStatus.Completed
-                  ? Colors.green.shade600
-                  : order.statusColor)
-              .withOpacity(0.3),
-          blurRadius: 4,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: ([
-          OrderStatus.Casted,
-          OrderStatus.DC,
-          OrderStatus.PendingDisp,
-          OrderStatus.Wax,
-        ].contains(order.status))
-        ? Text(
-            "In Progress",
-            style: AppConstants.bodySmall.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 10,
-              letterSpacing: 0.5,
+        Positioned(
+          top: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color:
+                  order.status == OrderStatus.Completed
+                      ? Colors
+                          .green
+                          .shade600 // Distinct color for Completed
+                      : order.statusColor,
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(AppConstants.radiusM),
+                bottomLeft: Radius.circular(8),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: (order.status == OrderStatus.Completed
+                          ? Colors.green.shade600
+                          : order.statusColor)
+                      .withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          )
-        : Text(
-            order.status == OrderStatus.Completed
-                ? "COMPLETED"
-                : order.statusText.toUpperCase(),
-            style: AppConstants.bodySmall.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 10,
-              letterSpacing: 0.5,
-            ),
+            child:
+                ([
+                      OrderStatus.Casted,
+                      OrderStatus.DC,
+                      OrderStatus.PendingDisp,
+                      OrderStatus.Wax,
+                    ].contains(order.status))
+                    ? Text(
+                      "In Progress",
+                      style: AppConstants.bodySmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                        letterSpacing: 0.5,
+                      ),
+                    )
+                    : Text(
+                      order.status == OrderStatus.Completed
+                          ? "COMPLETED"
+                          : order.statusText.toUpperCase(),
+                      style: AppConstants.bodySmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
           ),
-  ),
-),
+        ),
         // Show Delay over Due when both conditions could be true (positioned below status ribbon)
         if (_isDelay(order))
           Positioned(top: 30, right: 0, child: _buildDelayRibbon())
@@ -662,33 +688,34 @@ Widget build(BuildContext context) {
                   final isPdf = url.toLowerCase().endsWith('.pdf');
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: isPdf
-                        ? Container(
-                            color: Colors.red.shade50,
-                            child: Icon(
-                              Icons.picture_as_pdf,
-                              color: Colors.red.shade400,
-                              size: 24,
+                    child:
+                        isPdf
+                            ? Container(
+                              color: Colors.red.shade50,
+                              child: Icon(
+                                Icons.picture_as_pdf,
+                                color: Colors.red.shade400,
+                                size: 24,
+                              ),
+                            )
+                            : Image.network(
+                              url,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (c, e, s) => Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.broken_image_outlined,
+                                      color: Colors.grey.shade400,
+                                      size: 20,
+                                    ),
+                                  ),
                             ),
-                          )
-                        : Image.network(
-                            url,
-                            width: 48,
-                            height: 48,
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (c, e, s) => Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.broken_image_outlined,
-                                    color: Colors.grey.shade400,
-                                    size: 20,
-                                  ),
-                                ),
-                          ),
                   );
                 },
               ),
@@ -1072,7 +1099,8 @@ Widget build(BuildContext context) {
                 ],
 
                 // Partial Delivery
-                if (detail.partialDelivery != null && detail.partialDelivery!.isNotEmpty) ...[
+                if (detail.partialDelivery != null &&
+                    detail.partialDelivery!.isNotEmpty) ...[
                   const SizedBox(height: AppConstants.spacingM),
                   Container(
                     width: double.infinity,
@@ -1150,27 +1178,38 @@ Widget build(BuildContext context) {
                                 ),
                               ),
                               // Data rows
-                              ...detail.partialDelivery!.asMap().entries.map((entry) {
+                              ...detail.partialDelivery!.asMap().entries.map((
+                                entry,
+                              ) {
                                 final pd = entry.value;
-                                final isLast = entry.key == detail.partialDelivery!.length - 1;
+                                final isLast =
+                                    entry.key ==
+                                    detail.partialDelivery!.length - 1;
                                 return Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: AppConstants.spacingS,
                                     vertical: AppConstants.spacingS,
                                   ),
                                   decoration: BoxDecoration(
-                                    border: isLast ? null : Border(
-                                      bottom: BorderSide(
-                                        color: Colors.grey.withOpacity(0.2),
-                                        width: 1,
-                                      ),
-                                    ),
+                                    border:
+                                        isLast
+                                            ? null
+                                            : Border(
+                                              bottom: BorderSide(
+                                                color: Colors.grey.withOpacity(
+                                                  0.2,
+                                                ),
+                                                width: 1,
+                                              ),
+                                            ),
                                   ),
                                   child: Row(
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          DateFormat('dd MMM yyyy').format(pd.deliverydate),
+                                          DateFormat(
+                                            'dd MMM yyyy',
+                                          ).format(pd.deliverydate),
                                           style: AppConstants.bodySmall,
                                         ),
                                       ),
@@ -1179,10 +1218,11 @@ Widget build(BuildContext context) {
                                         child: Text(
                                           pd.qty.toString(),
                                           textAlign: TextAlign.right,
-                                          style: AppConstants.bodySmall.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.teal,
-                                          ),
+                                          style: AppConstants.bodySmall
+                                              .copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.teal,
+                                              ),
                                         ),
                                       ),
                                     ],
@@ -1279,82 +1319,84 @@ Widget build(BuildContext context) {
     );
   }
 
- Widget _buildActionButtonsSection(Order order) {
-  final isBulk = (order.orderType?.toLowerCase() == 'bulk');
-  final isSingle = !isBulk;
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Text(
-        'Actions',
-        style: AppConstants.bodyLarge.copyWith(
-          fontWeight: FontWeight.w600,
-          color: AppConstants.primaryColor,
-        ),
-      ),
-      const SizedBox(height: AppConstants.spacingS),
-      Wrap(
-        spacing: AppConstants.spacingS,
-        runSpacing: AppConstants.spacingS,
-        children: [
-          if (isSingle)
-            OutlinedButton.icon(
-              onPressed: () async {
-                final created = await Navigator.push<bool>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CreateOrderScreen(
-                      orderToEdit: order,
-                      cloneFromOrder: true,
-                    ),
-                  ),
-                );
-                if (created == true) {
-                  _loadOrders();
-                }
-              },
-              icon: const Icon(Icons.content_copy_outlined, size: 18),
-              label: const Text('Clone'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingM,
-                  vertical: AppConstants.spacingS,
-                ),
-              ),
-            ),
-          // No edit/cancel for single, nothing for bulk
-        ],
-      ),
-      const SizedBox(height: AppConstants.spacingM),
-      Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => OrderImageGenerator(order: order),
-                ),
-              ),
-              icon: const Icon(Icons.image_outlined),
-              label: const Text('Generate Image'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.accentColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppConstants.spacingM,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
+  Widget _buildActionButtonsSection(Order order) {
+    final isBulk = (order.orderType?.toLowerCase() == 'bulk');
+    final isSingle = !isBulk;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Actions',
+          style: AppConstants.bodyLarge.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppConstants.primaryColor,
           ),
-        ],
-      ),
-    ],
-  );
-}
+        ),
+        const SizedBox(height: AppConstants.spacingS),
+        Wrap(
+          spacing: AppConstants.spacingS,
+          runSpacing: AppConstants.spacingS,
+          children: [
+            if (isSingle)
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final created = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) => CreateOrderScreen(
+                            orderToEdit: order,
+                            cloneFromOrder: true,
+                          ),
+                    ),
+                  );
+                  if (created == true) {
+                    _loadOrders();
+                  }
+                },
+                icon: const Icon(Icons.content_copy_outlined, size: 18),
+                label: const Text('Clone'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingM,
+                    vertical: AppConstants.spacingS,
+                  ),
+                ),
+              ),
+            // No edit/cancel for single, nothing for bulk
+          ],
+        ),
+        const SizedBox(height: AppConstants.spacingM),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OrderImageGenerator(order: order),
+                      ),
+                    ),
+                icon: const Icon(Icons.image_outlined),
+                label: const Text('Generate Image'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.accentColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppConstants.spacingM,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   Widget _buildEmptyState() {
     return Center(
@@ -1443,123 +1485,153 @@ Widget build(BuildContext context) {
   //   }
   // }
 
-  Widget _buildImageThumbnails(List<String> images) {
-    return SizedBox(
-      height: 90,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: images.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final url = images[index];
-          final isPdf = url.toLowerCase().endsWith('.pdf');
-          
-          return GestureDetector(
-            onTap: () => _showImagePreview(url),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppConstants.radiusS),
-              child: AspectRatio(
-                aspectRatio: 1,
-                child: isPdf
-                    ? Container(
-                        color: Colors.red.shade50,
-                        alignment: Alignment.center,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.picture_as_pdf,
+Widget _buildImageThumbnails(List<String> images) {
+  return SizedBox(
+    height: 90,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: images.length,
+      separatorBuilder: (_, __) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final url = images[index];
+        final isPdf = url.toLowerCase().endsWith('.pdf');
+        
+        return GestureDetector(
+          onTap: () => _showImagePreview(url, galleryImages: images), // ✅ UPDATED
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppConstants.radiusS),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: isPdf
+                  ? Container(
+                      color: Colors.red.shade50,
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.picture_as_pdf,
+                            color: Colors.red.shade400,
+                            size: 40,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'PDF',
+                            style: TextStyle(
                               color: Colors.red.shade400,
-                              size: 40,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'PDF',
-                              style: TextStyle(
-                                color: Colors.red.shade400,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : Image.network(
-                        url,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (context, error, stack) => Container(
-                              color: AppConstants.backgroundColor,
-                              alignment: Alignment.center,
-                              child: const Icon(Icons.broken_image),
-                            ),
+                          ),
+                        ],
                       ),
-              ),
+                    )
+                  : Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stack) => Container(
+                        color: AppConstants.backgroundColor,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.broken_image),
+                      ),
+                    ),
             ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showImagePreview(String url) async {
-    // Check if the URL is a PDF
-    if (url.toLowerCase().endsWith('.pdf')) {
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PdfViewerScreen(
-            pdfUrl: url,
-            title: 'Order Document',
           ),
-        ),
-      );
+        );
+      },
+    ),
+  );
+}
 
-    } else {
-      // Show image preview dialog
-      showDialog(
-        context: context,
-        builder:
-            (context) => Dialog(
-              insetPadding: const EdgeInsets.all(16),
-              child: Stack(
-                children: [
-                  InteractiveViewer(
-                    minScale: 0.5,
-                    maxScale: 4,
-                    child: AspectRatio(
-                      aspectRatio: 1,
-                      child: Image.network(
-                        url,
-                        fit: BoxFit.contain,
-                        errorBuilder:
-                            (context, error, stack) => SizedBox(
-                              height: 300,
-                              child: Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.broken_image, size: 40),
-                                    SizedBox(height: 8),
-                                    Text('Failed to load image'),
-                                  ],
+  void _showImagePreview(String url, {List<String>? galleryImages}) async {
+    // If single image or no gallery context, show single image
+   
+   
+   
+    if (galleryImages == null || galleryImages.length == 1) {
+      if (url.toLowerCase().endsWith('.pdf')) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) =>
+                    PdfViewerScreen(pdfUrl: url, title: 'Order Document'),
+          ),
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder:
+              (context) => Dialog(
+                insetPadding: const EdgeInsets.all(16),
+                child: Stack(
+                  children: [
+                    InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 4,
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Image.network(
+                          url,
+                          fit: BoxFit.contain,
+                          errorBuilder:
+                              (context, error, stack) => SizedBox(
+                                height: 300,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(Icons.broken_image, size: 40),
+                                      SizedBox(height: 8),
+                                      Text('Failed to load image'),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
+                        ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+        );
+      }
+      return;
+    }
+
+    // Gallery mode - Find index and show full screen gallery
+    final initialIndex = galleryImages.indexOf(url);
+    if (initialIndex == -1) return; // Safety check
+
+    if (url.toLowerCase().endsWith('.pdf')) {
+      // If first image is PDF, open PDF viewer
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                  PdfViewerScreen(pdfUrl: url, title: 'Order Document'),
+        ),
+      );
+    } else {
+      // Show swipeable image gallery
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => FullScreenImageViewer(
+                images: galleryImages,
+                initialIndex: initialIndex,
+              ),
+        ),
       );
     }
   }

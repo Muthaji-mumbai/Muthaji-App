@@ -1742,7 +1742,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       ),
     );
   }
-
+bool _isAdmin() {
+  final currentUser = AuthService.currentUser;
+  return currentUser?.role == UserRole.admin;
+}
   Widget _buildOrderCard(Order order) {
     final isSelected = _selectedOrderIds.contains(order.id);
 
@@ -2173,7 +2176,19 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     } else if (value == 'status') {
                       _showStatusUpdateDialog(order);
                     } else if (value == 'delete') {
-                      _deleteOrder(order.id);
+  if (_isAdmin()) {
+    _deleteOrder(order.id);
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Only admins can delete orders'),
+        backgroundColor: AppConstants.errorColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
                     } else if (value == 'full_details') {
                       Navigator.push(
                         context,
@@ -2273,24 +2288,24 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                         //     ],
                         //   ),
                         // ),
-                        if (order.orderType == 'Single')
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.delete_outline_rounded,
-                                  size: 18,
-                                  color: Colors.red.shade600,
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Delete Order',
-                                  style: TextStyle(color: Colors.red.shade600),
-                                ),
-                              ],
-                            ),
-                          ),
+                        if (_isAdmin() && (order.orderType == 'Single' || order.status != OrderStatus.Delivered))
+  PopupMenuItem(
+    value: 'delete',
+    child: Row(
+      children: [
+        Icon(
+          Icons.delete_outline_rounded,
+          size: 18,
+          color: Colors.red.shade600,
+        ),
+        const SizedBox(width: 12),
+        Text(
+          'Delete Order',
+          style: TextStyle(color: Colors.red.shade600),
+        ),
+      ],
+    ),
+  ),
                       ],
                 ),
                 children: [_buildExpandedContent(order)],
