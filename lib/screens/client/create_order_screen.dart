@@ -51,7 +51,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       'categoryId': '',
       'size': '',
       'unit': '',
-      'weight': 0.0,
+      'weight': 0,
       'purity': '',
       'quantity': 1,
       'colorstone': 'Same as image',
@@ -156,7 +156,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         _isBulkOrderSimplifiedForm()
                             ? ''
                             : _getUnitForDetail(d),
-                    'weight': _isBulkOrderSimplifiedForm() ? 0.0 : d['weight'],
+                    'weight': _isBulkOrderSimplifiedForm() ? 0 : d['weight'],
                     'purity': d['purity'],
                     'quantity': d['quantity'],
                     'colorstone':
@@ -512,7 +512,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         'categoryId': '',
         'size': '',
         'unit': '',
-        'weight': 0.0,
+        'weight': 0,
         'purity': '',
         'quantity': 1,
         'colorstone': 'Same as image',
@@ -729,7 +729,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               // For bulk orders, pass empty strings for hidden fields
               'size': _isBulkOrderSimplifiedForm() ? '' : (d['size'] ?? ''),
               'unit': _isBulkOrderSimplifiedForm() ? '' : _getUnitForDetail(d),
-              'weight': _isBulkOrderSimplifiedForm() ? 0.0 : d['weight'],
+              'weight': _isBulkOrderSimplifiedForm() ? 0 : d['weight'],
               'purity': d['purity'],
               'quantity': d['quantity'],
               'colorstone':
@@ -1728,7 +1728,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     onChanged:
                         (value) => setState(() {
                           _ornamentDetails[index]['weight'] =
-                              double.tryParse(value) ?? 0.0;
+                              double.tryParse(value) ?? 0;
                         }),
                     validator: (value) {
                       if (value == null || value.isEmpty) return 'Enter weight';
