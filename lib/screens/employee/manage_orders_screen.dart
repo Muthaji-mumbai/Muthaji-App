@@ -37,7 +37,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     with TickerProviderStateMixin {
   List<Order> _allOrders = [];
   List<Order> _filteredOrders = [];
-
+  int _initialTotalCount = 0;
+  int _allChipCount = 0; // <-- Stores the FIRST load count
+  bool _isFirstLoadDone = false; // <-- Locks after first load
+  // ← count that is shown in the **All** chip
+  bool _allChipCountLocked = false; // ← true after the first successful load
   OrderStatus? _selectedStatus;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -148,15 +152,25 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
 
         final orders = await OrderService.getAllOrders(
           token,
-          status: _selectedStatus,
+          status:
+              _selectedStatus == OrderStatus.due ||
+                      _selectedStatus == OrderStatus.delay
+                  ? null
+                  : _selectedStatus,
           startDate: apiStartDate,
           endDate: apiEndDate,
-          partyname : _selectedUserId, 
+          partyname: _selectedUserId,
         );
 
         setState(() {
           _allOrders = orders;
           _filteredOrders = orders;
+          if (!_allChipCountLocked) {
+            _allChipCount =
+                orders.length; // ← first load → remember this number
+            _allChipCountLocked = true; // ← never change it again
+          }
+
           _isLoading = false;
         });
 
@@ -366,11 +380,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             bool matchesStatus = true;
             if (_selectedStatus != null) {
               if (_selectedStatus == OrderStatus.due) {
-                matchesStatus =
-                    order.status == OrderStatus.due || _isDue(order);
+                matchesStatus = _isDue(order);
               } else if (_selectedStatus == OrderStatus.delay) {
-                matchesStatus =
-                    order.status == OrderStatus.delay || _isDelay(order);
+                matchesStatus = _isDelay(order);
               } else {
                 matchesStatus = order.status == _selectedStatus;
               }
@@ -450,21 +462,20 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(
-              color: AppConstants.primaryColor,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            const SizedBox(height: 16),
-            const Text('Updating order status...'),
-          ],
-        ),
-      ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: AppConstants.primaryColor),
+                const SizedBox(height: 16),
+                const Text('Updating order status...'),
+              ],
+            ),
+          ),
     );
 
     try {
@@ -478,10 +489,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           token: token,
         );
         await _loadData();
-        
+
         // Close loading dialog
         if (mounted) Navigator.of(context).pop();
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -508,7 +519,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     } catch (e) {
       // Close loading dialog
       if (mounted) Navigator.of(context).pop();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1525,56 +1536,113 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         ),
       ],
     );
+  }Widget _buildSummaryBar() {
+  if (_allOrders.isEmpty && !_hasActiveFilters()) return const SizedBox.shrink();
+
+  // ---- Live counts for every status (updated on every API call) ----
+  final statusCounts = <OrderStatus, int>{};
+  for (final status in OrderStatus.values) {
+    if (status == OrderStatus.due) {
+      statusCounts[status] = _allOrders.where(_isDue).length;
+    } else if (status == OrderStatus.delay) {
+      statusCounts[status] = _allOrders.where(_isDelay).length;
+    } else {
+      statusCounts[status] = _allOrders.where((o) => o.status == status).length;
+    }
   }
 
-  Widget _buildSummaryBar() {
-    if (_allOrders.isEmpty && !_hasActiveFilters())
-      return const SizedBox.shrink();
+  return Container(
+    color: Colors.white,
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+    child: Row(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                // ---------- ALL CHIP – LOCKED TO FIRST LOAD ----------
+                GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedStatus = null);
+                    _loadData(); // still reloads data, but count stays same
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _selectedStatus == null
+                          ? AppConstants.primaryColor.withOpacity(0.2)
+                          : Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _selectedStatus == null
+                            ? AppConstants.primaryColor
+                            : Colors.grey.withOpacity(0.3),
+                        width: _selectedStatus == null ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _selectedStatus == null
+                                ? AppConstants.primaryColor
+                                : Colors.grey,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'All', // ← NEVER CHANGES
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _selectedStatus == null
+                                ? AppConstants.primaryColor
+                                : Colors.grey,
+                            fontWeight: _selectedStatus == null
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
-    // Always show all statuses, with counts from _allOrders
-    final statusCounts = <OrderStatus, int>{};
-    for (final status in OrderStatus.values) {
-      statusCounts[status] =
-          _allOrders.where((order) => order.status == status).length;
-    }
+                // ---------- OTHER STATUS CHIPS – LIVE COUNTS ----------
+                ...OrderStatus.values.map((status) {
+                  final isVirtual = status == OrderStatus.due || status == OrderStatus.delay;
+                  final count = statusCounts[status] ?? 0;
+                  final isSelected = _selectedStatus == status;
 
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Row(
-        children: [
-          
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  // "All" button to clear filters
-                  GestureDetector(
+                  return GestureDetector(
                     onTap: () {
                       setState(() {
-                        _selectedStatus = null;
+                        _selectedStatus = isSelected ? null : status;
                       });
-                      _loadData(); // Reload data from API
+                      if (!isVirtual) {
+                        _loadData();          // real status → API call
+                      } else {
+                        _applyFilters();      // Due/Delay → local filter
+                      }
                     },
                     child: Container(
                       margin: const EdgeInsets.only(right: 12),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color:
-                            _selectedStatus == null
-                                ? AppConstants.primaryColor.withOpacity(0.2)
-                                : Colors.grey.withOpacity(0.1),
+                        color: isSelected
+                            ? _getStatusColor(status).withOpacity(0.2)
+                            : _getStatusColor(status).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color:
-                              _selectedStatus == null
-                                  ? AppConstants.primaryColor
-                                  : Colors.grey.withOpacity(0.3),
-                          width: _selectedStatus == null ? 2 : 1,
+                          color: isSelected
+                              ? _getStatusColor(status)
+                              : _getStatusColor(status).withOpacity(0.3),
+                          width: isSelected ? 2 : 1,
                         ),
                       ),
                       child: Row(
@@ -1584,102 +1652,32 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             width: 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color:
-                                  _selectedStatus == null
-                                      ? AppConstants.primaryColor
-                                      : Colors.grey,
+                              color: _getStatusColor(status),
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'All',
+                            '${_getStatusText(status)}',
                             style: TextStyle(
                               fontSize: 12,
-                              color:
-                                  _selectedStatus == null
-                                      ? AppConstants.primaryColor
-                                      : Colors.grey,
-                              fontWeight:
-                                  _selectedStatus == null
-                                      ? FontWeight.w600
-                                      : FontWeight.w500,
+                              color: _getStatusColor(status),
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  // Status-specific buttons (always show all statuses)
-                  ...OrderStatus.values.map((status) {
-                    final isSelected = _selectedStatus == status;
-                    final count = statusCounts[status] ?? 0;
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          // Toggle filter: if already selected, clear it; otherwise set it
-                          _selectedStatus = isSelected ? null : status;
-                        });
-                        _loadData(); // Reload data from API
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              isSelected
-                                  ? _getStatusColor(status).withOpacity(0.2)
-                                  : _getStatusColor(status).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color:
-                                isSelected
-                                    ? _getStatusColor(status)
-                                    : _getStatusColor(status).withOpacity(0.3),
-                            width: isSelected ? 2 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: _getStatusColor(status),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${_getStatusText(status)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _getStatusColor(status),
-                                fontWeight:
-                                    isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ],
-              ),
+                  );
+                }).toList(),
+              ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
+        ),
+      ],
+    ),
+  );
+}  Widget _buildEmptyState() {
     return Container(
       padding: const EdgeInsets.all(40),
       child: Column(
@@ -1742,10 +1740,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       ),
     );
   }
-bool _isAdmin() {
-  final currentUser = AuthService.currentUser;
-  return currentUser?.role == UserRole.admin;
-}
+
+  bool _isAdmin() {
+    final currentUser = AuthService.currentUser;
+    return currentUser?.role == UserRole.admin;
+  }
+
   Widget _buildOrderCard(Order order) {
     final isSelected = _selectedOrderIds.contains(order.id);
 
@@ -1811,28 +1811,28 @@ bool _isAdmin() {
                         order.images.isNotEmpty
                             ? (order.images.first.toLowerCase().endsWith('.pdf')
                                 ? Container(
-                                    color: Colors.red.shade50,
-                                    child: Icon(
-                                      Icons.picture_as_pdf,
-                                      color: Colors.red.shade400,
-                                      size: 32,
-                                    ),
-                                  )
+                                  color: Colors.red.shade50,
+                                  child: Icon(
+                                    Icons.picture_as_pdf,
+                                    color: Colors.red.shade400,
+                                    size: 32,
+                                  ),
+                                )
                                 : Image.network(
-                                    order.images.first,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) => Container(
-                                          color: _getStatusColor(
-                                            order.status,
-                                          ).withOpacity(0.1),
-                                          child: Icon(
-                                            Icons.image_not_supported_rounded,
-                                            color: _getStatusColor(order.status),
-                                            size: 24,
-                                          ),
+                                  order.images.first,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (context, error, stackTrace) => Container(
+                                        color: _getStatusColor(
+                                          order.status,
+                                        ).withOpacity(0.1),
+                                        child: Icon(
+                                          Icons.image_not_supported_rounded,
+                                          color: _getStatusColor(order.status),
+                                          size: 24,
                                         ),
-                                  ))
+                                      ),
+                                ))
                             : Container(
                               color: _getStatusColor(
                                 order.status,
@@ -2176,19 +2176,22 @@ bool _isAdmin() {
                     } else if (value == 'status') {
                       _showStatusUpdateDialog(order);
                     } else if (value == 'delete') {
-  if (_isAdmin()) {
-    _deleteOrder(order.id);
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Only admins can delete orders'),
-        backgroundColor: AppConstants.errorColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
+                      if (_isAdmin()) {
+                        _deleteOrder(order.id);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                              'Only admins can delete orders',
+                            ),
+                            backgroundColor: AppConstants.errorColor,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        );
+                      }
                     } else if (value == 'full_details') {
                       Navigator.push(
                         context,
@@ -2288,24 +2291,26 @@ bool _isAdmin() {
                         //     ],
                         //   ),
                         // ),
-                        if (_isAdmin() && (order.orderType == 'Single' || order.status != OrderStatus.Delivered))
-  PopupMenuItem(
-    value: 'delete',
-    child: Row(
-      children: [
-        Icon(
-          Icons.delete_outline_rounded,
-          size: 18,
-          color: Colors.red.shade600,
-        ),
-        const SizedBox(width: 12),
-        Text(
-          'Delete Order',
-          style: TextStyle(color: Colors.red.shade600),
-        ),
-      ],
-    ),
-  ),
+                        if (_isAdmin() &&
+                            (order.orderType == 'Single' ||
+                                order.status != OrderStatus.Delivered))
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 18,
+                                  color: Colors.red.shade600,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Delete Order',
+                                  style: TextStyle(color: Colors.red.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                 ),
                 children: [_buildExpandedContent(order)],
@@ -2319,7 +2324,7 @@ bool _isAdmin() {
         if (_isDelay(order))
           Positioned(top: 0, right: 0, child: _buildDelayRibbon())
         else if (_isDue(order))
-          Positioned(top: 0, right: 0, child: _buildDueRibbon())
+          Positioned(top: 0, right: 0, child: _buildDueRibbon()),
         // else if (_isPending(order))
         //   Positioned(top: 0, right: 0, child: _buildPendingRibbon()),
       ],
@@ -2336,7 +2341,6 @@ bool _isAdmin() {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-        
           if (order.ornamentDetails.isNotEmpty) ...[
             const SizedBox(height: 20),
             _buildDetailSection('Ornament Details', []),
@@ -2420,7 +2424,8 @@ bool _isAdmin() {
                       ),
                     ],
                     // Partial Delivery entries
-                    if (detail.partialDelivery != null && detail.partialDelivery!.isNotEmpty) ...[
+                    if (detail.partialDelivery != null &&
+                        detail.partialDelivery!.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Text(
                         'Partial Delivery (${detail.partialDelivery!.length})',
@@ -2434,19 +2439,27 @@ bool _isAdmin() {
                         decoration: BoxDecoration(
                           color: Colors.teal.withOpacity(0.03),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.teal.withOpacity(0.15)),
+                          border: Border.all(
+                            color: Colors.teal.withOpacity(0.15),
+                          ),
                         ),
                         child: Column(
                           children: [
                             // Header row
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
                               child: Row(
                                 children: const [
                                   Expanded(
                                     child: Text(
                                       'Date',
-                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                   SizedBox(width: 8),
@@ -2455,7 +2468,10 @@ bool _isAdmin() {
                                     child: Text(
                                       'Qty',
                                       textAlign: TextAlign.right,
-                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -2464,12 +2480,17 @@ bool _isAdmin() {
                             const Divider(height: 1),
                             ...detail.partialDelivery!.map((pd) {
                               return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
                                 child: Row(
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        DateFormat('dd/MM/yyyy').format(pd.deliverydate),
+                                        DateFormat(
+                                          'dd/MM/yyyy',
+                                        ).format(pd.deliverydate),
                                         style: const TextStyle(fontSize: 12),
                                       ),
                                     ),
@@ -2479,7 +2500,10 @@ bool _isAdmin() {
                                       child: Text(
                                         pd.qty.toString(),
                                         textAlign: TextAlign.right,
-                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -2507,8 +2531,10 @@ bool _isAdmin() {
                           itemCount: detail.images.length,
                           itemBuilder: (context, index) {
                             final imageUrl = detail.images[index];
-                            final isPdf = imageUrl.toLowerCase().endsWith('.pdf');
-                            
+                            final isPdf = imageUrl.toLowerCase().endsWith(
+                              '.pdf',
+                            );
+
                             return GestureDetector(
                               onTap:
                                   () => _showFullScreenImage(
@@ -2526,58 +2552,68 @@ bool _isAdmin() {
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(11),
-                                  child: isPdf
-                                      ? Container(
-                                          color: Colors.red.shade50,
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.picture_as_pdf,
-                                                color: Colors.red.shade400,
-                                                size: 40,
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                'PDF',
-                                                style: TextStyle(
+                                  child:
+                                      isPdf
+                                          ? Container(
+                                            color: Colors.red.shade50,
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.picture_as_pdf,
                                                   color: Colors.red.shade400,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
+                                                  size: 40,
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                        )
-                                      : Image.network(
-                                          imageUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Container(
-                                              color: Colors.grey.shade100,
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons.broken_image_outlined,
-                                                    color: Colors.grey.shade400,
-                                                    size: 32,
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'PDF',
+                                                  style: TextStyle(
+                                                    color: Colors.red.shade400,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
                                                   ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    'Error',
-                                                    style: TextStyle(
-                                                      color: Colors.grey.shade400,
-                                                      fontSize: 10,
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                          : Image.network(
+                                            imageUrl,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (
+                                              context,
+                                              error,
+                                              stackTrace,
+                                            ) {
+                                              return Container(
+                                                color: Colors.grey.shade100,
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      Icons
+                                                          .broken_image_outlined,
+                                                      color:
+                                                          Colors.grey.shade400,
+                                                      size: 32,
                                                     ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      'Error',
+                                                      style: TextStyle(
+                                                        color:
+                                                            Colors
+                                                                .grey
+                                                                .shade400,
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
                                 ),
                               ),
                             );
@@ -2616,17 +2652,16 @@ bool _isAdmin() {
 
   void _showFullScreenImage(List<String> images, int initialIndex) async {
     final imageUrl = images[initialIndex];
-    
+
     // Check if the URL is a PDF
     if (imageUrl.toLowerCase().endsWith('.pdf')) {
       // Open PDF in built-in viewer
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PdfViewerScreen(
-            pdfUrl: imageUrl,
-            title: 'Order Document',
-          ),
+          builder:
+              (context) =>
+                  PdfViewerScreen(pdfUrl: imageUrl, title: 'Order Document'),
         ),
       );
     } else {
@@ -2875,7 +2910,7 @@ bool _isAdmin() {
         return AppConstants.PendingDisp;
       case OrderStatus.Completed:
         return AppConstants.Completed;
-         case OrderStatus.Delivered:
+      case OrderStatus.Delivered:
         return AppConstants.deliveredColor;
     }
   }
@@ -2902,7 +2937,7 @@ bool _isAdmin() {
         return 'PendingDisp';
       case OrderStatus.Completed:
         return 'Completed';
-       case OrderStatus.Delivered:
+      case OrderStatus.Delivered:
         return 'Delivered';
     }
   }

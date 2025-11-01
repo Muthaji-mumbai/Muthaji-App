@@ -861,11 +861,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           ),
           child: Column(
             children: [
-              _buildInfoRow(
-                icon: Icons.calendar_today_outlined,
-                label: 'Created',
-                value: _formatDate(order.createdAt),
-              ),
+              // _buildInfoRow(
+              //   icon: Icons.calendar_today_outlined,
+              //   label: 'Created',
+              //   value: _formatDate(order.createdAt),
+              // ),
 
               if (order.updatedAt != null) ...[
                 const SizedBox(height: AppConstants.spacingS),
