@@ -125,19 +125,21 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     if (_formKey.currentState!.validate() &&
         !_isLoading &&
         _existingOrder != null) {
-      // Check if at least one file is uploaded for each ornament detail
-      bool hasFiles = _ornamentImages.every((files) => files.isNotEmpty);
-      if (!hasFiles) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Please upload at least one file for each item.'),
-              backgroundColor: AppConstants.errorColor,
-            ),
-          );
-        }
-        return;
-      }
+     if (!_hasRequiredFiles()) {
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _isEditMode
+              ? 'You may add new files, but it is not required.'
+              : 'Please upload at least one file for the first item.',
+        ),
+        backgroundColor: AppConstants.errorColor,
+      ),
+    );
+  }
+  return;
+}
 
       setState(() => _isLoading = true);
       try {
@@ -698,21 +700,37 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       });
     }
   }
+bool _areFilesRequiredForItem(int index) {
+  // Edit mode → never required (existing images are already on the server)
+  if (_isEditMode) return false;
 
+  // Create mode → only the first item is required
+  return index == 0;
+}
+
+bool _hasRequiredFiles() {
+  return _ornamentImages
+      .asMap()
+      .entries
+      .every((entry) => !_areFilesRequiredForItem(entry.key) || entry.value.isNotEmpty);
+}
   Future<void> _createOrder() async {
     if (_formKey.currentState!.validate() && !_isLoading) {
-      bool hasFiles = _ornamentImages.every((files) => files.isNotEmpty);
-      if (!hasFiles) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Please upload at least one file for each item.'),
-              backgroundColor: AppConstants.errorColor,
-            ),
-          );
-        }
-        return;
-      }
+if (!_hasRequiredFiles()) {
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _isEditMode
+              ? 'You may add new files, but it is not required.'
+              : 'Please upload at least one file for the first item.',
+        ),
+        backgroundColor: AppConstants.errorColor,
+      ),
+    );
+  }
+  return;
+}
       setState(() {
         _isLoading = true;
       });
@@ -1432,7 +1450,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        'Party Name: ${_existingOrder!.clientName}',
+                        'Party Name: ${_existingOrder!.partynameDisplay}',
                         style: TextStyle(
                           color: AppConstants.primaryColor,
                           fontWeight: FontWeight.w600,
@@ -1547,10 +1565,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             ),
           ],
           // Party Selection (always show for Bulk orders, optional for Single)
-          if (_selectedOrderType == 'Bulk' || (_selectedOrderType == 'Single' && _shouldShowOrderTypeSelection())) ...[
-            const SizedBox(height: AppConstants.spacingM),
-            _buildPartySelectionField(),
-          ],
+         // Party Selection (always show for Bulk orders, optional for Single)
+if ((_selectedOrderType == 'Bulk' || 
+     (_selectedOrderType == 'Single' && _shouldShowOrderTypeSelection())) 
+    && !_isEditMode) ...[
+  const SizedBox(height: AppConstants.spacingM),
+  _buildPartySelectionField(),
+],
           // Show status only for admin/employee in edit mode
           if (_isEditMode && _shouldShowOrderTypeSelection()) ...[
             const SizedBox(height: AppConstants.spacingM),

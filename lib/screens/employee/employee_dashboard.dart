@@ -757,8 +757,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                       ).then((_) => _loadOrders());
                     } else if (value == 'status') {
                       _showStatusUpdateDialog(order);
-                    } else if (value == 'delete') {
-                      _deleteOrder(order.id);
+                    
                     } else if (value == 'full_details') {
                       Navigator.push(
                         context,
@@ -821,24 +820,24 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                             ],
                           ),
                         ),
-                        if (order.orderType == 'Single')
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.delete_outline_rounded,
-                                  size: 18,
-                                  color: Colors.red.shade600,
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Delete Order',
-                                  style: TextStyle(color: Colors.red.shade600),
-                                ),
-                              ],
-                            ),
-                          ),
+                        // if (order.orderType == 'Single')
+                        //   PopupMenuItem(
+                        //     value: 'delete',
+                        //     child: Row(
+                        //       children: [
+                        //         Icon(
+                        //           Icons.delete_outline_rounded,
+                        //           size: 18,
+                        //           color: Colors.red.shade600,
+                        //         ),
+                        //         const SizedBox(width: 12),
+                        //         Text(
+                        //           'Delete Order',
+                        //           style: TextStyle(color: Colors.red.shade600),
+                        //         ),
+                        //       ],
+                        //     ),
+                        //   ),
                         // PopupMenuItem(
                         //   value: 'pdf',
                         //   child: Row(
@@ -860,8 +859,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
             ),
           ),
         ),
-        if (order.status == OrderStatus.pending)
-          Positioned(top: 0, right: 0, child: _buildPendingRibbon()),
+        // if (order.status == OrderStatus.pending)
+        //   Positioned(top: 0, right: 0, child: _buildPendingRibbon()),
         if (_isUrgent(order))
           Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
       ],

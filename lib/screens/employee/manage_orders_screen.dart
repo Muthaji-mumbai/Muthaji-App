@@ -2320,8 +2320,8 @@ bool _isAdmin() {
           Positioned(top: 0, right: 0, child: _buildDelayRibbon())
         else if (_isDue(order))
           Positioned(top: 0, right: 0, child: _buildDueRibbon())
-        else if (_isPending(order))
-          Positioned(top: 0, right: 0, child: _buildPendingRibbon()),
+        // else if (_isPending(order))
+        //   Positioned(top: 0, right: 0, child: _buildPendingRibbon()),
       ],
     );
   }
