@@ -859,6 +859,224 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     }
   }
 
+  Future<void> _bulkDeleteOrders() async {
+    if (_selectedOrderIds.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.red.shade600,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            const Text('Delete Multiple Orders'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete ${_selectedOrderIds.length} orders? This action cannot be undone.',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: Colors.red.shade600,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'This will permanently delete all selected orders.',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
+            ),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Show progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.red.shade600,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Deleting Orders',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  minHeight: 8,
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Colors.red.shade600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Deleting 0/${_selectedOrderIds.length}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final token = AuthService.currentToken;
+      if (token == null) {
+        if (mounted) Navigator.of(context).pop();
+        throw Exception('No authentication token');
+      }
+
+      int deletedCount = 0;
+
+      for (final id in _selectedOrderIds) {
+        try {
+          await OrderService.deleteOrder(orderId: id, token: token);
+          deletedCount++;
+
+          // Update progress
+          if (mounted) {
+            setState(() {});
+          }
+        } catch (e) {
+          print('Error deleting order $id: $e');
+          // Continue with next order even if one fails
+        }
+      }
+
+      // Close progress dialog
+      if (mounted) Navigator.of(context).pop();
+
+      await _loadData();
+
+      if (!mounted) return;
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.done_all, color: Colors.white, size: 20),
+              const SizedBox(width: 12),
+              Text('Successfully deleted $deletedCount orders'),
+            ],
+          ),
+          backgroundColor: AppConstants.successColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+
+      _clearSelection();
+    } catch (e) {
+      // Close progress dialog
+      if (mounted) Navigator.of(context).pop();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white, size: 20),
+              const SizedBox(width: 12),
+              Text('Bulk delete failed: $e'),
+            ],
+          ),
+          backgroundColor: AppConstants.errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+  }
+
   void _toggleFilters() {
     setState(() {
       _showFilters = !_showFilters;
@@ -913,11 +1131,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               icon: const Icon(Icons.deselect_rounded),
               onPressed: _selectNoneOrders,
             ),
-            // IconButton(
-            //   tooltip: 'Clear Selection',
-            //   icon: const Icon(Icons.clear_all_rounded),
-            //   onPressed: _clearSelection,
-            // ),
             Container(
               margin: const EdgeInsets.only(right: 8),
               child: PopupMenuButton<OrderStatus>(
@@ -955,6 +1168,25 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             ),
                           ),
                     ],
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                tooltip: 'Delete Selected',
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.delete_outline_rounded,
+                    size: 20,
+                    color: Colors.red.shade600,
+                  ),
+                ),
+                onPressed: () => _bulkDeleteOrders(),
               ),
             ),
           ] else ...[
@@ -2571,82 +2803,82 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Order Summary Section
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppConstants.primaryColor.withOpacity(0.3),
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppConstants.primaryColor.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      color: AppConstants.primaryColor,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'ORDER SUMMARY',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: AppConstants.primaryColor,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildOrderSummaryRow('Order Number', order.orderNo ?? order.id),
-                const SizedBox(height: 12),
-                _buildOrderSummaryRow('Client Name', order.clientName),
-                const SizedBox(height: 12),
-                _buildOrderSummaryRow('Status', _getStatusText(order.status), isStatus: true, status: order.status),
-                const SizedBox(height: 12),
-                _buildOrderSummaryRow('Description', order.description),
-                const SizedBox(height: 12),
-                _buildOrderSummaryRow('Order Date', _formatDate(order.orderDate!)),
-                if (order.orderType != null) ...[
-                  const SizedBox(height: 12),
-                  _buildOrderSummaryRow('Order Type', order.orderType!),
-                ],
-                if (order.partynameDisplay != null) ...[
-                  const SizedBox(height: 12),
-                  _buildOrderSummaryRow('Party Name', order.partynameDisplay!),
-                ],
-                if (order.images.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  _buildOrderSummaryRow('Images', '${order.images.length} attached'),
-                ],
-                if (order.totalQuantity != null) ...[
-                  const SizedBox(height: 12),
-                  _buildOrderSummaryRow('Total Quantity', '${order.totalQuantity}'),
-                ],
-                if (order.status == OrderStatus.partialDelivery && order.totalDeliveryCount != null) ...[
-                  const SizedBox(height: 12),
-                  _buildOrderSummaryRow('Delivered', '${order.totalDeliveryCount}/${order.totalQuantity}'),
-                ],
-                if (order.updatedBy != null && order.updatedAt != null) ...[
-                  const SizedBox(height: 12),
-                  _buildOrderSummaryRow('Last Updated', '${_formatDate(order.updatedAt!)} by ${order.updatedBy}'),
-                ],
-              ],
-            ),
-          ),
+          // Container(
+          //   padding: const EdgeInsets.all(16),
+          //   decoration: BoxDecoration(
+          //     color: Colors.white,
+          //     borderRadius: BorderRadius.circular(12),
+          //     border: Border.all(
+          //       color: AppConstants.primaryColor.withOpacity(0.3),
+          //       width: 2,
+          //     ),
+          //     boxShadow: [
+          //       BoxShadow(
+          //         color: AppConstants.primaryColor.withOpacity(0.1),
+          //         blurRadius: 8,
+          //         offset: const Offset(0, 2),
+          //       ),
+          //     ],
+          //   ),
+          //   child: Column(
+          //     crossAxisAlignment: CrossAxisAlignment.start,
+          //     // children: [
+          //     //   Row(
+          //     //     children: [
+          //     //       Icon(
+          //     //         Icons.info_outline_rounded,
+          //     //         color: AppConstants.primaryColor,
+          //     //         size: 24,
+          //     //       ),
+          //     //       const SizedBox(width: 12),
+          //     //       Text(
+          //     //         'ORDER SUMMARY',
+          //     //         style: TextStyle(
+          //     //           fontSize: 16,
+          //     //           fontWeight: FontWeight.w800,
+          //     //           color: AppConstants.primaryColor,
+          //     //           letterSpacing: 0.5,
+          //     //         ),
+          //     //       ),
+          //     //     ],
+          //     //   ),
+          //     //   const SizedBox(height: 16),
+          //     //   _buildOrderSummaryRow('Order Number', order.orderNo ?? order.id),
+          //     //   const SizedBox(height: 12),
+          //     //   _buildOrderSummaryRow('Client Name', order.clientName),
+          //     //   const SizedBox(height: 12),
+          //     //   _buildOrderSummaryRow('Status', _getStatusText(order.status), isStatus: true, status: order.status),
+          //     //   const SizedBox(height: 12),
+          //     //   _buildOrderSummaryRow('Description', order.description),
+          //     //   const SizedBox(height: 12),
+          //     //   _buildOrderSummaryRow('Order Date', _formatDate(order.orderDate!)),
+          //     //   if (order.orderType != null) ...[
+          //     //     const SizedBox(height: 12),
+          //     //     _buildOrderSummaryRow('Order Type', order.orderType!),
+          //     //   ],
+          //     //   if (order.partynameDisplay != null) ...[
+          //     //     const SizedBox(height: 12),
+          //     //     _buildOrderSummaryRow('Party Name', order.partynameDisplay!),
+          //     //   ],
+          //     //   if (order.images.isNotEmpty) ...[
+          //     //     const SizedBox(height: 12),
+          //     //     _buildOrderSummaryRow('Images', '${order.images.length} attached'),
+          //     //   ],
+          //     //   if (order.totalQuantity != null) ...[
+          //     //     const SizedBox(height: 12),
+          //     //     _buildOrderSummaryRow('Total Quantity', '${order.totalQuantity}'),
+          //     //   ],
+          //     //   if (order.status == OrderStatus.partialDelivery && order.totalDeliveryCount != null) ...[
+          //     //     const SizedBox(height: 12),
+          //     //     _buildOrderSummaryRow('Delivered', '${order.totalDeliveryCount}/${order.totalQuantity}'),
+          //     //   ],
+          //     //   if (order.updatedBy != null && order.updatedAt != null) ...[
+          //     //     const SizedBox(height: 12),
+          //     //     _buildOrderSummaryRow('Last Updated', '${_formatDate(order.updatedAt!)} by ${order.updatedBy}'),
+          //     //   ],
+          //     // ],
+          //   ),
+          // ),
           const SizedBox(height: 20),
           if (order.ornamentDetails.isNotEmpty) ...[
             const SizedBox(height: 20),
@@ -2662,11 +2894,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.diamond_outlined,
-                    color: Colors.amber.shade700,
-                    size: 24,
-                  ),
+                  // Icon(
+                  //   Icons.diamond_outlined,
+                  //   color: Colors.amber.shade700,
+                  //   size: 24,
+                  // ),
                   const SizedBox(width: 12),
                   Text(
                     'ORNAMENT DETAILS',
