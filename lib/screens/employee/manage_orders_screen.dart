@@ -254,7 +254,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       final token = AuthService.currentToken;
       if (token != null) {
         final users = await UserService.getAllUsers(token);
-        // Show all users for party selection (customers, employees, admins)
+
         setState(() {
           _allUsers = users;
           _loadingUsers = false;
@@ -262,7 +262,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       }
     } catch (e) {
       setState(() => _loadingUsers = false);
-      // Silently fail for user loading as it's not critical
+
     }
   }
 
@@ -1760,9 +1760,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   String _formatOrderDetailsForCopy(Order order) {
     final buffer = StringBuffer();
     
-    buffer.writeln('╔════════════════════════════════════════════════════╗');
-    buffer.writeln('║           📋 ORDER DETAILS                         ║');
-    buffer.writeln('╚════════════════════════════════════════════════════╝');
+    buffer.writeln('');
+    buffer.writeln('║           📋 ORDER DETAILS                         ');
+    buffer.writeln('');
     buffer.writeln('');
     buffer.writeln('🔹 Order Number: ${order.orderNo ?? order.id}');
     buffer.writeln('🔹 Order ID: ${order.id}');
@@ -1797,9 +1797,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     
     if (order.ornamentDetails.isNotEmpty) {
       buffer.writeln('');
-      buffer.writeln('╔════════════════════════════════════════════════════╗');
-      buffer.writeln('║           💎 ORNAMENT DETAILS                      ║');
-      buffer.writeln('╚════════════════════════════════════════════════════╝');
+      buffer.writeln('╔═════════');
+      buffer.writeln('║           💎 ORNAMENT DETAILS                      ');
+      buffer.writeln('');
       for (int i = 0; i < order.ornamentDetails.length; i++) {
         final detail = order.ornamentDetails[i];
         buffer.writeln('');
@@ -1826,7 +1826,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     }
     
     buffer.writeln('');
-    buffer.writeln('╚════════════════════════════════════════════════════╝');
+    buffer.writeln('');
     
     return buffer.toString();
   }
