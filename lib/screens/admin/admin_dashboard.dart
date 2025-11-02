@@ -2354,6 +2354,15 @@ void _clearDateFilters() {
           filteredOrders.where((o) => o.status == OrderStatus.Delivered).length,
       'cancelled':
           filteredOrders.where((o) => o.status == OrderStatus.cancelled).length,
+      'completed':
+          filteredOrders.where((o) => o.status == OrderStatus.Completed).length,
+      'casted':
+          filteredOrders.where((o) => o.status == OrderStatus.Casted).length,
+      'partial delivery':
+          filteredOrders.where((o) => o.status == OrderStatus.partialDelivery).length,
+      'pendingdisp':
+          filteredOrders.where((o) => o.status == OrderStatus.PendingDisp).length,
+
     };
 
     return Column(
@@ -2391,6 +2400,26 @@ void _clearDateFilters() {
                       'label': 'Cancelled',
                       'value': statusCounts['cancelled']!.toDouble(),
                       'color': AppConstants.errorColor,
+                    },
+                    {
+                      'label': 'Completed',
+                      'value': statusCounts['completed']!.toDouble(),
+                      'color': AppConstants.successColor,
+                    },
+                    {
+                      'label': 'Casted',
+                      'value': statusCounts['casted']!.toDouble(),
+                      'color': AppConstants.primaryColor,
+                    },
+                    {
+                      'label': 'Partial Delivery',
+                      'value': statusCounts['partial delivery']!.toDouble(),
+                      'color': AppConstants.warningColor,
+                    },
+                    {
+                      'label': 'Pending Disp',
+                      'value': statusCounts['pendingdisp']!.toDouble(),
+                      'color': AppConstants.secondaryColor,
                     },
                   ],
                   onItemTap: _onStatusItemTap,
