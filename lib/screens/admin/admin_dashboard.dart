@@ -3065,6 +3065,7 @@ void _clearDateFilters() {
       case 'wax':
         status = OrderStatus.Wax;
         break;
+      
       case 'dc':
         status = OrderStatus.DC;
         break;
@@ -3080,7 +3081,7 @@ void _clearDateFilters() {
       case 'partial delivery':
         status = OrderStatus.partialDelivery;
         break;
-      case 'Delivered':
+      case 'delivered':
         status = OrderStatus.Delivered;
         break;
       case 'pendingdisp':
@@ -3176,6 +3177,8 @@ void _clearDateFilters() {
               initialOrderType: 'Single',
               initialUserId: _selectedUserId,
               initialUserName: _selectedUserName,
+              initialStartDate: _startDate,
+              initialEndDate: _endDate,
             ),
       ),
     );
@@ -3214,7 +3217,7 @@ void _clearDateFilters() {
       case 'pendingdisp':
         status = OrderStatus.PendingDisp;
         break;
-        case 'Delivered':
+        case 'delivered':
         status = OrderStatus.Delivered;
         break;
       default:
@@ -3230,6 +3233,8 @@ void _clearDateFilters() {
               initialOrderType: 'Bulk',
               initialUserId: _selectedUserId,
               initialUserName: _selectedUserName,
+              initialStartDate: _startDate,
+              initialEndDate: _endDate,
             ),
       ),
     );

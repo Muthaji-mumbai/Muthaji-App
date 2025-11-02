@@ -21,6 +21,8 @@ class ManageOrdersScreen extends StatefulWidget {
   final String? initialOrderType;
   final String? initialUserId;
   final String? initialUserName;
+  final DateTime? initialStartDate;
+  final DateTime? initialEndDate;
 
   const ManageOrdersScreen({
     super.key,
@@ -28,6 +30,8 @@ class ManageOrdersScreen extends StatefulWidget {
     this.initialOrderType,
     this.initialUserId,
     this.initialUserName,
+    this.initialStartDate,
+    this.initialEndDate,
   });
 
   @override
@@ -93,6 +97,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     _selectedOrderType = widget.initialOrderType;
     _selectedUserId = widget.initialUserId;
     _selectedUserName = widget.initialUserName;
+    _startDate = widget.initialStartDate;
+    _endDate = widget.initialEndDate;
 
     _filterAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
