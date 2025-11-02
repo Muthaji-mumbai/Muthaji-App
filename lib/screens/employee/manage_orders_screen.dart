@@ -862,6 +862,27 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   Future<void> _bulkDeleteOrders() async {
     if (_selectedOrderIds.isEmpty) return;
 
+    // Check if user is admin
+    if (!_isAdmin()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.lock_outline_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 12),
+              Text('Only admins can delete orders'),
+            ],
+          ),
+          backgroundColor: AppConstants.errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1170,25 +1191,26 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     ],
               ),
             ),
-            Container(
-              margin: const EdgeInsets.only(right: 8),
-              child: IconButton(
-                tooltip: 'Delete Selected',
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+            if (_isAdmin())
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                child: IconButton(
+                  tooltip: 'Delete Selected',
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 20,
+                      color: Colors.red.shade600,
+                    ),
                   ),
-                  child: Icon(
-                    Icons.delete_outline_rounded,
-                    size: 20,
-                    color: Colors.red.shade600,
-                  ),
+                  onPressed: () => _bulkDeleteOrders(),
                 ),
-                onPressed: () => _bulkDeleteOrders(),
               ),
-            ),
           ] else ...[
             IconButton(
               onPressed: _toggleFilters,
