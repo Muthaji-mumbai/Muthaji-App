@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
@@ -1741,9 +1742,74 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     );
   }
 
-  bool _isAdmin() {
+  bool _isAdmin() {   
     final currentUser = AuthService.currentUser;
     return currentUser?.role == UserRole.admin;
+  }
+
+  String _formatOrderDetailsForCopy(Order order) {
+    final buffer = StringBuffer();
+    
+    buffer.writeln('ORDER DETAILS');
+    buffer.writeln('═' * 50);
+    buffer.writeln('Order Number: ${order.orderNo ?? order.id}');
+    buffer.writeln('Order ID: ${order.id}');
+    buffer.writeln('Client Name: ${order.clientName}');
+    buffer.writeln('Status: ${_getStatusText(order.status)}');
+    buffer.writeln('Description: ${order.description}');
+    buffer.writeln('Order Date: ${_formatDate(order.orderDate!)}');
+    
+    if (order.orderType != null) {
+      buffer.writeln('Order Type: ${order.orderType}');
+    }
+    
+    if (order.partynameDisplay != null) {
+      buffer.writeln('Party Name: ${order.partynameDisplay}');
+    }
+    
+    if (order.images.isNotEmpty) {
+      buffer.writeln('Images: ${order.images.length}');
+    }
+    
+    if (order.totalQuantity != null) {
+      buffer.writeln('Total Quantity: ${order.totalQuantity}');
+    }
+    
+    if (order.status == OrderStatus.partialDelivery && order.totalDeliveryCount != null) {
+      buffer.writeln('Delivered: ${order.totalDeliveryCount}/${order.totalQuantity}');
+    }
+    
+    if (order.updatedBy != null && order.updatedAt != null) {
+      buffer.writeln('Last Updated: ${_formatDate(order.updatedAt!)} by ${order.updatedBy}');
+    }
+    
+    if (order.ornamentDetails.isNotEmpty) {
+      buffer.writeln('\nORNAMENT DETAILS:');
+      for (int i = 0; i < order.ornamentDetails.length; i++) {
+        final detail = order.ornamentDetails[i];
+        buffer.writeln('  Detail ${i + 1}: ${detail.name}');
+        buffer.writeln('    Weight: ${detail.weight} ${detail.unit ?? 'g'}');
+        buffer.writeln('    Purity: ${detail.purity}');
+        buffer.writeln('    Quantity: ${detail.quantity}');
+        if (detail.size != null) {
+          buffer.writeln('    Size: ${detail.size}');
+        }
+        if (detail.colorstone != null) {
+          buffer.writeln('    Colorstone: ${detail.colorstone}');
+        }
+        if (detail.rhodium != null) {
+          buffer.writeln('    Rhodium: ${detail.rhodium}');
+        }
+        if (detail.dull != null) {
+          buffer.writeln('    Dull: ${detail.dull}');
+        }
+        if ((detail.remarks ?? '').isNotEmpty) {
+          buffer.writeln('    Remarks: ${detail.remarks}');
+        }
+      }
+    }
+    
+    return buffer.toString();
   }
 
   Widget _buildOrderCard(Order order) {
@@ -1851,14 +1917,63 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            order.orderNo ?? order.id,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  order.orderNo ?? order.id,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () {
+                                  final orderDetails = _formatOrderDetailsForCopy(order);
+                                  final data = ClipboardData(text: orderDetails);
+                                  Clipboard.setData(data);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.check_circle,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          const Expanded(
+                                            child: Text('All details copied'),
+                                          ),
+                                        ],
+                                      ),
+                                      backgroundColor: AppConstants.successColor,
+                                      behavior: SnackBarBehavior.floating,
+                                      duration: const Duration(seconds: 2),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(
+                                    Icons.content_copy_rounded,
+                                    size: 16,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         Container(
