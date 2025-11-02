@@ -1552,7 +1552,7 @@ void _clearDateFilters() {
         const SizedBox(height: AppConstants.spacingL),
         // _buildTypeStatusBarCharts(),
         // const SizedBox(height: AppConstants.spacingL),
-        _buildPieChartsSection(),
+        // _buildPieChartsSection(),
       ],
     ],
   );
@@ -2298,211 +2298,211 @@ void _clearDateFilters() {
         );
   }
 
-  Widget _buildPieChartsSection() {
-    final isMobile = ResponsiveBreakpoints.of(context).isMobile;
+  // Widget _buildPieChartsSection() {
+  //   final isMobile = ResponsiveBreakpoints.of(context).isMobile;
 
-    var filteredOrders = _allOrders;
+  //   var filteredOrders = _allOrders;
 
-    // Filter by party
-    if (_selectedUserId != null) {
-      filteredOrders =
-          filteredOrders
-              .where((order) => order.clientId == _selectedUserId)
-              .toList();
-    }
+  //   // Filter by party
+  //   if (_selectedUserId != null) {
+  //     filteredOrders =
+  //         filteredOrders
+  //             .where((order) => order.clientId == _selectedUserId)
+  //             .toList();
+  //   }
 
-    // Filter by date range
-    if (_startDate != null) {
-      filteredOrders =
-          filteredOrders.where((order) {
-            final orderDate = order.orderDate ?? order.createdAt;
-            return orderDate.isAfter(
-              _startDate!.subtract(const Duration(days: 1)),
-            );
-          }).toList();
-    }
+  //   // Filter by date range
+  //   if (_startDate != null) {
+  //     filteredOrders =
+  //         filteredOrders.where((order) {
+  //           final orderDate = order.orderDate ?? order.createdAt;
+  //           return orderDate.isAfter(
+  //             _startDate!.subtract(const Duration(days: 1)),
+  //           );
+  //         }).toList();
+  //   }
 
-    if (_endDate != null) {
-      filteredOrders =
-          filteredOrders.where((order) {
-            final orderDate = order.orderDate ?? order.createdAt;
-            return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
-          }).toList();
-    }
+  //   if (_endDate != null) {
+  //     filteredOrders =
+  //         filteredOrders.where((order) {
+  //           final orderDate = order.orderDate ?? order.createdAt;
+  //           return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
+  //         }).toList();
+  //   }
 
-    // Calculate filtered statistics
-    final orderTypeCounts = {
-      'single':
-          filteredOrders
-              .where(
-                (o) => (o.orderType ?? '').toLowerCase().contains('single'),
-              )
-              .length,
-      'bulk':
-          filteredOrders
-              .where((o) => (o.orderType ?? '').toLowerCase().contains('bulk'))
-              .length,
-      'total': filteredOrders.length,
-    };
+  //   // Calculate filtered statistics
+  //   final orderTypeCounts = {
+  //     'single':
+  //         filteredOrders
+  //             .where(
+  //               (o) => (o.orderType ?? '').toLowerCase().contains('single'),
+  //             )
+  //             .length,
+  //     'bulk':
+  //         filteredOrders
+  //             .where((o) => (o.orderType ?? '').toLowerCase().contains('bulk'))
+  //             .length,
+  //     'total': filteredOrders.length,
+  //   };
 
-    final statusCounts = {
-      'pending':
-          filteredOrders.where((o) => o.status == OrderStatus.pending).length,
-      'Wax': filteredOrders.where((o) => o.status == OrderStatus.Wax).length,
-      'DC': filteredOrders.where((o) => o.status == OrderStatus.DC).length,
-      'Delivered':
-          filteredOrders.where((o) => o.status == OrderStatus.Delivered).length,
-      'cancelled':
-          filteredOrders.where((o) => o.status == OrderStatus.cancelled).length,
-      'completed':
-          filteredOrders.where((o) => o.status == OrderStatus.Completed).length,
-      'casted':
-          filteredOrders.where((o) => o.status == OrderStatus.Casted).length,
-      'partial delivery':
-          filteredOrders.where((o) => o.status == OrderStatus.partialDelivery).length,
-      'pendingdisp':
-          filteredOrders.where((o) => o.status == OrderStatus.PendingDisp).length,
+  //   final statusCounts = {
+  //     'pending':
+  //         filteredOrders.where((o) => o.status == OrderStatus.pending).length,
+  //     'Wax': filteredOrders.where((o) => o.status == OrderStatus.Wax).length,
+  //     'DC': filteredOrders.where((o) => o.status == OrderStatus.DC).length,
+  //     'Delivered':
+  //         filteredOrders.where((o) => o.status == OrderStatus.Delivered).length,
+  //     'cancelled':
+  //         filteredOrders.where((o) => o.status == OrderStatus.cancelled).length,
+  //     'completed':
+  //         filteredOrders.where((o) => o.status == OrderStatus.Completed).length,
+  //     'casted':
+  //         filteredOrders.where((o) => o.status == OrderStatus.Casted).length,
+  //     'partial delivery':
+  //         filteredOrders.where((o) => o.status == OrderStatus.partialDelivery).length,
+  //     'pendingdisp':
+  //         filteredOrders.where((o) => o.status == OrderStatus.PendingDisp).length,
 
-    };
+  //   };
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Distribution Analysis', style: AppConstants.headingSmall),
-        const SizedBox(height: AppConstants.spacingM),
-        isMobile
-            ? Column(
-              children: [
-                _buildPieChart(
-                  title: 'Order Status Distribution',
-                  data: [
-                    {
-                      'label': 'Pending',
-                      'value': statusCounts['pending']!.toDouble(),
-                      'color': AppConstants.warningColor,
-                    },
-                    {
-                      'label': 'Wax',
-                      'value': statusCounts['Wax']!.toDouble(),
-                      'color': AppConstants.secondaryColor,
-                    },
-                    {
-                      'label': 'DC',
-                      'value': statusCounts['DC']!.toDouble(),
-                      'color': AppConstants.successColor,
-                    },
-                    {
-                      'label': 'Delivered',
-                      'value': statusCounts['Delivered']!.toDouble(),
-                      'color': AppConstants.deliveredColor,
-                    },
-                    {
-                      'label': 'Cancelled',
-                      'value': statusCounts['cancelled']!.toDouble(),
-                      'color': AppConstants.errorColor,
-                    },
-                    {
-                      'label': 'Completed',
-                      'value': statusCounts['completed']!.toDouble(),
-                      'color': AppConstants.successColor,
-                    },
-                    {
-                      'label': 'Casted',
-                      'value': statusCounts['casted']!.toDouble(),
-                      'color': AppConstants.primaryColor,
-                    },
-                    {
-                      'label': 'Partial Delivery',
-                      'value': statusCounts['partial delivery']!.toDouble(),
-                      'color': AppConstants.warningColor,
-                    },
-                    {
-                      'label': 'Pending Disp',
-                      'value': statusCounts['pendingdisp']!.toDouble(),
-                      'color': AppConstants.secondaryColor,
-                    },
-                  ],
-                  onItemTap: _onStatusItemTap,
-                ),
-                const SizedBox(height: AppConstants.spacingL),
-                _buildPieChart(
-                  title: 'Order Type Distribution',
-                  data: [
-                    {
-                      'label': 'Single Orders',
-                      'value': orderTypeCounts['single']!.toDouble(),
-                      'color': AppConstants.primaryColor,
-                    },
-                    {
-                      'label': 'Bulk Orders',
-                      'value': orderTypeCounts['bulk']!.toDouble(),
-                      'color': AppConstants.accentColor,
-                    },
-                  ],
-                  onItemTap: _onOrderTypeItemTap,
-                ),
-              ],
-            )
-            : Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _buildPieChart(
-                    title: 'Order Status Distribution',
-                    data: [
-                      {
-                        'label': 'Pending',
-                        'value': statusCounts['pending']!.toDouble(),
-                        'color': AppConstants.warningColor,
-                      },
-                      {
-                        'label': 'Wax',
-                        'value': statusCounts['Wax']!.toDouble(),
-                        'color': AppConstants.secondaryColor,
-                      },
-                      {
-                        'label': 'DC',
-                        'value': statusCounts['DC']!.toDouble(),
-                        'color': AppConstants.successColor,
-                      },
-                      {
-                        'label': 'Delivered',
-                        'value': statusCounts['Delivered']!.toDouble(),
-                        'color': AppConstants.deliveredColor,
-                      },
-                      {
-                        'label': 'Cancelled',
-                        'value': statusCounts['cancelled']!.toDouble(),
-                        'color': AppConstants.errorColor,
-                      },
-                    ],
-                    onItemTap: _onStatusItemTap,
-                  ),
-                ),
-                const SizedBox(width: AppConstants.spacingL),
-                Expanded(
-                  child: _buildPieChart(
-                    title: 'Order Type Distribution',
-                    data: [
-                      {
-                        'label': 'Single Orders',
-                        'value': orderTypeCounts['single']!.toDouble(),
-                        'color': AppConstants.primaryColor,
-                      },
-                      {
-                        'label': 'Bulk Orders',
-                        'value': orderTypeCounts['bulk']!.toDouble(),
-                        'color': AppConstants.accentColor,
-                      },
-                    ],
-                    onItemTap: _onOrderTypeItemTap,
-                  ),
-                ),
-              ],
-            ),
-      ],
-    );
-  }
+    // return Column(
+    //   crossAxisAlignment: CrossAxisAlignment.start,
+    //   children: [
+    //     Text('Distribution Analysis', style: AppConstants.headingSmall),
+    //     const SizedBox(height: AppConstants.spacingM),
+    //     isMobile
+    //         ? Column(
+    //           children: [
+    //             _buildPieChart(
+    //               title: 'Order Status Distribution',
+    //               data: [
+    //                 {
+    //                   'label': 'Pending',
+    //                   'value': statusCounts['pending']!.toDouble(),
+    //                   'color': AppConstants.warningColor,
+    //                 },
+    //                 {
+    //                   'label': 'Wax',
+    //                   'value': statusCounts['Wax']!.toDouble(),
+    //                   'color': AppConstants.secondaryColor,
+    //                 },
+    //                 {
+    //                   'label': 'DC',
+    //                   'value': statusCounts['DC']!.toDouble(),
+    //                   'color': AppConstants.successColor,
+    //                 },
+    //                 {
+    //                   'label': 'Delivered',
+    //                   'value': statusCounts['Delivered']!.toDouble(),
+    //                   'color': AppConstants.deliveredColor,
+    //                 },
+    //                 {
+    //                   'label': 'Cancelled',
+    //                   'value': statusCounts['cancelled']!.toDouble(),
+    //                   'color': AppConstants.errorColor,
+    //                 },
+    //                 {
+    //                   'label': 'Completed',
+    //                   'value': statusCounts['completed']!.toDouble(),
+    //                   'color': AppConstants.successColor,
+    //                 },
+    //                 {
+    //                   'label': 'Casted',
+    //                   'value': statusCounts['casted']!.toDouble(),
+    //                   'color': AppConstants.primaryColor,
+    //                 },
+    //                 {
+    //                   'label': 'Partial Delivery',
+    //                   'value': statusCounts['partial delivery']!.toDouble(),
+    //                   'color': AppConstants.warningColor,
+    //                 },
+    //                 {
+    //                   'label': 'Pending Disp',
+    //                   'value': statusCounts['pendingdisp']!.toDouble(),
+    //                   'color': AppConstants.secondaryColor,
+    //                 },
+    //               ],
+    //               onItemTap: _onStatusItemTap,
+    //             ),
+    //             const SizedBox(height: AppConstants.spacingL),
+    //             _buildPieChart(
+    //               title: 'Order Type Distribution',
+    //               data: [
+    //                 {
+    //                   'label': 'Single Orders',
+    //                   'value': orderTypeCounts['single']!.toDouble(),
+    //                   'color': AppConstants.primaryColor,
+    //                 },
+    //                 {
+    //                   'label': 'Bulk Orders',
+    //                   'value': orderTypeCounts['bulk']!.toDouble(),
+    //                   'color': AppConstants.accentColor,
+    //                 },
+    //               ],
+    //               onItemTap: _onOrderTypeItemTap,
+    //             ),
+    //           ],
+    //         )
+    //         : Row(
+    //           crossAxisAlignment: CrossAxisAlignment.start,
+    //           children: [
+    //             // Expanded(
+    //             //   child: _buildPieChart(
+    //             //     title: 'Order Status Distribution',
+    //             //     data: [
+    //             //       {
+    //             //         'label': 'Pending',
+    //             //         'value': statusCounts['pending']!.toDouble(),
+    //             //         'color': AppConstants.warningColor,
+    //             //       },
+    //             //       {
+    //             //         'label': 'Wax',
+    //             //         'value': statusCounts['Wax']!.toDouble(),
+    //             //         'color': AppConstants.secondaryColor,
+    //             //       },
+    //             //       {
+    //             //         'label': 'DC',
+    //             //         'value': statusCounts['DC']!.toDouble(),
+    //             //         'color': AppConstants.successColor,
+    //             //       },
+    //             //       {
+    //             //         'label': 'Delivered',
+    //             //         'value': statusCounts['Delivered']!.toDouble(),
+    //             //         'color': AppConstants.deliveredColor,
+    //             //       },
+    //             //       {
+    //             //         'label': 'Cancelled',
+    //             //         'value': statusCounts['cancelled']!.toDouble(),
+    //             //         'color': AppConstants.errorColor,
+    //             //       },
+    //             //     ],
+    //             //     onItemTap: _onStatusItemTap,
+    //             //   ),
+    //             // ),
+    //             // const SizedBox(width: AppConstants.spacingL),
+    //             // Expanded(
+    //             //   child: _buildPieChart(
+    //             //     title: 'Order Type Distribution',
+    //             //     data: [
+    //             //       {
+    //             //         'label': 'Single Orders',
+    //             //         'value': orderTypeCounts['single']!.toDouble(),
+    //             //         'color': AppConstants.primaryColor,
+    //             //       },
+    //             //       {
+    //             //         'label': 'Bulk Orders',
+    //             //         'value': orderTypeCounts['bulk']!.toDouble(),
+    //             //         'color': AppConstants.accentColor,
+    //             //       },
+    //             //     ],
+    //             //     onItemTap: _onOrderTypeItemTap,
+    //             //   ),
+    //             // ),
+    //           ],
+    //         ),
+    //   ],
+    // );
+  // }
 
   Widget _buildPieChart({
     required String title,
