@@ -100,6 +100,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     _startDate = widget.initialStartDate;
     _endDate = widget.initialEndDate;
 
+    // If date range is provided, set to Custom mode
+    if (_startDate != null && _endDate != null) {
+      _selectedRange = 'Custom';
+    }
+
     _filterAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
