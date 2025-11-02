@@ -279,14 +279,24 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     if (!_isPending(order) || order.orderDate == null) return false;
     final now = DateTime.now();
     final days = now.difference(order.orderDate!).inDays;
-    return days >= 7 && days < 10;
+    
+
+    final isSingleOrder = order.orderType == 'Single' || order.orderType == null;
+    final dueThreshold = isSingleOrder ? 7 : 10;
+    final delayThreshold = isSingleOrder ? 10 : 15;
+    
+    return days >= dueThreshold && days < delayThreshold;
   }
 
   bool _isDelay(Order order) {
     if (!_isPending(order) || order.orderDate == null) return false;
     final now = DateTime.now();
     final days = now.difference(order.orderDate!).inDays;
-    return days >= 10;
+
+    final isSingleOrder = order.orderType == 'Single' || order.orderType == null;
+    final delayThreshold = isSingleOrder ? 10 : 15;
+    
+    return days >= delayThreshold;
   }
 
   Widget _buildUrgentRibbon() {
