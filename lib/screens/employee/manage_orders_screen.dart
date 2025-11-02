@@ -1750,64 +1750,73 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   String _formatOrderDetailsForCopy(Order order) {
     final buffer = StringBuffer();
     
-    buffer.writeln('ORDER DETAILS');
-    buffer.writeln('═' * 50);
-    buffer.writeln('Order Number: ${order.orderNo ?? order.id}');
-    buffer.writeln('Order ID: ${order.id}');
-    buffer.writeln('Client Name: ${order.clientName}');
-    buffer.writeln('Status: ${_getStatusText(order.status)}');
-    buffer.writeln('Description: ${order.description}');
-    buffer.writeln('Order Date: ${_formatDate(order.orderDate!)}');
+    buffer.writeln('╔════════════════════════════════════════════════════╗');
+    buffer.writeln('║           📋 ORDER DETAILS                         ║');
+    buffer.writeln('╚════════════════════════════════════════════════════╝');
+    buffer.writeln('');
+    buffer.writeln('🔹 Order Number: ${order.orderNo ?? order.id}');
+    buffer.writeln('🔹 Order ID: ${order.id}');
+    buffer.writeln('🔹 Client Name: ${order.clientName}');
+    buffer.writeln('🔹 Status: ${_getStatusText(order.status)}');
+    buffer.writeln('🔹 Description: ${order.description}');
+    buffer.writeln('🔹 Order Date: ${_formatDate(order.orderDate!)}');
     
     if (order.orderType != null) {
-      buffer.writeln('Order Type: ${order.orderType}');
+      buffer.writeln('🔹 Order Type: ${order.orderType}');
     }
     
     if (order.partynameDisplay != null) {
-      buffer.writeln('Party Name: ${order.partynameDisplay}');
+      buffer.writeln('🔹 Party Name: ${order.partynameDisplay}');
     }
     
     if (order.images.isNotEmpty) {
-      buffer.writeln('Images: ${order.images.length}');
+      buffer.writeln('🔹 Images: ${order.images.length}');
     }
     
     if (order.totalQuantity != null) {
-      buffer.writeln('Total Quantity: ${order.totalQuantity}');
+      buffer.writeln('🔹 Total Quantity: ${order.totalQuantity}');
     }
     
     if (order.status == OrderStatus.partialDelivery && order.totalDeliveryCount != null) {
-      buffer.writeln('Delivered: ${order.totalDeliveryCount}/${order.totalQuantity}');
+      buffer.writeln('🔹 Delivered: ${order.totalDeliveryCount}/${order.totalQuantity}');
     }
     
     if (order.updatedBy != null && order.updatedAt != null) {
-      buffer.writeln('Last Updated: ${_formatDate(order.updatedAt!)} by ${order.updatedBy}');
+      buffer.writeln('🔹 Last Updated: ${_formatDate(order.updatedAt!)} by ${order.updatedBy}');
     }
     
     if (order.ornamentDetails.isNotEmpty) {
-      buffer.writeln('\nORNAMENT DETAILS:');
+      buffer.writeln('');
+      buffer.writeln('╔════════════════════════════════════════════════════╗');
+      buffer.writeln('║           💎 ORNAMENT DETAILS                      ║');
+      buffer.writeln('╚════════════════════════════════════════════════════╝');
       for (int i = 0; i < order.ornamentDetails.length; i++) {
         final detail = order.ornamentDetails[i];
-        buffer.writeln('  Detail ${i + 1}: ${detail.name}');
-        buffer.writeln('    Weight: ${detail.weight} ${detail.unit ?? 'g'}');
-        buffer.writeln('    Purity: ${detail.purity}');
-        buffer.writeln('    Quantity: ${detail.quantity}');
+        buffer.writeln('');
+        buffer.writeln('  ▶ Detail ${i + 1}: ${detail.name}');
+        buffer.writeln('    • Weight: ${detail.weight} ${detail.unit ?? 'g'}');
+        buffer.writeln('    • Purity: ${detail.purity}');
+        buffer.writeln('    • Quantity: ${detail.quantity}');
         if (detail.size != null) {
-          buffer.writeln('    Size: ${detail.size}');
+          buffer.writeln('    • Size: ${detail.size}');
         }
         if (detail.colorstone != null) {
-          buffer.writeln('    Colorstone: ${detail.colorstone}');
+          buffer.writeln('    • Colorstone: ${detail.colorstone}');
         }
         if (detail.rhodium != null) {
-          buffer.writeln('    Rhodium: ${detail.rhodium}');
+          buffer.writeln('    • Rhodium: ${detail.rhodium}');
         }
         if (detail.dull != null) {
-          buffer.writeln('    Dull: ${detail.dull}');
+          buffer.writeln('    • Dull: ${detail.dull}');
         }
         if ((detail.remarks ?? '').isNotEmpty) {
-          buffer.writeln('    Remarks: ${detail.remarks}');
+          buffer.writeln('    • Remarks: ${detail.remarks}');
         }
       }
     }
+    
+    buffer.writeln('');
+    buffer.writeln('╚════════════════════════════════════════════════════╝');
     
     return buffer.toString();
   }
@@ -2446,6 +2455,101 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     );
   }
 
+  Widget _buildOrderSummaryRow(
+    String label,
+    String value, {
+    bool isStatus = false,
+    OrderStatus? status,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          flex: 3,
+          child: isStatus && status != null
+            ? Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(status).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _getStatusColor(status).withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _getStatusColor(status),
+                  ),
+                ),
+              )
+            : Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOrnamentDetailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 3,
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildExpandedContent(Order order) {
     return Container(
       decoration: BoxDecoration(
@@ -2456,20 +2560,137 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Order Summary Section
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppConstants.primaryColor.withOpacity(0.3),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppConstants.primaryColor.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: AppConstants.primaryColor,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'ORDER SUMMARY',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppConstants.primaryColor,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildOrderSummaryRow('Order Number', order.orderNo ?? order.id),
+                const SizedBox(height: 12),
+                _buildOrderSummaryRow('Client Name', order.clientName),
+                const SizedBox(height: 12),
+                _buildOrderSummaryRow('Status', _getStatusText(order.status), isStatus: true, status: order.status),
+                const SizedBox(height: 12),
+                _buildOrderSummaryRow('Description', order.description),
+                const SizedBox(height: 12),
+                _buildOrderSummaryRow('Order Date', _formatDate(order.orderDate!)),
+                if (order.orderType != null) ...[
+                  const SizedBox(height: 12),
+                  _buildOrderSummaryRow('Order Type', order.orderType!),
+                ],
+                if (order.partynameDisplay != null) ...[
+                  const SizedBox(height: 12),
+                  _buildOrderSummaryRow('Party Name', order.partynameDisplay!),
+                ],
+                if (order.images.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildOrderSummaryRow('Images', '${order.images.length} attached'),
+                ],
+                if (order.totalQuantity != null) ...[
+                  const SizedBox(height: 12),
+                  _buildOrderSummaryRow('Total Quantity', '${order.totalQuantity}'),
+                ],
+                if (order.status == OrderStatus.partialDelivery && order.totalDeliveryCount != null) ...[
+                  const SizedBox(height: 12),
+                  _buildOrderSummaryRow('Delivered', '${order.totalDeliveryCount}/${order.totalQuantity}'),
+                ],
+                if (order.updatedBy != null && order.updatedAt != null) ...[
+                  const SizedBox(height: 12),
+                  _buildOrderSummaryRow('Last Updated', '${_formatDate(order.updatedAt!)} by ${order.updatedBy}'),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           if (order.ornamentDetails.isNotEmpty) ...[
             const SizedBox(height: 20),
-            _buildDetailSection('Ornament Details', []),
-            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.amber.withOpacity(0.3),
+                  width: 2,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.diamond_outlined,
+                    color: Colors.amber.shade700,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'ORNAMENT DETAILS',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.amber.shade700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             ...order.ornamentDetails.asMap().entries.map((entry) {
               final idx = entry.key;
               final detail = entry.value;
               return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.amber.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.amber.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2477,66 +2698,59 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     Row(
                       children: [
                         Container(
-                          width: 8,
-                          height: 8,
+                          width: 10,
+                          height: 10,
                           decoration: const BoxDecoration(
                             color: Colors.amber,
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Text(
-                          'Ornament Detail ${idx + 1}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
+                          'Detail ${idx + 1}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            color: Colors.amber.shade700,
+                            letterSpacing: 0.3,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Text(
                       detail.name,
                       style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Weight: ${detail.weight} • Unit: ${detail.unit ?? 'g'} • Purity: ${detail.purity} • Qty: ${detail.quantity} • ${detail.size != null ? ' • Size: ${detail.size}' : ''}',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
-                    if (detail.colorstone != null ||
-                        detail.rhodium != null ||
-                        detail.dull != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        [
-                          if (detail.colorstone != null)
-                            'Colorstone: ${detail.colorstone}',
-                          if (detail.rhodium != null)
-                            'Rhodium: ${detail.rhodium}',
-                          if (detail.dull != null) 'Dull: ${detail.dull}',
-                        ].join(' • '),
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
-                        ),
-                      ),
+                    const SizedBox(height: 12),
+                    _buildOrnamentDetailRow('Weight', '${detail.weight} ${detail.unit ?? 'g'}'),
+                    const SizedBox(height: 10),
+                    _buildOrnamentDetailRow('Purity', detail.purity),
+                    const SizedBox(height: 10),
+                    _buildOrnamentDetailRow('Quantity', '${detail.quantity}'),
+                    if (detail.size != null) ...[
+                      const SizedBox(height: 10),
+                      _buildOrnamentDetailRow('Size', detail.size!),
+                    ],
+                    if (detail.colorstone != null) ...[
+                      const SizedBox(height: 10),
+                      _buildOrnamentDetailRow('Colorstone', detail.colorstone!),
+                    ],
+                    if (detail.rhodium != null) ...[
+                      const SizedBox(height: 10),
+                      _buildOrnamentDetailRow('Rhodium', detail.rhodium!),
+                    ],
+                    if (detail.dull != null) ...[
+                      const SizedBox(height: 10),
+                      _buildOrnamentDetailRow('Dull', detail.dull!),
                     ],
                     if ((detail.remarks ?? '').isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Remarks: ${detail.remarks}',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
-                        ),
-                      ),
+                      const SizedBox(height: 10),
+                      _buildOrnamentDetailRow('Remarks', detail.remarks!),
                     ],
                     // Partial Delivery entries
                     if (detail.partialDelivery != null &&
