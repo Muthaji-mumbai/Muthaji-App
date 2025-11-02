@@ -825,6 +825,7 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
                     'Weight: ${d.weight} • Unit: ${d.unit ?? 'g'} • Purity: ${d.purity} • Qty: ${d.quantity}${d.size != null ? ' • Size: ${d.size}' : ''} • Colorstone: ${d.colorstone} • Rhodium: ${d.rhodium} • Dull: ${d.dull}',
                     style: AppConstants.bodySmall.copyWith(
                       color: AppConstants.textSecondaryColor,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   if (d.remarks != null && d.remarks!.isNotEmpty)

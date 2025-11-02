@@ -1550,8 +1550,8 @@ void _clearDateFilters() {
         const SizedBox(height: AppConstants.spacingL),
         _buildTypePieChartsSection(),
         const SizedBox(height: AppConstants.spacingL),
-        _buildTypeStatusBarCharts(),
-        const SizedBox(height: AppConstants.spacingL),
+        // _buildTypeStatusBarCharts(),
+        // const SizedBox(height: AppConstants.spacingL),
         _buildPieChartsSection(),
       ],
     ],
@@ -3079,6 +3079,9 @@ void _clearDateFilters() {
       case 'casted':
         status = OrderStatus.Casted;
         break;
+      case 'completed':
+        status = OrderStatus.Completed;
+        break;
       case 'wax':
         status = OrderStatus.Wax;
         break;
@@ -3151,6 +3154,9 @@ void _clearDateFilters() {
         break;
       case 'casted':
         status = OrderStatus.Casted;
+        break;
+      case 'completed':
+        status = OrderStatus.Completed;
         break;
       case 'wax':
         status = OrderStatus.Wax;
