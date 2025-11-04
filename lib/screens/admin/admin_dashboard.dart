@@ -3154,7 +3154,7 @@ void _clearDateFilters() {
       case 'due':
         status = OrderStatus.due;
         break;
-        case 'Delivered':
+      case 'delivered':
         status = OrderStatus.Delivered;
         break;
       case 'partial delivery':
@@ -3205,6 +3205,9 @@ void _clearDateFilters() {
       case 'cancelled':
         status = OrderStatus.cancelled;
         break;
+      case 'completed':
+        status = OrderStatus.Completed;
+        break;
       case 'delay':
         status = OrderStatus.delay;
         break;
@@ -3217,7 +3220,7 @@ void _clearDateFilters() {
       case 'pendingdisp':
         status = OrderStatus.PendingDisp;
         break;
-        case 'delivered':
+      case 'delivered':
         status = OrderStatus.Delivered;
         break;
       default:
