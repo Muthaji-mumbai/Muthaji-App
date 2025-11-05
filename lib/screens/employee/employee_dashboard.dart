@@ -735,13 +735,13 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                           horizontal: 12,
                           vertical: 8,
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.amber.withOpacity(0.2),
-                          ),
-                        ),
+                        // decoration: BoxDecoration(
+                        //   color: Colors.amber.withOpacity(0.08),
+                        //   borderRadius: BorderRadius.circular(8),
+                        //   border: Border.all(
+                        //     color: Colors.amber.withOpacity(0.2),
+                        //   ),
+                        // ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: order.ornamentDetails.asMap().entries.map((entry) {
@@ -753,38 +753,38 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                               ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    margin: const EdgeInsets.only(top: 4, right: 8),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.amber,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          detail.name,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        Text(
-                                          '${detail.weight}g • ${detail.purity} • Qty: ${detail.quantity}',
-                                          style: TextStyle(
-                                            color: Colors.grey.shade600,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                // children: [
+                                //   Container(
+                                //     width: 6,
+                                //     height: 6,
+                                //     margin: const EdgeInsets.only(top: 4, right: 8),
+                                //     decoration: const BoxDecoration(
+                                //       color: Colors.amber,
+                                //       shape: BoxShape.circle,
+                                //     ),
+                                //   ),
+                                //   Expanded(
+                                //     child: Column(
+                                //       crossAxisAlignment: CrossAxisAlignment.start,
+                                //       children: [
+                                //         Text(
+                                //           detail.name,
+                                //           style: const TextStyle(
+                                //             fontWeight: FontWeight.w600,
+                                //             fontSize: 12,
+                                //           ),
+                                //         ),
+                                //         Text(
+                                //           '${detail.weight}g • ${detail.purity} • Qty: ${detail.quantity}',
+                                //           style: TextStyle(
+                                //             color: Colors.grey.shade600,
+                                //             fontSize: 11,
+                                //           ),
+                                //         ),
+                                //       ],
+                                //     ),
+                                //   ),
+                                // ],
                               ),
                             );
                           }).toList(),
@@ -941,24 +941,24 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Order Details Grid
-          _buildDetailSection('Order Information', [
-            _buildDetailItem('Order ID', order.id, Icons.tag_rounded),
-            if (order.orderType != null)
-              _buildDetailItem(
-                'Type',
-                order.orderType!,
-                Icons.category_outlined,
-              ),
-            if (order.orderDate != null)
-              _buildDetailItem(
-                'Order Date',
-                _formatDate(order.orderDate!),
-                Icons.calendar_today_outlined,
-              ),
-            if (order.notes != null && order.notes!.isNotEmpty)
-              _buildDetailItem('Notes', order.notes!, Icons.note_outlined),
-          ]),
+          // // Order Details Grid
+          // _buildDetailSection('Order Information', [
+          //   // _buildDetailItem('Order ID', order.id, Icons.tag_rounded),
+          //   if (order.orderType != null)
+          //     _buildDetailItem(
+          //       'Type',
+          //       order.orderType!,
+          //       Icons.category_outlined,
+          //     ),
+          //   if (order.orderDate != null)
+          //     _buildDetailItem(
+          //       'Order Date',
+          //       _formatDate(order.orderDate!),
+          //       Icons.calendar_today_outlined,
+          //     ),
+          //   if (order.notes != null && order.notes!.isNotEmpty)
+          //     _buildDetailItem('Notes', order.notes!, Icons.note_outlined),
+          // ]),
           // Ornament details + images (alternating per ornament)
           if (order.ornamentDetails.isNotEmpty) ...[
             const SizedBox(height: 20),

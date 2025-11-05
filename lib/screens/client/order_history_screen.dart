@@ -165,8 +165,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       'Pending',
       'In Progress',
       'Partially Delivered',
-      'Delivered',
       'Completed',
+      'Delivered',
       'Cancelled',
     ];
     _tabController = TabController(length: _tabs.length, vsync: this);
@@ -186,8 +186,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         'Pending',
         'In Progress',
         'Partially Delivered',
-        'Delivered',
         'Completed',
+        'Delivered',
         'Cancelled',
       ];
     } else {
@@ -195,8 +195,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         'All',
         'Pending',
         'In Progress',
-        'Delivered',
         'Completed',
+        'Delivered',
         'Cancelled',
       ];
     }
@@ -1174,6 +1174,16 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                         ),
                                       ),
                                     ),
+                                    SizedBox(
+                                      width: 60,
+                                      child: Text(
+                                        'Notes',
+                                        textAlign: TextAlign.right,
+                                        style: AppConstants.bodySmall.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1217,6 +1227,18 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                         width: 60,
                                         child: Text(
                                           pd.qty.toString(),
+                                          textAlign: TextAlign.right,
+                                          style: AppConstants.bodySmall
+                                              .copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.teal,
+                                              ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 60,
+                                        child: Text(
+                                          pd.deliverynote ?? '',
                                           textAlign: TextAlign.right,
                                           style: AppConstants.bodySmall
                                               .copyWith(

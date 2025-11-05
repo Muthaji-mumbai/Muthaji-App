@@ -18,6 +18,7 @@ enum OrderStatus {
 class PartialDeliveryEntry {
   final DateTime deliverydate;
   final int qty;
+  
   final String? deliverynote;
 
   PartialDeliveryEntry({

@@ -1611,7 +1611,19 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             _buildDropdownField<OrderStatus>(
               'Status',
               _selectedStatus,
-              OrderStatus.values
+              [
+                OrderStatus.pending,
+                OrderStatus.delay,
+                OrderStatus.due,
+                OrderStatus.Wax,
+                OrderStatus.DC,
+                OrderStatus.Casted,
+                OrderStatus.PendingDisp,
+                OrderStatus.partialDelivery,
+                OrderStatus.Completed,
+                OrderStatus.Delivered,
+                OrderStatus.cancelled,
+              ]
                   .map(
                     (s) => DropdownMenuItem<OrderStatus>(
                       value: s,
@@ -1700,7 +1712,19 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                   child: _buildDropdownField<OrderStatus>(
                     'Status',
                     _selectedStatus,
-                    OrderStatus.values
+                    [
+                      OrderStatus.pending,
+                      OrderStatus.delay,
+                      OrderStatus.due,
+                      OrderStatus.Wax,
+                      OrderStatus.DC,
+                      OrderStatus.Casted,
+                      OrderStatus.PendingDisp,
+                      OrderStatus.partialDelivery,
+                      OrderStatus.Completed,
+                      OrderStatus.Delivered,
+                      OrderStatus.cancelled,
+                    ]
                         .map(
                           (s) => DropdownMenuItem<OrderStatus>(
                             value: s,
@@ -2120,7 +2144,19 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 ),
 
                 // ---------- OTHER STATUS CHIPS – LIVE COUNTS ----------
-                ...OrderStatus.values.map((status) {
+                ...[
+                  OrderStatus.pending,
+                  OrderStatus.delay,
+                  OrderStatus.due,
+                  OrderStatus.Wax,
+                  OrderStatus.DC,
+                  OrderStatus.Casted,
+                  OrderStatus.PendingDisp,
+                  OrderStatus.partialDelivery,
+                  OrderStatus.Completed,
+                  OrderStatus.Delivered,
+                  OrderStatus.cancelled,
+                ].map((status) {
                   final isVirtual = status == OrderStatus.due || status == OrderStatus.delay;
                   final count = statusCounts[status] ?? 0;
                   final isSelected = _selectedStatus == status;
