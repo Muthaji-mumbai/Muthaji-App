@@ -727,6 +727,70 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                         ],
                       ),
                     ],
+                    // Ornament Details Summary (outside expansion)
+                    if (order.ornamentDetails.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.amber.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: order.ornamentDetails.asMap().entries.map((entry) {
+                            final idx = entry.key;
+                            final detail = entry.value;
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                bottom: idx < order.ornamentDetails.length - 1 ? 8 : 0,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    margin: const EdgeInsets.only(top: 4, right: 8),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.amber,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          detail.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${detail.weight}g • ${detail.purity} • Qty: ${detail.quantity}',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 trailing: PopupMenuButton<String>(
@@ -900,162 +964,293 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
             const SizedBox(height: 20),
             _buildDetailSection('Ornament Details', []),
             const SizedBox(height: 8),
-            ...order.ornamentDetails.map((detail) {
+            ...order.ornamentDetails.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final detail = entry.value;
               final images =
                   detail.images.isNotEmpty ? detail.images : order.images;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Details card
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade200),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.amber.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.amber.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                    child: Row(
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
                         Container(
-                          width: 8,
-                          height: 8,
+                          width: 10,
+                          height: 10,
                           decoration: const BoxDecoration(
                             color: Colors.amber,
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                detail.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${detail.material} • ${detail.weight}g • ${detail.purity} • Qty: ${detail.quantity}',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              if (detail.remarks != null &&
-                                  detail.remarks!.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Remarks: ${detail.remarks!}',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ],
+                        const SizedBox(width: 10),
+                        Text(
+                          'Detail ${idx + 1}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            color: Colors.amber.shade700,
+                            letterSpacing: 0.3,
                           ),
                         ),
                       ],
                     ),
-                  ),
-
-                  // Images for this ornament
-                  if (images.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      height: 100,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: images.length,
-                        itemBuilder: (context, index) {
-                          final imageUrl = images[index];
-                          final isPdf = imageUrl.toLowerCase().endsWith('.pdf');
-                          
-                          return GestureDetector(
-                            onTap: () => _showFullScreenImage(images, index),
-                            child: Container(
-                              margin: const EdgeInsets.only(right: 12),
-                              width: 100,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade300),
+                    const SizedBox(height: 12),
+                    Text(
+                      detail.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildOrnamentDetailRow('Weight', '${detail.weight} ${detail.unit ?? 'g'}'),
+                    const SizedBox(height: 10),
+                    _buildOrnamentDetailRow('Purity', detail.purity),
+                    const SizedBox(height: 10),
+                    _buildOrnamentDetailRow('Quantity', '${detail.quantity}'),
+                    if (detail.size != null) ...[
+                      const SizedBox(height: 10),
+                      _buildOrnamentDetailRow('Size', detail.size!),
+                    ],
+                    if (detail.colorstone != null) ...[
+                      const SizedBox(height: 10),
+                      _buildOrnamentDetailRow('Colorstone', detail.colorstone!),
+                    ],
+                    if (detail.rhodium != null) ...[
+                      const SizedBox(height: 10),
+                      _buildOrnamentDetailRow('Rhodium', detail.rhodium!),
+                    ],
+                    if (detail.dull != null) ...[
+                      const SizedBox(height: 10),
+                      _buildOrnamentDetailRow('Dull', detail.dull!),
+                    ],
+                    if ((detail.remarks ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _buildOrnamentDetailRow('Remarks', detail.remarks!),
+                    ],
+                    // Partial Delivery entries
+                    if (detail.partialDelivery != null &&
+                        detail.partialDelivery!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Partial Delivery (${detail.partialDelivery!.length})',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withOpacity(0.03),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.teal.withOpacity(0.15),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            // Header row
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(11),
-                                child: isPdf
-                                    ? Container(
-                                        color: Colors.red.shade50,
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.picture_as_pdf,
-                                              color: Colors.red.shade400,
-                                              size: 40,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'PDF',
-                                              style: TextStyle(
-                                                color: Colors.red.shade400,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      )
-                                    : Image.network(
-                                        imageUrl,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Container(
-                                            color: Colors.grey.shade100,
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.broken_image_outlined,
-                                                  color: Colors.grey.shade400,
-                                                  size: 32,
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'Error',
-                                                  style: TextStyle(
-                                                    color: Colors.grey.shade400,
-                                                    fontSize: 10,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                ),
+                              child: Row(
+                                children: const [
+                                  Expanded(
+                                    child: Text(
+                                      'Date',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  SizedBox(
+                                    width: 60,
+                                    child: Text(
+                                      'Qty',
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Note',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        },
+                            const Divider(height: 1),
+                            ...detail.partialDelivery!.map((pd) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        DateFormat(
+                                          'dd/MM/yyyy',
+                                        ).format(pd.deliverydate),
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    SizedBox(
+                                      width: 60,
+                                      child: Text(
+                                        pd.qty.toString(),
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        pd.deliverynote?.isNotEmpty == true ? pd.deliverynote! : '-',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: pd.deliverynote?.isNotEmpty == true ? Colors.black87 : Colors.grey,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                        ),
                       ),
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'No images for this ornament',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
+                    ],
+                    // Images for this ornament
+                    if (images.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Images (${images.length})',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 100,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: images.length,
+                          itemBuilder: (context, index) {
+                            final imageUrl = images[index];
+                            final isPdf = imageUrl.toLowerCase().endsWith('.pdf');
+                            
+                            return GestureDetector(
+                              onTap: () => _showFullScreenImage(images, index),
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 12),
+                                width: 100,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(11),
+                                  child: isPdf
+                                      ? Container(
+                                          color: Colors.red.shade50,
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.picture_as_pdf,
+                                                color: Colors.red.shade400,
+                                                size: 40,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'PDF',
+                                                style: TextStyle(
+                                                  color: Colors.red.shade400,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : Image.network(
+                                          imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Container(
+                                              color: Colors.grey.shade100,
+                                              child: Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.broken_image_outlined,
+                                                    color: Colors.grey.shade400,
+                                                    size: 32,
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    'Error',
+                                                    style: TextStyle(
+                                                      color: Colors.grey.shade400,
+                                                      fontSize: 10,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                      ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ],
-
-                  const SizedBox(height: 12),
-                ],
+                ),
               );
             }),
           ] else if (order.images.isNotEmpty) ...[
@@ -1544,5 +1739,39 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         );
       }
     }
+  }
+
+  Widget _buildOrnamentDetailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 3,
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
   }
 }

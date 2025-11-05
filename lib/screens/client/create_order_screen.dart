@@ -61,6 +61,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       'deliverycount': null,
       'deliveryqty': null,
       'deliverydate': null,
+      'deliverynote': '',
       'partialdelivery': [], // Store existing partial delivery entries
     },
   ];
@@ -194,6 +195,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                           'qty': d['deliveryqty'],
                           'deliverydate':
                               (d['deliverydate'] as DateTime).toIso8601String(),
+                          if ((d['deliverynote'] ?? '').toString().isNotEmpty)
+                            'deliverynote': d['deliverynote'],
                         },
                       ],
                     // If not adding new partial delivery, preserve existing ones
@@ -414,6 +417,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   'deliverycount': d.deliverycount,
                   'deliveryqty': null,
                   'deliverydate': null,
+                  'deliverynote': d.partialDelivery?.isNotEmpty == true 
+                      ? (d.partialDelivery!.last.deliverynote ?? '')
+                      : '',
                   'partialdelivery':
                       d.partialDelivery?.map((e) => e.toJson()).toList() ?? [],
                 },
@@ -524,6 +530,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         'deliverycount': null,
         'deliveryqty': null,
         'deliverydate': null,
+        'deliverynote': '',
         'partialdelivery': [],
       });
       _ornamentImages.add([]);
@@ -1527,8 +1534,8 @@ if (!_hasRequiredFiles()) {
                 .toList(),
             onChanged: (val) => setState(() => _selectedPriority = val ?? 'Regular'),
           ),
-          // Show order type selection only for admin and employee users
-          if (_shouldShowOrderTypeSelection()) ...[
+          // Show order type selection only for admin and employee users (not when editing)
+          if (_shouldShowOrderTypeSelection() && !_isEditMode) ...[
             const SizedBox(height: AppConstants.spacingM),
             Text(
               'Order Type',
@@ -2058,6 +2065,32 @@ if ((_selectedOrderType == 'Bulk' ||
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: AppConstants.spacingM),
+            // Delivery Note
+            TextFormField(
+              initialValue: detail['deliverynote']?.toString() ?? '',
+              decoration: InputDecoration(
+                labelText: 'Delivery Note',
+                hintText: 'Add any notes for this delivery',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingS,
+                  vertical: AppConstants.spacingS,
+                ),
+                suffixIcon: Icon(
+                  Icons.note_outlined,
+                  color: AppConstants.primaryColor,
+                ),
+              ),
+              maxLines: 3,
+              minLines: 1,
+              onChanged:
+                  (value) => setState(() {
+                    _ornamentDetails[index]['deliverynote'] = value;
+                  }),
             ),
             const SizedBox(height: AppConstants.spacingM),
             // Delivery Date

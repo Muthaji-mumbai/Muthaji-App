@@ -3078,6 +3078,16 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                       ),
                                     ),
                                   ),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Note',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -3108,6 +3118,18 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                         ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        pd.deliverynote?.isNotEmpty == true ? pd.deliverynote! : '-',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: pd.deliverynote?.isNotEmpty == true ? Colors.black87 : Colors.grey,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
