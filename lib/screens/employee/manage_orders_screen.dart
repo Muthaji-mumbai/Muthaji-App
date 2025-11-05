@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:photo_view/photo_view.dart';
@@ -9,6 +10,10 @@ import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/employee/order_detailed_screen.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
 import 'package:soloshine/screens/common/pdf_viewer_screen.dart';
+import 'dart:io';
+import 'dart:convert' show utf8;
+import 'dart:html' as html show Blob, Url, AnchorElement;
+import 'package:path_provider/path_provider.dart';
 import '../../models/order.dart';
 import '../../services/order_service.dart';
 import '../../services/auth_service.dart';
@@ -1109,6 +1114,212 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     }
   }
 
+  Future<void> _downloadSelectedOrdersAsExcel() async {
+    if (_selectedOrderIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No orders selected'),
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Get selected orders
+      final selectedOrders = _allOrders
+          .where((order) => _selectedOrderIds.contains(order.id))
+          .toList();
+
+      if (selectedOrders.isEmpty) return;
+
+      // Create CSV content
+      StringBuffer csvContent = StringBuffer();
+      
+      // Add headers
+      csvContent.writeln('Order No,Order ID,Client Name,Status,Order Type,Order Date,Priority,Description,Total Quantity,Delivery Count,Ornament Name,Weight,Purity,Quantity,Size,Colorstone,Rhodium,Dull,Remarks,Partial Delivery Date,Partial Delivery Qty,Delivery Note');
+
+      // Add data rows
+      for (final order in selectedOrders) {
+        final orderDate = DateFormat('dd/MM/yyyy HH:mm:ss').format(order.orderDate ?? order.createdAt);
+        
+        if (order.ornamentDetails.isEmpty) {
+          // Order without ornament details
+          csvContent.writeln(
+            '${_escapeCSV(order.orderNo ?? order.id)},'
+            // '${_escapeCSV(order.id)},'
+            '${_escapeCSV(order.clientName)},'
+            '${_escapeCSV(_getStatusText(order.status))},'
+            '${_escapeCSV(order.orderType ?? 'Single')},'
+            '${_escapeCSV(orderDate)},'
+            '${_escapeCSV(order.orderPriority ?? 'Regular')},'
+            '${_escapeCSV(order.description)},'
+            '${order.totalQuantity},'
+            '${order.totalDeliveryCount},'
+            ',,,,,,,,,'
+          );
+        } else {
+          // Order with ornament details
+          for (int i = 0; i < order.ornamentDetails.length; i++) {
+            final detail = order.ornamentDetails[i];
+            
+            if (detail.partialDelivery == null || detail.partialDelivery!.isEmpty) {
+              // No partial deliveries
+              csvContent.writeln(
+                '${i == 0 ? _escapeCSV(order.orderNo ?? order.id) : ''},'
+                // '${i == 0 ? _escapeCSV(order.id) : ''},'
+                '${i == 0 ? _escapeCSV(order.clientName) : ''},'
+                '${i == 0 ? _escapeCSV(_getStatusText(order.status)) : ''},'
+                '${i == 0 ? _escapeCSV(order.orderType ?? 'Single') : ''},'
+                '${i == 0 ? _escapeCSV(orderDate) : ''},'
+                '${i == 0 ? _escapeCSV(order.orderPriority ?? 'Regular') : ''},'
+                '${i == 0 ? _escapeCSV(order.description) : ''},'
+                '${i == 0 ? order.totalQuantity : ''},'
+                '${i == 0 ? order.totalDeliveryCount : ''},'
+                '${_escapeCSV(detail.name)},'
+                '${detail.weight},'
+                '${_escapeCSV(detail.purity)},'
+                '${detail.quantity},'
+                '${_escapeCSV(detail.size ?? '')},'
+                '${_escapeCSV(detail.colorstone ?? '')},'
+                '${_escapeCSV(detail.rhodium ?? '')},'
+                '${_escapeCSV(detail.dull ?? '')},'
+                '${_escapeCSV(detail.remarks ?? '')}'
+                ',,,'
+              );
+            } else {
+              // With partial deliveries
+              for (int j = 0; j < detail.partialDelivery!.length; j++) {
+                final pd = detail.partialDelivery![j];
+                final pdDate = DateFormat('dd/MM/yyyy').format(pd.deliverydate);
+                
+                csvContent.writeln(
+                  '${i == 0 && j == 0 ? _escapeCSV(order.orderNo ?? order.id) : ''},'
+                  // '${i == 0 && j == 0 ? _escapeCSV(order.id) : ''},'
+                  '${i == 0 && j == 0 ? _escapeCSV(order.clientName) : ''},'
+                  '${i == 0 && j == 0 ? _escapeCSV(_getStatusText(order.status)) : ''},'
+                  '${i == 0 && j == 0 ? _escapeCSV(order.orderType ?? 'Single') : ''},'
+                  '${i == 0 && j == 0 ? _escapeCSV(orderDate) : ''},'
+                  '${i == 0 && j == 0 ? _escapeCSV(order.orderPriority ?? 'Regular') : ''},'
+                  '${i == 0 && j == 0 ? _escapeCSV(order.description) : ''},'
+                  '${i == 0 && j == 0 ? order.totalQuantity : ''},'
+                  '${i == 0 && j == 0 ? order.totalDeliveryCount : ''},'
+                  '${j == 0 ? _escapeCSV(detail.name) : ''},'
+                  '${j == 0 ? detail.weight : ''},'
+                  '${j == 0 ? _escapeCSV(detail.purity) : ''},'
+                  '${j == 0 ? detail.quantity : ''},'
+                  '${j == 0 ? _escapeCSV(detail.size ?? '') : ''},'
+                  '${j == 0 ? _escapeCSV(detail.colorstone ?? '') : ''},'
+                  '${j == 0 ? _escapeCSV(detail.rhodium ?? '') : ''},'
+                  '${j == 0 ? _escapeCSV(detail.dull ?? '') : ''},'
+                  '${j == 0 ? _escapeCSV(detail.remarks ?? '') : ''},'
+                  '${_escapeCSV(pdDate)},'
+                  '${pd.qty},'
+                  '${_escapeCSV(pd.deliverynote ?? '')}'
+                );
+              }
+            }
+          }
+        }
+      }
+
+      // Save file
+      final fileName = 'Orders_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+      
+      // Check if running on web
+      if (kIsWeb) {
+        // Web: Use data URI for download
+        _downloadFileOnWeb(csvContent.toString(), fileName);
+      } else if (Platform.isAndroid || Platform.isIOS) {
+        // Mobile: Use file picker or downloads directory
+        final directory = await getDownloadsDirectory();
+        if (directory == null) throw Exception('Downloads directory not found');
+        
+        final file = File('${directory.path}/$fileName');
+        await file.writeAsString(csvContent.toString());
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Downloaded: $fileName'),
+            backgroundColor: AppConstants.successColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      } else {
+        // Desktop: Save to downloads
+        final directory = await getDownloadsDirectory();
+        if (directory != null) {
+          final file = File('${directory.path}/$fileName');
+          await file.writeAsString(csvContent.toString());
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Downloaded: $fileName'),
+              backgroundColor: AppConstants.successColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        } else {
+          throw Exception('Could not access downloads directory');
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Export failed: $e'),
+          backgroundColor: AppConstants.errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+  }
+
+  String _escapeCSV(String value) {
+    if (value.contains(',') || value.contains('"') || value.contains('\n')) {
+      return '"${value.replaceAll('"', '""')}"';
+    }
+    return value;
+  }
+
+  void _downloadFileOnWeb(String csvContent, String fileName) {
+    // Create a blob from the CSV content with proper encoding
+    final bytes = utf8.encode(csvContent);
+    final blob = html.Blob([bytes], 'text/csv;charset=utf-8');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+
+    
+    // Create an anchor element and trigger download
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute('download', fileName)
+      ..click();
+    
+    // Clean up after a short delay to ensure download starts
+    Future.delayed(const Duration(milliseconds: 500), () {
+      html.Url.revokeObjectUrl(url);
+    });
+    
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Downloaded: $fileName'),
+        backgroundColor: AppConstants.successColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
   void _toggleFilters() {
     setState(() {
       _showFilters = !_showFilters;
@@ -1200,6 +1411,27 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             ),
                           ),
                     ],
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                tooltip: 'Download as Excel',
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.download_rounded,
+                    size: 20,
+                    color: Colors.green.shade600,
+                  ),
+                ),
+                onPressed: _selectedOrderIds.isEmpty
+                    ? null
+                    : () => _downloadSelectedOrdersAsExcel(),
               ),
             ),
             if (_isAdmin())
