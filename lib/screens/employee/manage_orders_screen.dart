@@ -167,13 +167,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             break;
         }
 
+        // Always fetch ALL orders (no status filter) to show accurate counts
         final orders = await OrderService.getAllOrders(
           token,
-          status:
-              _selectedStatus == OrderStatus.due ||
-                      _selectedStatus == OrderStatus.delay
-                  ? null
-                  : _selectedStatus,
+          status: null, // Always fetch all statuses to show correct counts
           startDate: apiStartDate,
           endDate: apiEndDate,
           partyname: _selectedUserId,
@@ -181,7 +178,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
 
         setState(() {
           _allOrders = orders;
-          _filteredOrders = orders;
+          // Apply status filter only to display, not to data loading
+          _applyFilters();
           if (!_allChipCountLocked) {
             _allChipCount =
                 orders.length; // ← first load → remember this number
@@ -2105,7 +2103,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'All', // ← NEVER CHANGES
+                          'All (${_allOrders.length})', // ← NEVER CHANGES
                           style: TextStyle(
                             fontSize: 12,
                             color: _selectedStatus == null
@@ -2166,7 +2164,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '${_getStatusText(status)}',
+                            '${_getStatusText(status)} ($count)',
                             style: TextStyle(
                               fontSize: 12,
                               color: _getStatusColor(status),
