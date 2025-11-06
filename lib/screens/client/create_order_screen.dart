@@ -99,6 +99,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     'Green',
     'Black',
     'White',
+    'Others',
     'Same as image',
   ];
   static const List<String> _rhodiumOptions = [
