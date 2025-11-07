@@ -2811,6 +2811,21 @@ void _clearDateFilters() {
                       'value':
                           _orderStats['cancelledOrders']?.toString() ?? '0',
                     },
+                    {
+                      'label': 'Completed',
+                      'value':
+                          _orderStats['completedOrders']?.toString() ?? '0',
+                    },
+                    {
+                      'label': 'Partial Delivery',
+                      'value':
+                          _orderStats['Partial Delivery']?.toString() ?? '0',
+                    },
+                    {
+                      'label': 'In Progress',
+                      'value':
+                          _orderStats['InProgress']?.toString() ?? '0',
+                    },
                   ],
                   Icons.analytics,
                   AppConstants.primaryColor,

@@ -308,6 +308,31 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     _filteredOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
+  Map<String, int> _getStatusCounts() {
+    final counts = <String, int>{};
+    for (final order in _allOrders) {
+      final status = _mapOrderToUiStatus(order);
+      counts[status] = (counts[status] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  Widget _buildTabWithCount(String tabName) {
+    final counts = _getStatusCounts();
+    int count = 0;
+
+    if (tabName == 'All') {
+      count = _allOrders.length;
+    } else {
+      count = counts[tabName] ?? 0;
+    }
+
+    return Tab(
+      text: '$tabName($count)',
+      height: 48,
+    );
+  }
+
   @override
   @override
   Widget build(BuildContext context) {
@@ -342,7 +367,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                 fontWeight: FontWeight.w500,
               ),
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              tabs: _tabs.map((t) => Tab(text: t, height: 48)).toList(),
+              tabs: _tabs.map((t) => _buildTabWithCount(t)).toList(),
             ),
           ),
         ),
@@ -355,6 +380,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           }
           return Column(
             children: [
+              // _buildStatusCountSection(),
               _buildSearchAndFilterSection(),
               _buildDateFilterSection(),
               Expanded(
@@ -406,6 +432,59 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             child: GestureDetector(
               onTap: () => _pickDate(isFrom: false),
               child: _buildDateField(label: 'To', date: _toDate),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget _buildStatusCountSection() {
+  //   final counts = _getStatusCounts();
+  //   final statusColors = {
+  //     'Pending': Colors.orange,
+  //     'In Progress': Colors.blue,
+  //     'Partially Delivered': Colors.purple,
+  //     'Completed': Colors.green,
+  //     'Delivered': Colors.teal,
+  //     'Cancelled': Colors.red,
+  //     'All': AppConstants.primaryColor,
+  //   };
+
+  //   return Container(
+  //     padding: const EdgeInsets.all(AppConstants.spacingM),
+     
+      
+  //   );
+  // }
+
+  Widget _buildStatusCountCard(String status, String count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingM,
+        vertical: AppConstants.spacingS,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            count,
+            style: AppConstants.bodyLarge.copyWith(
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            status,
+            style: AppConstants.bodySmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
