@@ -66,6 +66,7 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   syncfusion_flutter_pdfviewer: ^31.1.23
   listen_sharing_intent: ^1.9.2  
+  web: 
 
 dev_dependencies:
   flutter_test:
