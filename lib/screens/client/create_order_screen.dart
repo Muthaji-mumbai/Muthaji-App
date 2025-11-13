@@ -1988,6 +1988,10 @@ if ((_selectedOrderType == 'Bulk' ||
                 vertical: AppConstants.spacingS,
               ),
             ),
+            keyboardType: TextInputType.multiline,
+              maxLines: null,
+              minLines: 3,
+              expands: false,
             onChanged:
                 (value) => setState(() {
                   _ornamentDetails[index]['remarks'] = value;
@@ -2156,32 +2160,32 @@ if ((_selectedOrderType == 'Bulk' ||
               ),
             ),
             const SizedBox(height: AppConstants.spacingM),
-            // Remarks field for partial delivery
-            TextFormField(
-              initialValue: detail['remarks'],
-              decoration: InputDecoration(
-                labelText: 'Remarks',
-                hintText: 'Add any remarks for this delivery',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingS,
-                  vertical: AppConstants.spacingS,
-                ),
-                suffixIcon: Icon(
-                  Icons.edit_note,
-                  color: AppConstants.primaryColor,
-                ),
-              ),
-              maxLines: 2,
-              minLines: 1,
-              onChanged:
-                  (value) => setState(() {
-                    _ornamentDetails[index]['remarks'] = value;
-                  }),
-            ),
-            const SizedBox(height: AppConstants.spacingM),
+            // // Remarks field for partial delivery
+            // TextFormField(
+            //   initialValue: detail['remarks'],
+            //   decoration: InputDecoration(
+            //     labelText: 'Remarks',
+            //     hintText: 'Add any remarks for this delivery',
+            //     border: OutlineInputBorder(
+            //       borderRadius: BorderRadius.circular(AppConstants.radiusS),
+            //     ),
+            //     contentPadding: const EdgeInsets.symmetric(
+            //       horizontal: AppConstants.spacingS,
+            //       vertical: AppConstants.spacingS,
+            //     ),
+            //     suffixIcon: Icon(
+            //       Icons.edit_note,
+            //       color: AppConstants.primaryColor,
+            //     ),
+            //   ),
+            //   maxLines: 2,
+            //   minLines: 1,
+            //   onChanged:
+            //       (value) => setState(() {
+            //         _ornamentDetails[index]['remarks'] = value;
+            //       }),
+            // ),
+            // const SizedBox(height: AppConstants.spacingM),
           ],
           Align(
             alignment: Alignment.centerLeft,
