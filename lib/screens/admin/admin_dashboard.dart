@@ -10,7 +10,7 @@ import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
 import '../../services/user_service.dart';
-import '../../models/user.dart';
+import '../../models/user.dart';  
 import '../../models/order.dart';
 import '../dashboard_screen.dart';
 import '../client/create_order_screen.dart';
@@ -289,9 +289,12 @@ bool _isLoadingOrders = false;
         'pendingOrders': 0,
         'WaxOrders': 0,
         'DCOrders': 0,
-        'DeliveredOrders': 0,
+        'CastedOrders': 0,
         'cancelledOrders': 0,
-
+        'completedOrders': 0,
+        'Delivered': 0,
+        'Partial Delivery': 0,
+        'PendingDisp': 0,
         'totalRevenue': 0.0,
       };
       _dashboardStats = {
@@ -2798,10 +2801,28 @@ void _clearDateFilters() {
                       'value': _orderStats['WaxOrders']?.toString() ?? '0',
                     },
                     {
+                      'label': 'Casted',
+                      'value': _orderStats['CastedOrders']?.toString() ?? '0',
+                    },
+                    {
                       'label': 'DC',
                       'value': _orderStats['DCOrders']?.toString() ?? '0',
                     },
-                     {
+                    {
+                      'label': 'Pending Disp',
+                      'value': _orderStats['PendingDisp']?.toString() ?? '0',
+                    },
+                    {
+                      'label': 'Partial Delivery',
+                      'value':
+                          _orderStats['Partial Delivery']?.toString() ?? '0',
+                    },
+                    {
+                      'label': 'Completed',
+                      'value':
+                          _orderStats['completedOrders']?.toString() ?? '0',
+                    },
+                    {
                       'label': 'Delivered',
                       'value':
                           _orderStats['Delivered']?.toString() ?? '0',
@@ -2810,21 +2831,6 @@ void _clearDateFilters() {
                       'label': 'Cancelled',
                       'value':
                           _orderStats['cancelledOrders']?.toString() ?? '0',
-                    },
-                    {
-                      'label': 'Completed',
-                      'value':
-                          _orderStats['completedOrders']?.toString() ?? '0',
-                    },
-                    {
-                      'label': 'Partial Delivery',
-                      'value':
-                          _orderStats['Partial Delivery']?.toString() ?? '0',
-                    },
-                    {
-                      'label': 'In Progress',
-                      'value':
-                          _orderStats['InProgress']?.toString() ?? '0',
                     },
                   ],
                   Icons.analytics,
@@ -2888,10 +2894,28 @@ void _clearDateFilters() {
                         'value': _orderStats['WaxOrders']?.toString() ?? '0',
                       },
                       {
+                        'label': 'Casted',
+                        'value': _orderStats['CastedOrders']?.toString() ?? '0',
+                      },
+                      {
                         'label': 'DC',
                         'value': _orderStats['DCOrders']?.toString() ?? '0',
                       },
-                              {
+                      {
+                        'label': 'Pending Disp',
+                        'value': _orderStats['PendingDisp']?.toString() ?? '0',
+                      },
+                      {
+                        'label': 'Partial Delivery',
+                        'value':
+                            _orderStats['Partial Delivery']?.toString() ?? '0',
+                      },
+                      {
+                        'label': 'Completed',
+                        'value':
+                            _orderStats['completedOrders']?.toString() ?? '0',
+                      },
+                      {
                         'label': 'Delivered',
                         'value': _orderStats['Delivered']?.toString() ?? '0',
                       },
@@ -3112,6 +3136,7 @@ void _clearDateFilters() {
         status = OrderStatus.Delivered;
         break;
       case 'pendingdisp':
+      case 'pending disp':
         status = OrderStatus.PendingDisp;
         break;
       default:
@@ -3188,6 +3213,7 @@ void _clearDateFilters() {
         status = OrderStatus.partialDelivery;
         break;
       case 'pendingdisp':
+      case 'pending disp':
         status = OrderStatus.PendingDisp;
         break;
       default:
@@ -3245,6 +3271,7 @@ void _clearDateFilters() {
         status = OrderStatus.partialDelivery;
         break;
       case 'pendingdisp':
+      case 'pending disp':
         status = OrderStatus.PendingDisp;
         break;
       case 'delivered':

@@ -861,6 +861,67 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                 // Order Information Section
                 _buildOrderInfoSection(order),
 
+                // Partial Delivery Status
+                if (order.status == OrderStatus.partialDelivery) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppConstants.partialDeliveryColor.withOpacity(
+                        0.1,
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: AppConstants.partialDeliveryColor
+                            .withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.local_shipping_outlined,
+                          size: 14,
+                          color: AppConstants.partialDeliveryColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Delivered: ${order.totalDeliveryCount}/${order.totalQuantity}',
+                          style: TextStyle(
+                            color: AppConstants.partialDeliveryColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (order.shouldBeDelivered) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'READY FOR COMPLETION',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+
                 // Ornament Details Section
                 if (order.ornamentDetails.isNotEmpty) ...[
                   const SizedBox(height: AppConstants.spacingL),

@@ -405,6 +405,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 matchesStatus = _isDue(order);
               } else if (_selectedStatus == OrderStatus.delay) {
                 matchesStatus = _isDelay(order);
+              } else if (_selectedStatus == OrderStatus.PendingDisp) {
+                matchesStatus = order.status == OrderStatus.PendingDisp;
               } else {
                 matchesStatus = order.status == _selectedStatus;
               }
@@ -1132,7 +1134,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       StringBuffer csvContent = StringBuffer();
       
       // Add headers
-      csvContent.writeln('Order No,Order ID,Client Name,Status,Order Type,Order Date,Priority,Description,Total Quantity,Delivery Count,Ornament Name,Weight,Purity,Quantity,Size,Colorstone,Rhodium,Dull,Remarks,Partial Delivery Date,Partial Delivery Qty,Delivery Note');
+      csvContent.writeln('Order No,Client Name,Status,Order Type,Order Date,Priority,Description,Total Quantity,Delivery Count,Ornament Name,Weight,Purity,Quantity,Size,Colorstone,Rhodium,Dull,Remarks,Partial Delivery Date,Partial Delivery Qty,Delivery Note');
 
       // Add data rows
       for (final order in selectedOrders) {
@@ -3366,9 +3368,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
 
                             return GestureDetector(
                               onTap:
-                                  () => _showFullScreenImage(
-                                    detail.images,
-                                    index,
+                                  () => _showImagePreview(
+                                   imageUrl, galleryImages: detail.images
                                   ),
                               child: Container(
                                 margin: const EdgeInsets.only(right: 12),
@@ -3462,6 +3463,95 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     );
   }
 
+  void _showImagePreview(String url, {List<String>? galleryImages}) async {
+    // If single image or no gallery context, show single image
+    if (galleryImages == null || galleryImages.length == 1) {
+      if (url.toLowerCase().endsWith('.pdf')) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) =>
+                    PdfViewerScreen(pdfUrl: url, title: 'Order Document'),
+          ),
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder:
+              (context) => Dialog(
+                insetPadding: const EdgeInsets.all(16),
+                child: Stack(
+                  children: [
+                    InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 4,
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Image.network(
+                          url,
+                          fit: BoxFit.contain,
+                          errorBuilder:
+                              (context, error, stack) => SizedBox(
+                                height: 300,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(Icons.broken_image, size: 40),
+                                      SizedBox(height: 8),
+                                      Text('Failed to load image'),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+        );
+      }
+      return;
+    }
+
+    // Gallery mode - Find index and show full screen gallery
+    final initialIndex = galleryImages.indexOf(url);
+    if (initialIndex == -1) return; // Safety check
+
+    if (url.toLowerCase().endsWith('.pdf')) {
+      // If first image is PDF, open PDF viewer
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                  PdfViewerScreen(pdfUrl: url, title: 'Order Document'),
+        ),
+      );
+    } else {
+      // Show swipeable image gallery
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => FullScreenImageViewer(
+                images: galleryImages,
+                initialIndex: initialIndex,
+              ),
+        ),
+      );
+    }
+  }
   Widget _buildDetailSection(String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3864,4 +3954,6 @@ class FullScreenImageViewer extends StatelessWidget {
       ),
     );
   }
+
+  
 }
