@@ -10,10 +10,7 @@ import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/employee/order_detailed_screen.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
 import 'package:soloshine/screens/common/pdf_viewer_screen.dart';
-import 'dart:io';
-import 'dart:convert' show utf8;
-import 'dart:html' as html show Blob, Url, AnchorElement;
-import 'package:path_provider/path_provider.dart';
+import 'package:soloshine/utils/download_csv.dart';
 import '../../models/order.dart';
 import '../../services/order_service.dart';
 import '../../services/auth_service.dart';
@@ -1225,50 +1222,18 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
 
       // Save file
       final fileName = 'Orders_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+      await downloadCsv(csvContent.toString(), fileName);
       
-      // Check if running on web
-      if (kIsWeb) {
-        // Web: Use data URI for download
-        _downloadFileOnWeb(csvContent.toString(), fileName);
-      } else if (Platform.isAndroid || Platform.isIOS) {
-        // Mobile: Use file picker or downloads directory
-        final directory = await getDownloadsDirectory();
-        if (directory == null) throw Exception('Downloads directory not found');
-        
-        final file = File('${directory.path}/$fileName');
-        await file.writeAsString(csvContent.toString());
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Downloaded: $fileName'),
-            backgroundColor: AppConstants.successColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Downloaded: $fileName'),
+          backgroundColor: AppConstants.successColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
-        );
-      } else {
-        // Desktop: Save to downloads
-        final directory = await getDownloadsDirectory();
-        if (directory != null) {
-          final file = File('${directory.path}/$fileName');
-          await file.writeAsString(csvContent.toString());
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Downloaded: $fileName'),
-              backgroundColor: AppConstants.successColor,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
-        } else {
-          throw Exception('Could not access downloads directory');
-        }
-      }
+        ),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1290,35 +1255,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     return value;
   }
 
-  void _downloadFileOnWeb(String csvContent, String fileName) {
-    // Create a blob from the CSV content with proper encoding
-    final bytes = utf8.encode(csvContent);
-    final blob = html.Blob([bytes], 'text/csv;charset=utf-8');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-
-    
-    // Create an anchor element and trigger download
-    final anchor = html.AnchorElement(href: url)
-      ..setAttribute('download', fileName)
-      ..click();
-    
-    // Clean up after a short delay to ensure download starts
-    Future.delayed(const Duration(milliseconds: 500), () {
-      html.Url.revokeObjectUrl(url);
-    });
-    
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Downloaded: $fileName'),
-        backgroundColor: AppConstants.successColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-  }
+  
 
   void _toggleFilters() {
     setState(() {
