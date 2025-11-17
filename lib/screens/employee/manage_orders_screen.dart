@@ -11,6 +11,7 @@ import 'package:soloshine/screens/employee/order_detailed_screen.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
 import 'package:soloshine/screens/common/pdf_viewer_screen.dart';
 import 'package:soloshine/utils/download_csv.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../models/order.dart';
 import '../../services/order_service.dart';
 import '../../services/auth_service.dart';
@@ -1224,6 +1225,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       final fileName = 'Orders_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
       await downloadCsv(csvContent.toString(), fileName);
       
+      // Get the downloads directory to show full path
+      final downloadsDir = await getDownloadsDirectory();
+      final fullPath = downloadsDir != null ? '${downloadsDir.path}/$fileName' : fileName;
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Downloaded: $fileName'),
@@ -1232,6 +1237,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
+          duration: const Duration(seconds: 5), // Show longer so user can read the path
         ),
       );
     } catch (e) {
@@ -3862,7 +3868,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   }
 }
 
-class FullScreenImageViewer extends StatelessWidget {
+class FullScreenImageViewer extends StatefulWidget {
   final List<String> images;
   final int initialIndex;
 
@@ -3871,6 +3877,44 @@ class FullScreenImageViewer extends StatelessWidget {
     required this.images,
     required this.initialIndex,
   });
+
+  @override
+  State<FullScreenImageViewer> createState() => _FullScreenImageViewerState();
+}
+
+class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
+  late PageController _pageController;
+  int _currentIndex = 0;
+  final Map<int, PhotoViewScaleStateController> _scaleControllers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+    
+    // Add ESC key listener for web
+    if (kIsWeb) {
+      RawKeyboard.instance.addListener(_handleKeyEvent);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    if (kIsWeb) {
+      RawKeyboard.instance.removeListener(_handleKeyEvent);
+    }
+    super.dispose();
+  }
+
+  void _handleKeyEvent(RawKeyEvent event) {
+    if (event is RawKeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        Navigator.pop(context);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -3884,28 +3928,54 @@ class FullScreenImageViewer extends StatelessWidget {
           icon: const Icon(Icons.close_rounded),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Image ${initialIndex + 1} of ${images.length}'),
+        title: Text('Image ${_currentIndex + 1} of ${widget.images.length}'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.share_rounded),
-            onPressed: () {
-              // Implement share functionality if needed
-            },
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: IconButton(
+              tooltip: 'Toggle zoom',
+              icon: const Icon(Icons.zoom_in),
+              onPressed: () {
+                final controller = _scaleControllers[_currentIndex];
+                if (controller != null) {
+                  final current = controller.scaleState;
+                  controller.scaleState =
+                      current == PhotoViewScaleState.initial
+                          ? PhotoViewScaleState.covering
+                          : PhotoViewScaleState.initial;
+                }
+              },
+            ),
           ),
         ],
       ),
       body: PhotoViewGallery.builder(
         scrollPhysics: const BouncingScrollPhysics(),
         builder: (BuildContext context, int index) {
+          final scaleCtrl = _scaleControllers.putIfAbsent(
+            index,
+            () => PhotoViewScaleStateController(),
+          );
           return PhotoViewGalleryPageOptions(
-            imageProvider: NetworkImage(images[index]),
+            imageProvider: NetworkImage(widget.images[index]),
             initialScale: PhotoViewComputedScale.contained,
             heroAttributes: PhotoViewHeroAttributes(tag: index),
-            minScale: PhotoViewComputedScale.contained * 0.8,
-            maxScale: PhotoViewComputedScale.covered * 2,
+            minScale: PhotoViewComputedScale.contained * 0.5,
+            maxScale: PhotoViewComputedScale.covered * 4.0,
+            gestureDetectorBehavior: HitTestBehavior.translucent,
+            scaleStateController: scaleCtrl,
+            // Custom scale state callbacks for better zoom control
+            scaleStateCycle: (scaleState) {
+              if (scaleState == PhotoViewScaleState.initial) {
+                return PhotoViewScaleState.covering;
+              } else if (scaleState == PhotoViewScaleState.covering) {
+                return PhotoViewScaleState.initial;
+              }
+              return scaleState;
+            },
           );
         },
-        itemCount: images.length,
+        itemCount: widget.images.length,
         loadingBuilder:
             (context, event) => Center(
               child: Column(
@@ -3924,20 +3994,6 @@ class FullScreenImageViewer extends StatelessWidget {
                       strokeWidth: 2,
                     ),
                   ),
-                  // PopupMenuItem(
-                  //   value: 'pdf',
-                  //   child: Row(
-                  //     children: [
-                  //       Icon(
-                  //         Icons.picture_as_pdf_outlined,
-                  //         size: 18,
-                  //         color: Colors.grey.shade600,
-                  //       ),
-                  //       const SizedBox(width: 12),
-                  //       const Text('Generate PDF'),
-                  //     ],
-                  //   ),
-                  // ),
                   const SizedBox(height: 16),
                   const Text(
                     'Loading image...',
@@ -3947,13 +4003,13 @@ class FullScreenImageViewer extends StatelessWidget {
               ),
             ),
         backgroundDecoration: const BoxDecoration(color: Colors.black),
-        pageController: PageController(initialPage: initialIndex),
+        pageController: _pageController,
         onPageChanged: (index) {
-          // Update app bar title if needed
+          setState(() {
+            _currentIndex = index;
+          });
         },
       ),
     );
   }
-
-  
 }

@@ -41,13 +41,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   late List<String> _tabs;
   int _selectedTabIndex = 0;
   String _mapOrderToUiStatus(Order order) {
-    // Bulk orders: allow Partial Delivery tab
-    final isBulk = (order.orderType?.toLowerCase() == 'bulk');
     switch (order.status) {
       case OrderStatus.pending:
         return 'Pending';
       case OrderStatus.partialDelivery:
-        return isBulk ? 'Partially Delivered' : 'In Progress';
+        return 'Partially Delivered'; // Show for both bulk and single orders
       case OrderStatus.cancelled:
         return 'Cancelled';
       case OrderStatus.Delivered:
@@ -195,6 +193,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         'All',
         'Pending',
         'In Progress',
+        'Partially Delivered', // Added for single orders too
         'Completed',
         'Delivered',
         'Cancelled',

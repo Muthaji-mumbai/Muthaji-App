@@ -63,7 +63,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   firebase_core: ^4.1.0
   firebase_messaging: ^16.0.1
-  flutter_local_notifications: ^19.5.0
+  flutter_local_notifications: 
   syncfusion_flutter_pdfviewer: ^31.1.23
   listen_sharing_intent: ^1.9.2  
   web: 
