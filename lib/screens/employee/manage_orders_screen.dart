@@ -3028,7 +3028,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               fontWeight: FontWeight.w700,
               color: Colors.black87,
             ),
-            maxLines: 2,
+            maxLines: null,
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -3127,15 +3127,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           if (order.ornamentDetails.isNotEmpty) ...[
             const SizedBox(height: 20),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.amber.withOpacity(0.3),
-                  width: 2,
-                ),
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+           
               child: Row(
                 children: [
                   // Icon(
@@ -3162,7 +3155,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               final detail = entry.value;
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -3339,7 +3332,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                           fontSize: 12,
                                           color: pd.deliverynote?.isNotEmpty == true ? Colors.black87 : Colors.grey,
                                         ),
-                                        maxLines: 2,
+                                        maxLines: null,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),

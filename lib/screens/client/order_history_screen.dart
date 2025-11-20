@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart'; // For loading asset images
 import 'package:soloshine/screens/common/pdf_viewer_screen.dart';
 import 'package:soloshine/screens/employee/manage_orders_screen.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
@@ -12,8 +11,7 @@ import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
 import '../../services/auth_service.dart';
-import 'package:photo_view/photo_view.dart';
-import 'package:photo_view/photo_view_gallery.dart';
+
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -846,99 +844,94 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       children: [
         Card(
           elevation: 2,
-          margin: const EdgeInsets.all(AppConstants.spacingM),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppConstants.spacingL),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with status and actions
-
-                // Order Information Section
-                _buildOrderInfoSection(order),
-
-                // Partial Delivery Status
-                if (order.status == OrderStatus.partialDelivery) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+       
+        
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with status and actions
+          
+              // Order Information Section
+              _buildOrderInfoSection(order),
+          
+              // Partial Delivery Status
+              if (order.status == OrderStatus.partialDelivery) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppConstants.partialDeliveryColor.withOpacity(
+                      0.1,
                     ),
-                    decoration: BoxDecoration(
-                      color: AppConstants.partialDeliveryColor.withOpacity(
-                        0.1,
-                      ),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: AppConstants.partialDeliveryColor
-                            .withOpacity(0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.local_shipping_outlined,
-                          size: 14,
-                          color: AppConstants.partialDeliveryColor,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Delivered: ${order.totalDeliveryCount}/${order.totalQuantity}',
-                          style: TextStyle(
-                            color: AppConstants.partialDeliveryColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (order.shouldBeDelivered) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              'READY FOR COMPLETION',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: AppConstants.partialDeliveryColor
+                          .withOpacity(0.3),
                     ),
                   ),
-                ],
-
-                // Ornament Details Section
-                if (order.ornamentDetails.isNotEmpty) ...[
-                  const SizedBox(height: AppConstants.spacingL),
-                  _buildOrnamentDetailsSection(order),
-                ],
-
-                // Notes Section
-                if (order.notes != null && order.notes!.isNotEmpty) ...[
-                  const SizedBox(height: AppConstants.spacingL),
-                  _buildNotesSection(order),
-                ],
-
-                const SizedBox(height: AppConstants.spacingL),
-
-                // Action Buttons Section
-                _buildActionButtonsSection(order),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.local_shipping_outlined,
+                        size: 14,
+                        color: AppConstants.partialDeliveryColor,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Delivered: ${order.totalDeliveryCount}/${order.totalQuantity}',
+                        style: TextStyle(
+                          color: AppConstants.partialDeliveryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (order.shouldBeDelivered) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'READY FOR COMPLETION',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ],
-            ),
+          
+              // Ornament Details Section
+              if (order.ornamentDetails.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.spacingL),
+                _buildOrnamentDetailsSection(order),
+              ],
+          
+              // Notes Section
+              if (order.notes != null && order.notes!.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.spacingL),
+                _buildNotesSection(order),
+              ],
+          
+              const SizedBox(height: AppConstants.spacingL),
+          
+              // Action Buttons Section
+              _buildActionButtonsSection(order),
+            ],
           ),
         ),
 
@@ -1304,17 +1297,17 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                       ),
                                     ),
                                     SizedBox(
-                                      width: 60,
+                                      width: 50,
                                       child: Text(
                                         'Qty',
-                                        textAlign: TextAlign.right,
+                                        textAlign: TextAlign.left,
                                         style: AppConstants.bodySmall.copyWith(
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ),
                                     SizedBox(
-                                      width: 60,
+                                      width: 100,
                                       child: Text(
                                         'Notes',
                                         textAlign: TextAlign.right,
@@ -1363,10 +1356,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                         ),
                                       ),
                                       SizedBox(
-                                        width: 60,
+                                        width: 30,
                                         child: Text(
                                           pd.qty.toString(),
-                                          textAlign: TextAlign.right,
+                                          textAlign: TextAlign.left,
                                           style: AppConstants.bodySmall
                                               .copyWith(
                                                 fontWeight: FontWeight.w600,
@@ -1375,7 +1368,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                         ),
                                       ),
                                       SizedBox(
-                                        width: 60,
+                                        width: 140,
                                         child: Text(
                                           pd.deliverynote ?? '',
                                           textAlign: TextAlign.right,

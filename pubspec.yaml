@@ -51,7 +51,7 @@ dependencies:
   image_editor: ^1.6.0
   image_picker_for_web: ^3.1.0
   pro_image_editor: 
-  file_picker: ^10.3.1
+  file_picker:
   html: ^0.15.6
   flutter_pdfview: ^1.4.3
   pdf: ^3.11.3

@@ -1426,7 +1426,7 @@ if (!_hasRequiredFiles()) {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Order Details', style: AppConstants.headingSmall),
+            
               if (_isEditMode && _existingOrder?.orderNo != null)
                 Row(
                   children: [
