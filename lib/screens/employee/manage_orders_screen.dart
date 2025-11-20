@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -3860,7 +3861,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     }
   }
 }
-
 class FullScreenImageViewer extends StatefulWidget {
   final List<String> images;
   final int initialIndex;
@@ -3878,34 +3878,127 @@ class FullScreenImageViewer extends StatefulWidget {
 class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
   late PageController _pageController;
   int _currentIndex = 0;
+
+  /// One scale-state controller & controller per page
   final Map<int, PhotoViewScaleStateController> _scaleControllers = {};
+  final Map<int, PhotoViewController> _controllers = {};
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
-    
-    // Add ESC key listener for web
-    if (kIsWeb) {
-      RawKeyboard.instance.addListener(_handleKeyEvent);
-    }
+
+    // ESC / arrows / +/- keyboard shortcuts on web & desktop
+    RawKeyboard.instance.addListener(_handleKeyEvent);
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    if (kIsWeb) {
-      RawKeyboard.instance.removeListener(_handleKeyEvent);
+    RawKeyboard.instance.removeListener(_handleKeyEvent);
+
+    for (final c in _scaleControllers.values) {
+      c.dispose();
+    }
+    for (final c in _controllers.values) {
+      c.dispose();
     }
     super.dispose();
   }
 
+  PhotoViewScaleStateController _getScaleController(int index) {
+    return _scaleControllers.putIfAbsent(
+      index,
+      () => PhotoViewScaleStateController(),
+    );
+  }
+
+  PhotoViewController _getController(int index) {
+    return _controllers.putIfAbsent(
+      index,
+      () => PhotoViewController(),
+    );
+  }
+
   void _handleKeyEvent(RawKeyEvent event) {
-    if (event is RawKeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.escape) {
-        Navigator.pop(context);
+    if (event is! RawKeyDownEvent) return;
+
+    final key = event.logicalKey;
+
+    // Close
+    if (key == LogicalKeyboardKey.escape) {
+      Navigator.pop(context);
+      return;
+    }
+
+    // Next / previous image
+    if (key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.keyD) {
+      if (_currentIndex < widget.images.length - 1) {
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
       }
+      return;
+    }
+
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.keyA) {
+      if (_currentIndex > 0) {
+        _pageController.previousPage(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+      return;
+    }
+
+    // Zoom in / out
+    if (key == LogicalKeyboardKey.equal ||
+        key == LogicalKeyboardKey.add ||
+        key == LogicalKeyboardKey.numpadAdd) {
+      _zoomDelta(1.15); // zoom in
+      return;
+    }
+
+    if (key == LogicalKeyboardKey.minus ||
+        key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.numpadSubtract) {
+      _zoomDelta(0.87); // zoom out
+      return;
+    }
+
+    // Reset zoom
+    if (key == LogicalKeyboardKey.digit0 ||
+        key == LogicalKeyboardKey.numpad0) {
+      _resetZoom();
+    }
+  }
+
+  /// Multiply current scale by [factor] and clamp between min & max
+  void _zoomDelta(double factor) {
+    final controller = _controllers[_currentIndex];
+    if (controller == null) return;
+
+    final current = controller.scale ?? 1.0;
+    final minScale = 0.5;
+    final maxScale = 4.0;
+
+    final newScale = (current * factor).clamp(minScale, maxScale);
+    controller.scale = newScale;
+  }
+
+  void _resetZoom() {
+    final controller = _controllers[_currentIndex];
+    final scaleCtrl = _scaleControllers[_currentIndex];
+
+    if (controller != null) {
+      controller.scale = 1.0;
+    }
+    if (scaleCtrl != null) {
+      scaleCtrl.scaleState = PhotoViewScaleState.initial;
     }
   }
 
@@ -3923,85 +4016,96 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
         ),
         title: Text('Image ${_currentIndex + 1} of ${widget.images.length}'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: IconButton(
-              tooltip: 'Toggle zoom',
-              icon: const Icon(Icons.zoom_in),
-              onPressed: () {
-                final controller = _scaleControllers[_currentIndex];
-                if (controller != null) {
-                  final current = controller.scaleState;
-                  controller.scaleState =
-                      current == PhotoViewScaleState.initial
-                          ? PhotoViewScaleState.covering
-                          : PhotoViewScaleState.initial;
-                }
-              },
-            ),
+          IconButton(
+            tooltip: 'Zoom out (- / scroll down)',
+            icon: const Icon(Icons.zoom_out),
+            onPressed: () => _zoomDelta(0.87),
           ),
+          IconButton(
+            tooltip: 'Zoom in (+ / scroll up)',
+            icon: const Icon(Icons.zoom_in),
+            onPressed: () => _zoomDelta(1.15),
+          ),
+          IconButton(
+            tooltip: 'Reset zoom (0)',
+            icon: const Icon(Icons.aspect_ratio),
+            onPressed: _resetZoom,
+          ),
+          const SizedBox(width: 4),
         ],
       ),
-      body: PhotoViewGallery.builder(
-        scrollPhysics: const BouncingScrollPhysics(),
-        builder: (BuildContext context, int index) {
-          final scaleCtrl = _scaleControllers.putIfAbsent(
-            index,
-            () => PhotoViewScaleStateController(),
-          );
-          return PhotoViewGalleryPageOptions(
-            imageProvider: NetworkImage(widget.images[index]),
-            initialScale: PhotoViewComputedScale.contained,
-            heroAttributes: PhotoViewHeroAttributes(tag: index),
-            minScale: PhotoViewComputedScale.contained * 0.5,
-            maxScale: PhotoViewComputedScale.covered * 4.0,
-            gestureDetectorBehavior: HitTestBehavior.translucent,
-            scaleStateController: scaleCtrl,
-            // Custom scale state callbacks for better zoom control
-            scaleStateCycle: (scaleState) {
-              if (scaleState == PhotoViewScaleState.initial) {
-                return PhotoViewScaleState.covering;
-              } else if (scaleState == PhotoViewScaleState.covering) {
-                return PhotoViewScaleState.initial;
-              }
-              return scaleState;
-            },
-          );
+      body: Listener(
+        // Mouse scroll zoom (mainly for web / desktop)
+        onPointerSignal: (PointerSignalEvent event) {
+          if (event is PointerScrollEvent && kIsWeb) {
+            if (event.scrollDelta.dy < 0) {
+              // scroll up -> zoom in
+              _zoomDelta(1.1);
+            } else if (event.scrollDelta.dy > 0) {
+              // scroll down -> zoom out
+              _zoomDelta(0.9);
+            }
+          }
         },
-        itemCount: widget.images.length,
-        loadingBuilder:
-            (context, event) => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: CircularProgressIndicator(
-                      value:
-                          event == null
-                              ? 0
-                              : event.cumulativeBytesLoaded /
-                                  (event.expectedTotalBytes ?? 1),
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
+        child: PhotoViewGallery.builder(
+          scrollPhysics: const BouncingScrollPhysics(),
+          builder: (BuildContext context, int index) {
+            final scaleCtrl = _getScaleController(index);
+            final controller = _getController(index);
+
+            return PhotoViewGalleryPageOptions(
+              imageProvider: NetworkImage(widget.images[index]),
+              initialScale: PhotoViewComputedScale.contained,
+              heroAttributes: PhotoViewHeroAttributes(tag: index),
+              minScale: PhotoViewComputedScale.contained * 0.5,
+              maxScale: PhotoViewComputedScale.covered * 4.0,
+              gestureDetectorBehavior: HitTestBehavior.translucent,
+              scaleStateController: scaleCtrl,
+              controller: controller,
+              // Keep simple toggle between fit & cover when double-tapping
+              scaleStateCycle: (scaleState) {
+                if (scaleState == PhotoViewScaleState.initial) {
+                  return PhotoViewScaleState.covering;
+                } else if (scaleState == PhotoViewScaleState.covering) {
+                  return PhotoViewScaleState.initial;
+                }
+                return scaleState;
+              },
+            );
+          },
+          itemCount: widget.images.length,
+          loadingBuilder: (context, event) => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(
+                    value: event == null
+                        ? null
+                        : event.cumulativeBytesLoaded /
+                            (event.expectedTotalBytes ?? 1),
+                    color: Colors.white,
+                    strokeWidth: 2,
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Loading image...',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Loading image...',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ],
             ),
-        backgroundDecoration: const BoxDecoration(color: Colors.black),
-        pageController: _pageController,
-        onPageChanged: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+          ),
+          backgroundDecoration: const BoxDecoration(color: Colors.black),
+          pageController: _pageController,
+          onPageChanged: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+        ),
       ),
     );
   }
