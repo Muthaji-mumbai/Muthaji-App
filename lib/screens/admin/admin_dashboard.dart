@@ -10,7 +10,7 @@ import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
 import '../../services/user_service.dart';
-import '../../models/user.dart';
+import '../../models/user.dart';  
 import '../../models/order.dart';
 import '../dashboard_screen.dart';
 import '../client/create_order_screen.dart';
@@ -50,9 +50,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   // Party/User filtering for reports
   String? _selectedUserId;
+  
   String? _selectedUserName;
   List<User> _allUsers = [];
   bool _loadingUsers = false;
+bool _isLoadingOrders = false;
 
   // Date filtering for reports
   DateTime? _startDate;
@@ -287,9 +289,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'pendingOrders': 0,
         'WaxOrders': 0,
         'DCOrders': 0,
-        'DeliveredOrders': 0,
+        'CastedOrders': 0,
         'cancelledOrders': 0,
-
+        'completedOrders': 0,
+        'Delivered': 0,
+        'Partial Delivery': 0,
+        'PendingDisp': 0,
         'totalRevenue': 0.0,
       };
       _dashboardStats = {
@@ -321,80 +326,84 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // Silently fail for user loading as it's not critical
     }
   }
-
-  Future<void> _loadOrdersWithPartyFilter() async {
-    try {
-      print('Selected party ID: $_selectedUserId');
-      final authProvider = context.read<AuthProvider>();
-      final token = authProvider.currentUser?.token;
+Future<void> _loadOrdersWithPartyFilter() async {
+  setState(() {
+    _isLoadingOrders = true; // Show loader
+  });
+  try {
+    print('Selected party ID: $_selectedUserId');
+    print('Selected party name: $_selectedUserName');
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.currentUser?.token;
+    
+    if (token != null) {
       
-      if (token != null) {
-        // Call API with partyname parameter if a party is selected
-        final allOrders = await OrderService.getAllOrders(
-          token,
-          partyname: _selectedUserId,
-          startDate: _startDate,
-          endDate: _endDate,
-        );
-        
-        setState(() {
-          _allOrders = allOrders;
-        });
-      }
-    } catch (e) {
-      print('Error loading orders with party filter: $e');
-      // Show error to user
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load orders: $e'),
-            backgroundColor: AppConstants.errorColor,
-          ),
-        );
-      }
-    }
-  }
+      final allOrders = await OrderService.getAllOrders(
+        token,
+        partyname: _selectedUserId,
+        startDate: _startDate,
+        endDate: _endDate,
+      );
+      print('Fetched orders: $allOrders');
+      if (!mounted) return;
 
-  Future<void> _selectDate({required bool isStartDate}) async {
-    final initialDate =
-        isStartDate
-            ? (_startDate ?? DateTime.now())
-            : (_endDate ?? DateTime.now());
-
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-
-    if (pickedDate != null) {
       setState(() {
-        if (isStartDate) {
-          _startDate = pickedDate;
-          // If end date is before start date, adjust it
-          if (_endDate != null && _endDate!.isBefore(_startDate!)) {
-            _endDate = _startDate;
-          }
-        } else {
-          _endDate = pickedDate;
-          // If start date is after end date, adjust it
-          if (_startDate != null && _startDate!.isAfter(_endDate!)) {
-            _startDate = _endDate;
-          }
-        }
+        _allOrders = allOrders;
+        _isLoadingOrders = false; // Hide loader after data is loaded
       });
-      // Charts will automatically update since they use the filtered data
+    }
+  } catch (e) {
+    print('Error loading orders with party filter: $e');
+    if (mounted) {
+      setState(() {
+        _isLoadingOrders = false; // Hide loader on error
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load orders: $e'),
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
     }
   }
+}  
+Future<void> _selectDate({required bool isStartDate}) async {
+  final initialDate = isStartDate
+      ? (_startDate ?? DateTime.now())
+      : (_endDate ?? DateTime.now());
 
-  void _clearDateFilters() {
+  final pickedDate = await showDatePicker(
+    context: context,
+    initialDate: initialDate,
+    firstDate: DateTime(2020),
+    lastDate: DateTime(2030),
+  );
+
+  if (pickedDate != null) {
     setState(() {
-      _startDate = null;
-      _endDate = null;
+      if (isStartDate) {
+        _startDate = pickedDate;
+        if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+          _endDate = _startDate;
+        }
+      } else {
+        _endDate = pickedDate;
+        if (_startDate != null && _startDate!.isAfter(_endDate!)) {
+          _startDate = _endDate;
+        }
+      }
     });
-    // Charts will automatically update since they use the filtered data
+    await _loadOrdersWithPartyFilter(); // Reload orders with new dates
   }
+}
+
+void _clearDateFilters() {
+  setState(() {
+    _startDate = null;
+    _endDate = null;
+  });
+  _loadOrdersWithPartyFilter(); // Reload orders without date filters
+}
 
   @override
   Widget build(BuildContext context) {
@@ -1521,25 +1530,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
   Widget _buildReportsView() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildPartySelectionSection(), // Party selection for filtering reports
-        const SizedBox(height: AppConstants.spacingL),
-        _buildDetailedStatistics(), // Moved detailed stats higher for priority
+  print('Rendering Reports - Orders count: ${_allOrders.length}');
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildPartySelectionSection(),
+      const SizedBox(height: AppConstants.spacingL),
+      if (_isLoadingOrders)
+        const Center(
+          child: CircularProgressIndicator(
+            color: AppConstants.primaryColor,
+          ),
+        )
+      else if (_allOrders.isEmpty)
+        const Center(
+          child: Text(
+            'No orders available for the selected party.',
+         
+          ),
+        )
+      else ...[
+        _buildDetailedStatistics(),
         const SizedBox(height: AppConstants.spacingL),
         _buildTypePieChartsSection(),
         const SizedBox(height: AppConstants.spacingL),
-        _buildTypeStatusBarCharts(),
-        const SizedBox(height: AppConstants.spacingL),
+        // _buildTypeStatusBarCharts(),
+        // const SizedBox(height: AppConstants.spacingL),
         _buildPieChartsSection(),
       ],
-    );
-  }
-
-  Widget _buildPartySelectionSection() {
+    ],
+  );
+}  Widget _buildPartySelectionSection() {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingM),
       decoration: BoxDecoration(
@@ -1630,6 +1652,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ? _allUsers.firstWhere((u) => u.id == value).name
                               : null;
                     });
+                    print('Selected User ID: $_selectedUserId');
                     // Reload orders with party filter
                     await _loadOrdersWithPartyFilter();
                   },
@@ -1761,35 +1784,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildTypePieChartsSection() {
-    // Filter orders by selected party and date range
+    // Orders are already filtered by party and date from API call
+    // No need to filter again - just use _allOrders directly
     var filteredOrders = _allOrders;
-
-    // Filter by party
-    if (_selectedUserId != null) {
-      filteredOrders =
-          filteredOrders
-              .where((order) => order.clientId == _selectedUserId)
-              .toList();
-    }
-
-    // Filter by date range
-    if (_startDate != null) {
-      filteredOrders =
-          filteredOrders.where((order) {
-            final orderDate = order.orderDate ?? order.createdAt;
-            return orderDate.isAfter(
-              _startDate!.subtract(const Duration(days: 1)),
-            );
-          }).toList();
-    }
-
-    if (_endDate != null) {
-      filteredOrders =
-          filteredOrders.where((order) {
-            final orderDate = order.orderDate ?? order.createdAt;
-            return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
-          }).toList();
-    }
 
     // Compute per type status counts from filtered orders
     int singlePending = 0,
@@ -1798,7 +1795,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         singleCancelled = 0,
         singleCompleted = 0,
         singleDelivered = 0,
-        singleCasted = 0;
+        singleCasted = 0,
+        singlePendingDisp = 0;
 
     int singleDelay = 0, singleDue = 0, singlePartialDelivery = 0;
     int bulkPending = 0,
@@ -1807,13 +1805,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
         bulkCompleted = 0,
         bulkCancelled = 0,
         bulkDelivered =0 ,
-        bulkCasted = 0;
+        bulkCasted = 0,
+        bulkPendingDisp = 0;
 
     int bulkDelay = 0, bulkDue = 0, bulkPartialDelivery = 0;
 
     for (final o in filteredOrders) {
-      final isSingle = (o.orderType ?? '').toLowerCase().contains('single');
-      final isBulk = (o.orderType ?? '').toLowerCase().contains('bulk');
+      final isSingle = (o.orderType ?? '').toLowerCase() == 'single';
+      final isBulk = (o.orderType ?? '').toLowerCase() == 'bulk';
       if (!isSingle && !isBulk) continue; // skip unknown types
 
       void addTo(bool toSingle) {
@@ -1843,7 +1842,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
             break;
           case OrderStatus.PendingDisp:
-            toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
+            toSingle ? singlePendingDisp++ : bulkPendingDisp++;
             break;
           case OrderStatus.Completed:
             toSingle ? singleCompleted++ : bulkCompleted++;
@@ -1894,6 +1893,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'value': singleDelivered.toDouble(),
         'color': AppConstants.deliveredColor,
       },
+      {
+        'label': 'Pending Disp',
+        'value': singlePendingDisp.toDouble(),
+        'color': AppConstants.secondaryColor,
+      },
     ];
 
     final bulkData = [
@@ -1936,6 +1940,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'label': 'Delivered',
         'value': bulkDelivered.toDouble(),
         'color': AppConstants.deliveredColor,
+      },
+      {
+        'label': 'Pending Disp',
+        'value': bulkPendingDisp.toDouble(),
+        'color': AppConstants.secondaryColor,
       },
     ];
 
@@ -2283,46 +2292,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildPieChartsSection() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
 
+    // Orders are already filtered by party and date from API call
+    // No need to filter again - just use _allOrders directly
     var filteredOrders = _allOrders;
 
-    // Filter by party
-    if (_selectedUserId != null) {
-      filteredOrders =
-          filteredOrders
-              .where((order) => order.clientId == _selectedUserId)
-              .toList();
-    }
-
-    // Filter by date range
-    if (_startDate != null) {
-      filteredOrders =
-          filteredOrders.where((order) {
-            final orderDate = order.orderDate ?? order.createdAt;
-            return orderDate.isAfter(
-              _startDate!.subtract(const Duration(days: 1)),
-            );
-          }).toList();
-    }
-
-    if (_endDate != null) {
-      filteredOrders =
-          filteredOrders.where((order) {
-            final orderDate = order.orderDate ?? order.createdAt;
-            return orderDate.isBefore(_endDate!.add(const Duration(days: 1)));
-          }).toList();
-    }
-
-    // Calculate filtered statistics
+    // Calculate filtered statistics - Fixed order type matching
     final orderTypeCounts = {
       'single':
           filteredOrders
               .where(
-                (o) => (o.orderType ?? '').toLowerCase().contains('single'),
+                (o) => (o.orderType ?? '').toLowerCase() == 'single',
               )
               .length,
       'bulk':
           filteredOrders
-              .where((o) => (o.orderType ?? '').toLowerCase().contains('bulk'))
+              .where((o) => (o.orderType ?? '').toLowerCase() == 'bulk')
               .length,
       'total': filteredOrders.length,
     };
@@ -2336,6 +2320,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
           filteredOrders.where((o) => o.status == OrderStatus.Delivered).length,
       'cancelled':
           filteredOrders.where((o) => o.status == OrderStatus.cancelled).length,
+      'completed':
+          filteredOrders.where((o) => o.status == OrderStatus.Completed).length,
+      'casted':
+          filteredOrders.where((o) => o.status == OrderStatus.Casted).length,
+      'partial delivery':
+          filteredOrders.where((o) => o.status == OrderStatus.partialDelivery).length,
+      'pendingdisp':
+          filteredOrders.where((o) => o.status == OrderStatus.PendingDisp).length,
+
     };
 
     return Column(
@@ -2346,38 +2339,58 @@ class _AdminDashboardState extends State<AdminDashboard> {
         isMobile
             ? Column(
               children: [
-                _buildPieChart(
-                  title: 'Order Status Distribution',
-                  data: [
-                    {
-                      'label': 'Pending',
-                      'value': statusCounts['pending']!.toDouble(),
-                      'color': AppConstants.warningColor,
-                    },
-                    {
-                      'label': 'Wax',
-                      'value': statusCounts['Wax']!.toDouble(),
-                      'color': AppConstants.secondaryColor,
-                    },
-                    {
-                      'label': 'DC',
-                      'value': statusCounts['DC']!.toDouble(),
-                      'color': AppConstants.successColor,
-                    },
-                    {
-                      'label': 'Delivered',
-                      'value': statusCounts['Delivered']!.toDouble(),
-                      'color': AppConstants.deliveredColor,
-                    },
-                    {
-                      'label': 'Cancelled',
-                      'value': statusCounts['cancelled']!.toDouble(),
-                      'color': AppConstants.errorColor,
-                    },
-                  ],
-                  onItemTap: _onStatusItemTap,
-                ),
-                const SizedBox(height: AppConstants.spacingL),
+                // _buildPieChart(
+                //   title: 'Order Status Distribution',
+                //   data: [
+                //     {
+                //       'label': 'Pending',
+                //       'value': statusCounts['pending']!.toDouble(),
+                //       'color': AppConstants.warningColor,
+                //     },
+                //     {
+                //       'label': 'Wax',
+                //       'value': statusCounts['Wax']!.toDouble(),
+                //       'color': AppConstants.secondaryColor,
+                //     },
+                //     {
+                //       'label': 'DC',
+                //       'value': statusCounts['DC']!.toDouble(),
+                //       'color': AppConstants.successColor,
+                //     },
+                //     {
+                //       'label': 'Delivered',
+                //       'value': statusCounts['Delivered']!.toDouble(),
+                //       'color': AppConstants.deliveredColor,
+                //     },
+                //     {
+                //       'label': 'Cancelled',
+                //       'value': statusCounts['cancelled']!.toDouble(),
+                //       'color': AppConstants.errorColor,
+                //     },
+                //     {
+                //       'label': 'Completed',
+                //       'value': statusCounts['completed']!.toDouble(),
+                //       'color': AppConstants.successColor,
+                //     },
+                //     {
+                //       'label': 'Casted',
+                //       'value': statusCounts['casted']!.toDouble(),
+                //       'color': AppConstants.primaryColor,
+                //     },
+                //     {
+                //       'label': 'Partial Delivery',
+                //       'value': statusCounts['partial delivery']!.toDouble(),
+                //       'color': AppConstants.warningColor,
+                //     },
+                //     {
+                //       'label': 'Pending Disp',
+                //       'value': statusCounts['pendingdisp']!.toDouble(),
+                //       'color': AppConstants.secondaryColor,
+                //     },
+                //   ],
+                //   onItemTap: _onStatusItemTap,
+                // ),
+                // const SizedBox(height: AppConstants.spacingL),
                 _buildPieChart(
                   title: 'Order Type Distribution',
                   data: [
@@ -2399,40 +2412,40 @@ class _AdminDashboardState extends State<AdminDashboard> {
             : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _buildPieChart(
-                    title: 'Order Status Distribution',
-                    data: [
-                      {
-                        'label': 'Pending',
-                        'value': statusCounts['pending']!.toDouble(),
-                        'color': AppConstants.warningColor,
-                      },
-                      {
-                        'label': 'Wax',
-                        'value': statusCounts['Wax']!.toDouble(),
-                        'color': AppConstants.secondaryColor,
-                      },
-                      {
-                        'label': 'DC',
-                        'value': statusCounts['DC']!.toDouble(),
-                        'color': AppConstants.successColor,
-                      },
-                      {
-                        'label': 'Delivered',
-                        'value': statusCounts['Delivered']!.toDouble(),
-                        'color': AppConstants.deliveredColor,
-                      },
-                      {
-                        'label': 'Cancelled',
-                        'value': statusCounts['cancelled']!.toDouble(),
-                        'color': AppConstants.errorColor,
-                      },
-                    ],
-                    onItemTap: _onStatusItemTap,
-                  ),
-                ),
-                const SizedBox(width: AppConstants.spacingL),
+                // Expanded(
+                //   child: _buildPieChart(
+                //     title: 'Order Status Distribution',
+                //     data: [
+                //       {
+                //         'label': 'Pending',
+                //         'value': statusCounts['pending']!.toDouble(),
+                //         'color': AppConstants.warningColor,
+                //       },
+                //       {
+                //         'label': 'Wax',
+                //         'value': statusCounts['Wax']!.toDouble(),
+                //         'color': AppConstants.secondaryColor,
+                //       },
+                //       {
+                //         'label': 'DC',
+                //         'value': statusCounts['DC']!.toDouble(),
+                //         'color': AppConstants.successColor,
+                //       },
+                //       {
+                //         'label': 'Delivered',
+                //         'value': statusCounts['Delivered']!.toDouble(),
+                //         'color': AppConstants.deliveredColor,
+                //       },
+                //       {
+                //         'label': 'Cancelled',
+                //         'value': statusCounts['cancelled']!.toDouble(),
+                //         'color': AppConstants.errorColor,
+                //       },
+                //     ],
+                //     onItemTap: _onStatusItemTap,
+                //   ),
+                // ),
+                // const SizedBox(width: AppConstants.spacingL),
                 Expanded(
                   child: _buildPieChart(
                     title: 'Order Type Distribution',
@@ -2788,10 +2801,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       'value': _orderStats['WaxOrders']?.toString() ?? '0',
                     },
                     {
+                      'label': 'Casted',
+                      'value': _orderStats['CastedOrders']?.toString() ?? '0',
+                    },
+                    {
                       'label': 'DC',
                       'value': _orderStats['DCOrders']?.toString() ?? '0',
                     },
-                     {
+                    {
+                      'label': 'Pending Disp',
+                      'value': _orderStats['PendingDisp']?.toString() ?? '0',
+                    },
+                    {
+                      'label': 'Partial Delivery',
+                      'value':
+                          _orderStats['Partial Delivery']?.toString() ?? '0',
+                    },
+                    {
+                      'label': 'Completed',
+                      'value':
+                          _orderStats['completedOrders']?.toString() ?? '0',
+                    },
+                    {
                       'label': 'Delivered',
                       'value':
                           _orderStats['Delivered']?.toString() ?? '0',
@@ -2863,10 +2894,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         'value': _orderStats['WaxOrders']?.toString() ?? '0',
                       },
                       {
+                        'label': 'Casted',
+                        'value': _orderStats['CastedOrders']?.toString() ?? '0',
+                      },
+                      {
                         'label': 'DC',
                         'value': _orderStats['DCOrders']?.toString() ?? '0',
                       },
-                              {
+                      {
+                        'label': 'Pending Disp',
+                        'value': _orderStats['PendingDisp']?.toString() ?? '0',
+                      },
+                      {
+                        'label': 'Partial Delivery',
+                        'value':
+                            _orderStats['Partial Delivery']?.toString() ?? '0',
+                      },
+                      {
+                        'label': 'Completed',
+                        'value':
+                            _orderStats['completedOrders']?.toString() ?? '0',
+                      },
+                      {
                         'label': 'Delivered',
                         'value': _orderStats['Delivered']?.toString() ?? '0',
                       },
@@ -3061,9 +3110,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 'casted':
         status = OrderStatus.Casted;
         break;
+      case 'completed':
+        status = OrderStatus.Completed;
+        break;
       case 'wax':
         status = OrderStatus.Wax;
         break;
+      
       case 'dc':
         status = OrderStatus.DC;
         break;
@@ -3079,10 +3132,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 'partial delivery':
         status = OrderStatus.partialDelivery;
         break;
-      case 'Delivered':
+      case 'delivered':
         status = OrderStatus.Delivered;
         break;
       case 'pendingdisp':
+      case 'pending disp':
         status = OrderStatus.PendingDisp;
         break;
       default:
@@ -3134,6 +3188,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 'casted':
         status = OrderStatus.Casted;
         break;
+      case 'completed':
+        status = OrderStatus.Completed;
+        break;
       case 'wax':
         status = OrderStatus.Wax;
         break;
@@ -3149,13 +3206,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 'due':
         status = OrderStatus.due;
         break;
-        case 'Delivered':
+      case 'delivered':
         status = OrderStatus.Delivered;
         break;
       case 'partial delivery':
         status = OrderStatus.partialDelivery;
         break;
       case 'pendingdisp':
+      case 'pending disp':
         status = OrderStatus.PendingDisp;
         break;
       default:
@@ -3172,6 +3230,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
               initialOrderType: 'Single',
               initialUserId: _selectedUserId,
               initialUserName: _selectedUserName,
+              initialStartDate: _startDate,
+              initialEndDate: _endDate,
             ),
       ),
     );
@@ -3198,6 +3258,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 'cancelled':
         status = OrderStatus.cancelled;
         break;
+      case 'completed':
+        status = OrderStatus.Completed;
+        break;
       case 'delay':
         status = OrderStatus.delay;
         break;
@@ -3208,9 +3271,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         status = OrderStatus.partialDelivery;
         break;
       case 'pendingdisp':
+      case 'pending disp':
         status = OrderStatus.PendingDisp;
         break;
-        case 'Delivered':
+      case 'delivered':
         status = OrderStatus.Delivered;
         break;
       default:
@@ -3226,6 +3290,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
               initialOrderType: 'Bulk',
               initialUserId: _selectedUserId,
               initialUserName: _selectedUserName,
+              initialStartDate: _startDate,
+              initialEndDate: _endDate,
             ),
       ),
     );

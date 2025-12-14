@@ -764,24 +764,24 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingM,
-                vertical: AppConstants.spacingS,
-              ),
-              decoration: BoxDecoration(
-                color: order.statusColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                border: Border.all(color: order.statusColor.withOpacity(0.3)),
-              ),
-              child: Text(
-                order.statusText,
-                style: AppConstants.bodySmall.copyWith(
-                  color: order.statusColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+            // Container(
+            //   padding: const EdgeInsets.symmetric(
+            //     horizontal: AppConstants.spacingM,
+            //     vertical: AppConstants.spacingS,
+            //   ),
+            //   decoration: BoxDecoration(
+            //     color: order.statusColor.withOpacity(0.15),
+            //     borderRadius: BorderRadius.circular(AppConstants.radiusS),
+            //     border: Border.all(color: order.statusColor.withOpacity(0.3)),
+            //   ),
+            //   child: Text(
+            //     order.statusText,
+            //     style: AppConstants.bodySmall.copyWith(
+            //       color: order.statusColor,
+            //       fontWeight: FontWeight.w600,
+            //     ),
+            //   ),
+            // ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -825,6 +825,7 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
                     'Weight: ${d.weight} • Unit: ${d.unit ?? 'g'} • Purity: ${d.purity} • Qty: ${d.quantity}${d.size != null ? ' • Size: ${d.size}' : ''} • Colorstone: ${d.colorstone} • Rhodium: ${d.rhodium} • Dull: ${d.dull}',
                     style: AppConstants.bodySmall.copyWith(
                       color: AppConstants.textSecondaryColor,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   if (d.remarks != null && d.remarks!.isNotEmpty)

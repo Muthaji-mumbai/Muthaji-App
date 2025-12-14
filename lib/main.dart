@@ -12,6 +12,9 @@ import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/push_notification_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:listen_sharing_intent/listen_sharing_intent.dart';
+import 'dart:async';
+import 'screens/client/create_order_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,11 +77,60 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _isInitializing = true;
+  StreamSubscription? _intentDataStreamSubscription;
+  bool _hasSharedIntent = false;
 
   @override
   void initState() {
     super.initState();
     _initializeAuth();
+    _checkForSharedIntent();
+  }
+  
+  @override
+  void dispose() {
+    _intentDataStreamSubscription?.cancel();
+    super.dispose();
+  }
+  
+  // Check if app was opened with shared images
+  void _checkForSharedIntent() {
+    // Check for initial sharing when app was closed
+    ReceiveSharingIntent.instance.getInitialMedia().then((List<dynamic> sharedFiles) {
+      if (sharedFiles.isNotEmpty && mounted) {
+        setState(() {
+          _hasSharedIntent = true;
+        });
+      }
+    });
+    
+    // Listen to media sharing while app is running
+    _intentDataStreamSubscription = ReceiveSharingIntent.instance.getMediaStream().listen(
+      (List<dynamic> sharedFiles) {
+        if (sharedFiles.isNotEmpty && mounted) {
+          setState(() {
+            _hasSharedIntent = true;
+          });
+          _navigateToCreateOrder();
+        }
+      },
+    );
+  } 
+  
+  void _navigateToCreateOrder() {
+    // Wait for auth to complete, then navigate
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        final authProvider = context.read<AuthProvider>();
+        if (authProvider.isLoggedIn) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const CreateOrderScreen(),
+            ),
+          );
+        }
+      }
+    });
   }
 
   Future<void> _initializeAuth() async {
@@ -101,6 +153,17 @@ class _AuthWrapperState extends State<AuthWrapper> {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         if (authProvider.isLoggedIn) {
+          // If we have shared intent, navigate to create order after dashboard loads
+          if (_hasSharedIntent) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {
+                  _hasSharedIntent = false;
+                });
+                _navigateToCreateOrder();
+              }
+            });
+          }
           return const DashboardScreen();
         } else {
           return const LoginScreen();

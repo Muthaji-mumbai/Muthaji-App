@@ -465,6 +465,24 @@ class OrderService {
           allOrders
               .where((order) => order.status == OrderStatus.cancelled)
               .length;
+      final CastedOrders =
+          allOrders.where((order) => order.status == OrderStatus.Casted).length;
+      final completedOrders =
+          allOrders
+              .where((order) => order.status == OrderStatus.Completed)
+              .length;
+      final DeliveredOrders =
+          allOrders
+              .where((order) => order.status == OrderStatus.Delivered)
+              .length;
+      final partialDeliveryOrders =
+          allOrders
+              .where((order) => order.status == OrderStatus.partialDelivery)
+              .length;
+      final PendingDispOrders =
+          allOrders
+              .where((order) => order.status == OrderStatus.PendingDisp)
+              .length;
 
       final totalRevenue = allOrders
           .where((order) => order.status == OrderStatus.DC)
@@ -475,7 +493,12 @@ class OrderService {
         'pendingOrders': pendingOrders,
         'WaxOrders': WaxOrders,
         'DCOrders': DCOrders,
+        'CastedOrders': CastedOrders,
         'cancelledOrders': cancelledOrders,
+        'completedOrders': completedOrders,
+        'Delivered': DeliveredOrders,
+        'Partial Delivery': partialDeliveryOrders,
+        'PendingDisp': PendingDispOrders,
         'totalRevenue': totalRevenue,
       };
     } catch (e) {
@@ -485,7 +508,12 @@ class OrderService {
         'pendingOrders': 0,
         'WaxOrders': 0,
         'DCOrders': 0,
+        'CastedOrders': 0,
         'cancelledOrders': 0,
+        'completedOrders': 0,
+        'Delivered': 0,
+        'Partial Delivery': 0,
+        'PendingDisp': 0,
         'totalRevenue': 0.0,
       };
     }

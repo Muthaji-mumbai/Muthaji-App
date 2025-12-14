@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart'; // For loading asset images
 import 'package:soloshine/screens/common/pdf_viewer_screen.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:soloshine/screens/employee/manage_orders_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:soloshine/screens/client/create_order_screen.dart';
@@ -11,6 +11,7 @@ import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
 import '../../services/auth_service.dart';
+
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -37,23 +38,18 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   // Tab definitions
   late List<String> _tabs;
   int _selectedTabIndex = 0;
-
-  // Helper: Map backend status to UI status
   String _mapOrderToUiStatus(Order order) {
-    // Bulk orders: allow Partial Delivery tab
-    final isBulk = (order.orderType?.toLowerCase() == 'bulk');
     switch (order.status) {
       case OrderStatus.pending:
         return 'Pending';
       case OrderStatus.partialDelivery:
-        return isBulk ? 'Partially Delivered' : 'In Progress';
+        return 'Partially Delivered'; // Show for both bulk and single orders
       case OrderStatus.cancelled:
         return 'Cancelled';
-      // Delivered: treat DC and Delivered as delivered
-      case OrderStatus.DC:
       case OrderStatus.Delivered:
-      case OrderStatus.Completed:
         return 'Delivered';
+      case OrderStatus.Completed:
+        return 'Completed'; // Separate status for Completed
       // In Progress: all other statuses (Casted, Wax, PendingDisp, etc.)
       default:
         return 'In Progress';
@@ -165,6 +161,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       'Pending',
       'In Progress',
       'Partially Delivered',
+      'Completed',
       'Delivered',
       'Cancelled',
     ];
@@ -185,15 +182,27 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         'Pending',
         'In Progress',
         'Partially Delivered',
+        'Completed',
         'Delivered',
         'Cancelled',
       ];
     } else {
-      _tabs = ['All', 'Pending', 'In Progress', 'Delivered', 'Cancelled'];
+      _tabs = [
+        'All',
+        'Pending',
+        'In Progress',
+        'Partially Delivered', // Added for single orders too
+        'Completed',
+        'Delivered',
+        'Cancelled',
+      ];
     }
-    return _tabs;
+    if (_tabController.length != _tabs.length) {
+      _tabController.dispose();
+      // _initializeTabController(); // Reinitialize with new length
+    }
+    setState(() {}); // Refresh UI
   }
-
 
   @override
   void dispose() {
@@ -296,6 +305,31 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     _filteredOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
+  Map<String, int> _getStatusCounts() {
+    final counts = <String, int>{};
+    for (final order in _allOrders) {
+      final status = _mapOrderToUiStatus(order);
+      counts[status] = (counts[status] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  Widget _buildTabWithCount(String tabName) {
+    final counts = _getStatusCounts();
+    int count = 0;
+
+    if (tabName == 'All') {
+      count = _allOrders.length;
+    } else {
+      count = counts[tabName] ?? 0;
+    }
+
+    return Tab(
+      text: '$tabName($count)',
+      height: 48,
+    );
+  }
+
   @override
   @override
   Widget build(BuildContext context) {
@@ -330,10 +364,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                 fontWeight: FontWeight.w500,
               ),
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              tabs: _tabs.map((t) => Tab(
-                text: t,
-                height: 48,
-              )).toList(),
+              tabs: _tabs.map((t) => _buildTabWithCount(t)).toList(),
             ),
           ),
         ),
@@ -341,14 +372,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       body: TabBarView(
         controller: _tabController,
         children: List.generate(_tabs.length, (tabIdx) {
-          // Apply tab filter dynamically
           if (_selectedTabIndex == tabIdx) {
             _applyFilters(); // Ensure filters are applied for the current tab
           }
           return Column(
             children: [
+              // _buildStatusCountSection(),
               _buildSearchAndFilterSection(),
-              // Add date filter section
               _buildDateFilterSection(),
               Expanded(
                 child:
@@ -379,7 +409,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     );
   }
 
-  // New method for date filter section
   Widget _buildDateFilterSection() {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingM),
@@ -400,6 +429,59 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             child: GestureDetector(
               onTap: () => _pickDate(isFrom: false),
               child: _buildDateField(label: 'To', date: _toDate),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget _buildStatusCountSection() {
+  //   final counts = _getStatusCounts();
+  //   final statusColors = {
+  //     'Pending': Colors.orange,
+  //     'In Progress': Colors.blue,
+  //     'Partially Delivered': Colors.purple,
+  //     'Completed': Colors.green,
+  //     'Delivered': Colors.teal,
+  //     'Cancelled': Colors.red,
+  //     'All': AppConstants.primaryColor,
+  //   };
+
+  //   return Container(
+  //     padding: const EdgeInsets.all(AppConstants.spacingM),
+     
+      
+  //   );
+  // }
+
+  Widget _buildStatusCountCard(String status, String count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingM,
+        vertical: AppConstants.spacingS,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            count,
+            style: AppConstants.bodyLarge.copyWith(
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            status,
+            style: AppConstants.bodySmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -595,14 +677,22 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: order.statusColor,
+              color:
+                  order.status == OrderStatus.Completed
+                      ? Colors
+                          .green
+                          .shade600 // Distinct color for Completed
+                      : order.statusColor,
               borderRadius: const BorderRadius.only(
                 topRight: Radius.circular(AppConstants.radiusM),
                 bottomLeft: Radius.circular(8),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: order.statusColor.withOpacity(0.3),
+                  color: (order.status == OrderStatus.Completed
+                          ? Colors.green.shade600
+                          : order.statusColor)
+                      .withOpacity(0.3),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -625,7 +715,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                       ),
                     )
                     : Text(
-                      order.statusText.toUpperCase(),
+                      order.status == OrderStatus.Completed
+                          ? "COMPLETED"
+                          : order.statusText.toUpperCase(),
                       style: AppConstants.bodySmall.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -672,33 +764,34 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                   final isPdf = url.toLowerCase().endsWith('.pdf');
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: isPdf
-                        ? Container(
-                            color: Colors.red.shade50,
-                            child: Icon(
-                              Icons.picture_as_pdf,
-                              color: Colors.red.shade400,
-                              size: 24,
+                    child:
+                        isPdf
+                            ? Container(
+                              color: Colors.red.shade50,
+                              child: Icon(
+                                Icons.picture_as_pdf,
+                                color: Colors.red.shade400,
+                                size: 24,
+                              ),
+                            )
+                            : Image.network(
+                              url,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (c, e, s) => Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.broken_image_outlined,
+                                      color: Colors.grey.shade400,
+                                      size: 20,
+                                    ),
+                                  ),
                             ),
-                          )
-                        : Image.network(
-                            url,
-                            width: 48,
-                            height: 48,
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (c, e, s) => Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.broken_image_outlined,
-                                    color: Colors.grey.shade400,
-                                    size: 20,
-                                  ),
-                                ),
-                          ),
                   );
                 },
               ),
@@ -751,38 +844,94 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       children: [
         Card(
           elevation: 2,
-          margin: const EdgeInsets.all(AppConstants.spacingM),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppConstants.spacingL),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with status and actions
-
-                // Order Information Section
-                _buildOrderInfoSection(order),
-
-                // Ornament Details Section
-                if (order.ornamentDetails.isNotEmpty) ...[
-                  const SizedBox(height: AppConstants.spacingL),
-                  _buildOrnamentDetailsSection(order),
-                ],
-
-                // Notes Section
-                if (order.notes != null && order.notes!.isNotEmpty) ...[
-                  const SizedBox(height: AppConstants.spacingL),
-                  _buildNotesSection(order),
-                ],
-
-                const SizedBox(height: AppConstants.spacingL),
-
-                // Action Buttons Section
-                _buildActionButtonsSection(order),
+       
+        
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with status and actions
+          
+              // Order Information Section
+              _buildOrderInfoSection(order),
+          
+              // Partial Delivery Status
+              if (order.status == OrderStatus.partialDelivery) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppConstants.partialDeliveryColor.withOpacity(
+                      0.1,
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: AppConstants.partialDeliveryColor
+                          .withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.local_shipping_outlined,
+                        size: 14,
+                        color: AppConstants.partialDeliveryColor,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Delivered: ${order.totalDeliveryCount}/${order.totalQuantity}',
+                        style: TextStyle(
+                          color: AppConstants.partialDeliveryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (order.shouldBeDelivered) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'READY FOR COMPLETION',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ],
-            ),
+          
+              // Ornament Details Section
+              if (order.ornamentDetails.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.spacingL),
+                _buildOrnamentDetailsSection(order),
+              ],
+          
+              // Notes Section
+              if (order.notes != null && order.notes!.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.spacingL),
+                _buildNotesSection(order),
+              ],
+          
+              const SizedBox(height: AppConstants.spacingL),
+          
+              // Action Buttons Section
+              _buildActionButtonsSection(order),
+            ],
           ),
         ),
 
@@ -844,11 +993,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           ),
           child: Column(
             children: [
-              _buildInfoRow(
-                icon: Icons.calendar_today_outlined,
-                label: 'Created',
-                value: _formatDate(order.createdAt),
-              ),
+              // _buildInfoRow(
+              //   icon: Icons.calendar_today_outlined,
+              //   label: 'Created',
+              //   value: _formatDate(order.createdAt),
+              // ),
 
               if (order.updatedAt != null) ...[
                 const SizedBox(height: AppConstants.spacingS),
@@ -1082,7 +1231,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                 ],
 
                 // Partial Delivery
-                if (detail.partialDelivery != null && detail.partialDelivery!.isNotEmpty) ...[
+                if (detail.partialDelivery != null &&
+                    detail.partialDelivery!.isNotEmpty) ...[
                   const SizedBox(height: AppConstants.spacingM),
                   Container(
                     width: double.infinity,
@@ -1147,9 +1297,19 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                       ),
                                     ),
                                     SizedBox(
-                                      width: 60,
+                                      width: 50,
                                       child: Text(
                                         'Qty',
+                                        textAlign: TextAlign.left,
+                                        style: AppConstants.bodySmall.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 100,
+                                      child: Text(
+                                        'Notes',
                                         textAlign: TextAlign.right,
                                         style: AppConstants.bodySmall.copyWith(
                                           fontWeight: FontWeight.w600,
@@ -1160,39 +1320,63 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                 ),
                               ),
                               // Data rows
-                              ...detail.partialDelivery!.asMap().entries.map((entry) {
+                              ...detail.partialDelivery!.asMap().entries.map((
+                                entry,
+                              ) {
                                 final pd = entry.value;
-                                final isLast = entry.key == detail.partialDelivery!.length - 1;
+                                final isLast =
+                                    entry.key ==
+                                    detail.partialDelivery!.length - 1;
                                 return Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: AppConstants.spacingS,
                                     vertical: AppConstants.spacingS,
                                   ),
                                   decoration: BoxDecoration(
-                                    border: isLast ? null : Border(
-                                      bottom: BorderSide(
-                                        color: Colors.grey.withOpacity(0.2),
-                                        width: 1,
-                                      ),
-                                    ),
+                                    border:
+                                        isLast
+                                            ? null
+                                            : Border(
+                                              bottom: BorderSide(
+                                                color: Colors.grey.withOpacity(
+                                                  0.2,
+                                                ),
+                                                width: 1,
+                                              ),
+                                            ),
                                   ),
                                   child: Row(
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          DateFormat('dd MMM yyyy').format(pd.deliverydate),
+                                          DateFormat(
+                                            'dd MMM yyyy',
+                                          ).format(pd.deliverydate),
                                           style: AppConstants.bodySmall,
                                         ),
                                       ),
                                       SizedBox(
-                                        width: 60,
+                                        width: 30,
                                         child: Text(
                                           pd.qty.toString(),
+                                          textAlign: TextAlign.left,
+                                          style: AppConstants.bodySmall
+                                              .copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.teal,
+                                              ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 140,
+                                        child: Text(
+                                          pd.deliverynote ?? '',
                                           textAlign: TextAlign.right,
-                                          style: AppConstants.bodySmall.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.teal,
-                                          ),
+                                          style: AppConstants.bodySmall
+                                              .copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.teal,
+                                              ),
                                         ),
                                       ),
                                     ],
@@ -1289,82 +1473,84 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     );
   }
 
- Widget _buildActionButtonsSection(Order order) {
-  final isBulk = (order.orderType?.toLowerCase() == 'bulk');
-  final isSingle = !isBulk;
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Text(
-        'Actions',
-        style: AppConstants.bodyLarge.copyWith(
-          fontWeight: FontWeight.w600,
-          color: AppConstants.primaryColor,
-        ),
-      ),
-      const SizedBox(height: AppConstants.spacingS),
-      Wrap(
-        spacing: AppConstants.spacingS,
-        runSpacing: AppConstants.spacingS,
-        children: [
-          if (isSingle)
-            OutlinedButton.icon(
-              onPressed: () async {
-                final created = await Navigator.push<bool>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CreateOrderScreen(
-                      orderToEdit: order,
-                      cloneFromOrder: true,
-                    ),
-                  ),
-                );
-                if (created == true) {
-                  _loadOrders();
-                }
-              },
-              icon: const Icon(Icons.content_copy_outlined, size: 18),
-              label: const Text('Clone'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingM,
-                  vertical: AppConstants.spacingS,
-                ),
-              ),
-            ),
-          // No edit/cancel for single, nothing for bulk
-        ],
-      ),
-      const SizedBox(height: AppConstants.spacingM),
-      Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => OrderImageGenerator(order: order),
-                ),
-              ),
-              icon: const Icon(Icons.image_outlined),
-              label: const Text('Generate Image'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.accentColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppConstants.spacingM,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
+  Widget _buildActionButtonsSection(Order order) {
+    final isBulk = (order.orderType?.toLowerCase() == 'bulk');
+    final isSingle = !isBulk;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Actions',
+          style: AppConstants.bodyLarge.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppConstants.primaryColor,
           ),
-        ],
-      ),
-    ],
-  );
-}
+        ),
+        const SizedBox(height: AppConstants.spacingS),
+        Wrap(
+          spacing: AppConstants.spacingS,
+          runSpacing: AppConstants.spacingS,
+          children: [
+            if (isSingle)
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final created = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) => CreateOrderScreen(
+                            orderToEdit: order,
+                            cloneFromOrder: true,
+                          ),
+                    ),
+                  );
+                  if (created == true) {
+                    _loadOrders();
+                  }
+                },
+                icon: const Icon(Icons.content_copy_outlined, size: 18),
+                label: const Text('Clone'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingM,
+                    vertical: AppConstants.spacingS,
+                  ),
+                ),
+              ),
+            // No edit/cancel for single, nothing for bulk
+          ],
+        ),
+        const SizedBox(height: AppConstants.spacingM),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OrderImageGenerator(order: order),
+                      ),
+                    ),
+                icon: const Icon(Icons.image_outlined),
+                label: const Text('Generate Image'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.accentColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppConstants.spacingM,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   Widget _buildEmptyState() {
     return Center(
@@ -1453,123 +1639,153 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   //   }
   // }
 
-  Widget _buildImageThumbnails(List<String> images) {
-    return SizedBox(
-      height: 90,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: images.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final url = images[index];
-          final isPdf = url.toLowerCase().endsWith('.pdf');
-          
-          return GestureDetector(
-            onTap: () => _showImagePreview(url),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppConstants.radiusS),
-              child: AspectRatio(
-                aspectRatio: 1,
-                child: isPdf
-                    ? Container(
-                        color: Colors.red.shade50,
-                        alignment: Alignment.center,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.picture_as_pdf,
+Widget _buildImageThumbnails(List<String> images) {
+  return SizedBox(
+    height: 90,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: images.length,
+      separatorBuilder: (_, __) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final url = images[index];
+        final isPdf = url.toLowerCase().endsWith('.pdf');
+        
+        return GestureDetector(
+          onTap: () => _showImagePreview(url, galleryImages: images), // ✅ UPDATED
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppConstants.radiusS),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: isPdf
+                  ? Container(
+                      color: Colors.red.shade50,
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.picture_as_pdf,
+                            color: Colors.red.shade400,
+                            size: 40,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'PDF',
+                            style: TextStyle(
                               color: Colors.red.shade400,
-                              size: 40,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'PDF',
-                              style: TextStyle(
-                                color: Colors.red.shade400,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : Image.network(
-                        url,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (context, error, stack) => Container(
-                              color: AppConstants.backgroundColor,
-                              alignment: Alignment.center,
-                              child: const Icon(Icons.broken_image),
-                            ),
+                          ),
+                        ],
                       ),
-              ),
+                    )
+                  : Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stack) => Container(
+                        color: AppConstants.backgroundColor,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.broken_image),
+                      ),
+                    ),
             ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showImagePreview(String url) async {
-    // Check if the URL is a PDF
-    if (url.toLowerCase().endsWith('.pdf')) {
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PdfViewerScreen(
-            pdfUrl: url,
-            title: 'Order Document',
           ),
-        ),
-      );
+        );
+      },
+    ),
+  );
+}
 
-    } else {
-      // Show image preview dialog
-      showDialog(
-        context: context,
-        builder:
-            (context) => Dialog(
-              insetPadding: const EdgeInsets.all(16),
-              child: Stack(
-                children: [
-                  InteractiveViewer(
-                    minScale: 0.5,
-                    maxScale: 4,
-                    child: AspectRatio(
-                      aspectRatio: 1,
-                      child: Image.network(
-                        url,
-                        fit: BoxFit.contain,
-                        errorBuilder:
-                            (context, error, stack) => SizedBox(
-                              height: 300,
-                              child: Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.broken_image, size: 40),
-                                    SizedBox(height: 8),
-                                    Text('Failed to load image'),
-                                  ],
+  void _showImagePreview(String url, {List<String>? galleryImages}) async {
+    // If single image or no gallery context, show single image
+   
+   
+   
+    if (galleryImages == null || galleryImages.length == 1) {
+      if (url.toLowerCase().endsWith('.pdf')) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) =>
+                    PdfViewerScreen(pdfUrl: url, title: 'Order Document'),
+          ),
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder:
+              (context) => Dialog(
+                insetPadding: const EdgeInsets.all(16),
+                child: Stack(
+                  children: [
+                    InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 4,
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Image.network(
+                          url,
+                          fit: BoxFit.contain,
+                          errorBuilder:
+                              (context, error, stack) => SizedBox(
+                                height: 300,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(Icons.broken_image, size: 40),
+                                      SizedBox(height: 8),
+                                      Text('Failed to load image'),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
+                        ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+        );
+      }
+      return;
+    }
+
+    // Gallery mode - Find index and show full screen gallery
+    final initialIndex = galleryImages.indexOf(url);
+    if (initialIndex == -1) return; // Safety check
+
+    if (url.toLowerCase().endsWith('.pdf')) {
+      // If first image is PDF, open PDF viewer
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                  PdfViewerScreen(pdfUrl: url, title: 'Order Document'),
+        ),
+      );
+    } else {
+      // Show swipeable image gallery
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => FullScreenImageViewer(
+                images: galleryImages,
+                initialIndex: initialIndex,
+              ),
+        ),
       );
     }
   }
