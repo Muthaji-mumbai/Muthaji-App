@@ -269,13 +269,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         final users = await UserService.getAllUsers(token);
 
         setState(() {
-          _allUsers = users;
+          // Filter to only show customers
+          _allUsers =
+              users.where((user) => user.role == UserRole.customer).toList();
           _loadingUsers = false;
         });
       }
     } catch (e) {
       setState(() => _loadingUsers = false);
-
     }
   }
 
@@ -292,12 +293,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     if (!_isPending(order) || order.orderDate == null) return false;
     final now = DateTime.now();
     final days = now.difference(order.orderDate!).inDays;
-    
 
-    final isSingleOrder = order.orderType == 'Single' || order.orderType == null;
+    final isSingleOrder =
+        order.orderType == 'Single' || order.orderType == null;
     final dueThreshold = isSingleOrder ? 7 : 10;
     final delayThreshold = isSingleOrder ? 10 : 15;
-    
+
     return days >= dueThreshold && days < delayThreshold;
   }
 
@@ -306,9 +307,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     final now = DateTime.now();
     final days = now.difference(order.orderDate!).inDays;
 
-    final isSingleOrder = order.orderType == 'Single' || order.orderType == null;
+    final isSingleOrder =
+        order.orderType == 'Single' || order.orderType == null;
     final delayThreshold = isSingleOrder ? 10 : 15;
-    
+
     return days >= delayThreshold;
   }
 
@@ -422,6 +424,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 order.description.toLowerCase().contains(
                   _searchQuery.toLowerCase(),
                 ) ||
+                (order.partynameDisplay?.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ) ??
+                    false) ||
                 order.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
                 (order.orderNo?.toLowerCase().contains(
                       _searchQuery.toLowerCase(),
@@ -900,87 +906,88 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.red.shade600,
-              size: 28,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            const SizedBox(width: 12),
-            const Text('Delete Multiple Orders'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Are you sure you want to delete ${_selectedOrderIds.length} orders? This action cannot be undone.',
-              style: const TextStyle(fontSize: 16),
+            title: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.red.shade600,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                const Text('Delete Multiple Orders'),
+              ],
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    color: Colors.red.shade600,
-                    size: 20,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Are you sure you want to delete ${_selectedOrderIds.length} orders? This action cannot be undone.',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'This will permanently delete all selected orders.',
-                      style: TextStyle(
-                        color: Colors.red.shade700,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        color: Colors.red.shade600,
+                        size: 20,
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'This will permanently delete all selected orders.',
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 12,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text('Cancel'),
               ),
-            ),
-            child: const Text('Cancel'),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Delete All'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 12,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Delete All'),
-          ),
-        ],
-      ),
     );
 
     if (confirmed != true) return;
@@ -989,54 +996,56 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.delete_outline_rounded,
-                    color: Colors.red.shade600,
-                    size: 24,
+      builder:
+          (context) => StatefulBuilder(
+            builder:
+                (context, setState) => AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Deleting Orders',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  minHeight: 8,
-                  backgroundColor: Colors.grey.shade200,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.red.shade600,
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.delete_outline_rounded,
+                            color: Colors.red.shade600,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Deleting Orders',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          minHeight: 8,
+                          backgroundColor: Colors.grey.shade200,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.red.shade600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Deleting 0/${_selectedOrderIds.length}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Deleting 0/${_selectedOrderIds.length}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
           ),
-        ),
-      ),
     );
 
     try {
@@ -1126,22 +1135,27 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
 
     try {
       // Get selected orders
-      final selectedOrders = _allOrders
-          .where((order) => _selectedOrderIds.contains(order.id))
-          .toList();
+      final selectedOrders =
+          _allOrders
+              .where((order) => _selectedOrderIds.contains(order.id))
+              .toList();
 
       if (selectedOrders.isEmpty) return;
 
       // Create CSV content
       StringBuffer csvContent = StringBuffer();
-      
+
       // Add headers
-      csvContent.writeln('Order No,Client Name,Status,Order Type,Order Date,Priority,Description,Total Quantity,Delivery Count,Ornament Name,Weight,Purity,Quantity,Size,Colorstone,Rhodium,Dull,Remarks,Partial Delivery Date,Partial Delivery Qty,Delivery Note');
+      csvContent.writeln(
+        'Order No,Client Name,Status,Order Type,Order Date,Priority,Description,Total Quantity,Delivery Count,Ornament Name,Weight,Purity,Quantity,Size,Colorstone,Rhodium,Dull,Remarks,Partial Delivery Date,Partial Delivery Qty,Delivery Note',
+      );
 
       // Add data rows
       for (final order in selectedOrders) {
-        final orderDate = DateFormat('dd/MM/yyyy HH:mm:ss').format(order.orderDate ?? order.createdAt);
-        
+        final orderDate = DateFormat(
+          'dd/MM/yyyy HH:mm:ss',
+        ).format(order.orderDate ?? order.createdAt);
+
         if (order.ornamentDetails.isEmpty) {
           // Order without ornament details
           csvContent.writeln(
@@ -1155,14 +1169,15 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             '${_escapeCSV(order.description)},'
             '${order.totalQuantity},'
             '${order.totalDeliveryCount},'
-            ',,,,,,,,,'
+            ',,,,,,,,,',
           );
         } else {
           // Order with ornament details
           for (int i = 0; i < order.ornamentDetails.length; i++) {
             final detail = order.ornamentDetails[i];
-            
-            if (detail.partialDelivery == null || detail.partialDelivery!.isEmpty) {
+
+            if (detail.partialDelivery == null ||
+                detail.partialDelivery!.isEmpty) {
               // No partial deliveries
               csvContent.writeln(
                 '${i == 0 ? _escapeCSV(order.orderNo ?? order.id) : ''},'
@@ -1184,14 +1199,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 '${_escapeCSV(detail.rhodium ?? '')},'
                 '${_escapeCSV(detail.dull ?? '')},'
                 '${_escapeCSV(detail.remarks ?? '')}'
-                ',,,'
+                ',,,',
               );
             } else {
               // With partial deliveries
               for (int j = 0; j < detail.partialDelivery!.length; j++) {
                 final pd = detail.partialDelivery![j];
                 final pdDate = DateFormat('dd/MM/yyyy').format(pd.deliverydate);
-                
+
                 csvContent.writeln(
                   '${i == 0 && j == 0 ? _escapeCSV(order.orderNo ?? order.id) : ''},'
                   // '${i == 0 && j == 0 ? _escapeCSV(order.id) : ''},'
@@ -1214,7 +1229,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                   '${j == 0 ? _escapeCSV(detail.remarks ?? '') : ''},'
                   '${_escapeCSV(pdDate)},'
                   '${pd.qty},'
-                  '${_escapeCSV(pd.deliverynote ?? '')}'
+                  '${_escapeCSV(pd.deliverynote ?? '')}',
                 );
               }
             }
@@ -1223,13 +1238,15 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       }
 
       // Save file
-      final fileName = 'Orders_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+      final fileName =
+          'Orders_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
       await downloadCsv(csvContent.toString(), fileName);
-      
+
       // Get the downloads directory to show full path
       final downloadsDir = await getDownloadsDirectory();
-      final fullPath = downloadsDir != null ? '${downloadsDir.path}/$fileName' : fileName;
-      
+      final fullPath =
+          downloadsDir != null ? '${downloadsDir.path}/$fileName' : fileName;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Downloaded: $fileName'),
@@ -1238,7 +1255,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          duration: const Duration(seconds: 5), // Show longer so user can read the path
+          duration: const Duration(
+            seconds: 5,
+          ), // Show longer so user can read the path
         ),
       );
     } catch (e) {
@@ -1261,8 +1280,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     }
     return value;
   }
-
-  
 
   void _toggleFilters() {
     setState(() {
@@ -1373,9 +1390,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     color: Colors.green.shade600,
                   ),
                 ),
-                onPressed: _selectedOrderIds.isEmpty
-                    ? null
-                    : () => _downloadSelectedOrdersAsExcel(),
+                onPressed:
+                    _selectedOrderIds.isEmpty
+                        ? null
+                        : () => _downloadSelectedOrdersAsExcel(),
               ),
             ),
             if (_isAdmin())
@@ -1558,18 +1576,18 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               'Status',
               _selectedStatus,
               [
-                OrderStatus.pending,
-                OrderStatus.delay,
-                OrderStatus.due,
-                OrderStatus.Wax,
-                OrderStatus.DC,
-                OrderStatus.Casted,
-                OrderStatus.PendingDisp,
-                OrderStatus.partialDelivery,
-                OrderStatus.Completed,
-                OrderStatus.Delivered,
-                OrderStatus.cancelled,
-              ]
+                    OrderStatus.pending,
+                    OrderStatus.delay,
+                    OrderStatus.due,
+                    OrderStatus.Wax,
+                    OrderStatus.DC,
+                    OrderStatus.Casted,
+                    OrderStatus.PendingDisp,
+                    OrderStatus.partialDelivery,
+                    OrderStatus.Completed,
+                    OrderStatus.Delivered,
+                    OrderStatus.cancelled,
+                  ]
                   .map(
                     (s) => DropdownMenuItem<OrderStatus>(
                       value: s,
@@ -1659,18 +1677,18 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     'Status',
                     _selectedStatus,
                     [
-                      OrderStatus.pending,
-                      OrderStatus.delay,
-                      OrderStatus.due,
-                      OrderStatus.Wax,
-                      OrderStatus.DC,
-                      OrderStatus.Casted,
-                      OrderStatus.PendingDisp,
-                      OrderStatus.partialDelivery,
-                      OrderStatus.Completed,
-                      OrderStatus.Delivered,
-                      OrderStatus.cancelled,
-                    ]
+                          OrderStatus.pending,
+                          OrderStatus.delay,
+                          OrderStatus.due,
+                          OrderStatus.Wax,
+                          OrderStatus.DC,
+                          OrderStatus.Casted,
+                          OrderStatus.PendingDisp,
+                          OrderStatus.partialDelivery,
+                          OrderStatus.Completed,
+                          OrderStatus.Delivered,
+                          OrderStatus.cancelled,
+                        ]
                         .map(
                           (s) => DropdownMenuItem<OrderStatus>(
                             value: s,
@@ -2012,125 +2030,59 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         ),
       ],
     );
-  }Widget _buildSummaryBar() {
-  if (_allOrders.isEmpty && !_hasActiveFilters()) return const SizedBox.shrink();
-
-  // ---- Live counts for every status (updated on every API call) ----
-  final statusCounts = <OrderStatus, int>{};
-  for (final status in OrderStatus.values) {
-    if (status == OrderStatus.due) {
-      statusCounts[status] = _allOrders.where(_isDue).length;
-    } else if (status == OrderStatus.delay) {
-      statusCounts[status] = _allOrders.where(_isDelay).length;
-    } else {
-      statusCounts[status] = _allOrders.where((o) => o.status == status).length;
-    }
   }
 
-  return Container(
-    color: Colors.white,
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-    child: Row(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                // ---------- ALL CHIP – LOCKED TO FIRST LOAD ----------
-                GestureDetector(
-                  onTap: () {
-                    setState(() => _selectedStatus = null);
-                    _loadData(); // still reloads data, but count stays same
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _selectedStatus == null
-                          ? AppConstants.primaryColor.withOpacity(0.2)
-                          : Colors.grey.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _selectedStatus == null
-                            ? AppConstants.primaryColor
-                            : Colors.grey.withOpacity(0.3),
-                        width: _selectedStatus == null ? 2 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: _selectedStatus == null
-                                ? AppConstants.primaryColor
-                                : Colors.grey,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'All (${_allOrders.length})', // ← NEVER CHANGES
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _selectedStatus == null
-                                ? AppConstants.primaryColor
-                                : Colors.grey,
-                            fontWeight: _selectedStatus == null
-                                ? FontWeight.w600
-                                : FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+  Widget _buildSummaryBar() {
+    if (_allOrders.isEmpty && !_hasActiveFilters())
+      return const SizedBox.shrink();
 
-                // ---------- OTHER STATUS CHIPS – LIVE COUNTS ----------
-                ...[
-                  OrderStatus.pending,
-                  OrderStatus.delay,
-                  OrderStatus.due,
-                  OrderStatus.Wax,
-                  OrderStatus.DC,
-                  OrderStatus.Casted,
-                  OrderStatus.PendingDisp,
-                  OrderStatus.partialDelivery,
-                  OrderStatus.Completed,
-                  OrderStatus.Delivered,
-                  OrderStatus.cancelled,
-                ].map((status) {
-                  final isVirtual = status == OrderStatus.due || status == OrderStatus.delay;
-                  final count = statusCounts[status] ?? 0;
-                  final isSelected = _selectedStatus == status;
+    // ---- Live counts for every status (updated on every API call) ----
+    final statusCounts = <OrderStatus, int>{};
+    for (final status in OrderStatus.values) {
+      if (status == OrderStatus.due) {
+        statusCounts[status] = _allOrders.where(_isDue).length;
+      } else if (status == OrderStatus.delay) {
+        statusCounts[status] = _allOrders.where(_isDelay).length;
+      } else {
+        statusCounts[status] =
+            _allOrders.where((o) => o.status == status).length;
+      }
+    }
 
-                  return GestureDetector(
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  // ---------- ALL CHIP – LOCKED TO FIRST LOAD ----------
+                  GestureDetector(
                     onTap: () {
-                      setState(() {
-                        _selectedStatus = isSelected ? null : status;
-                      });
-                      if (!isVirtual) {
-                        _loadData();          // real status → API call
-                      } else {
-                        _applyFilters();      // Due/Delay → local filter
-                      }
+                      setState(() => _selectedStatus = null);
+                      _loadData(); // still reloads data, but count stays same
                     },
                     child: Container(
                       margin: const EdgeInsets.only(right: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? _getStatusColor(status).withOpacity(0.2)
-                            : _getStatusColor(status).withOpacity(0.1),
+                        color:
+                            _selectedStatus == null
+                                ? AppConstants.primaryColor.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isSelected
-                              ? _getStatusColor(status)
-                              : _getStatusColor(status).withOpacity(0.3),
-                          width: isSelected ? 2 : 1,
+                          color:
+                              _selectedStatus == null
+                                  ? AppConstants.primaryColor
+                                  : Colors.grey.withOpacity(0.3),
+                          width: _selectedStatus == null ? 2 : 1,
                         ),
                       ),
                       child: Row(
@@ -2140,32 +2092,122 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             width: 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: _getStatusColor(status),
+                              color:
+                                  _selectedStatus == null
+                                      ? AppConstants.primaryColor
+                                      : Colors.grey,
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '${_getStatusText(status)} ($count)',
+                            'All (${_allOrders.length})', // ← NEVER CHANGES
                             style: TextStyle(
                               fontSize: 12,
-                              color: _getStatusColor(status),
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              color:
+                                  _selectedStatus == null
+                                      ? AppConstants.primaryColor
+                                      : Colors.grey,
+                              fontWeight:
+                                  _selectedStatus == null
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  );
-                }).toList(),
-              ],
+                  ),
+
+                  // ---------- OTHER STATUS CHIPS – LIVE COUNTS ----------
+                  ...[
+                    OrderStatus.pending,
+                    OrderStatus.delay,
+                    OrderStatus.due,
+                    OrderStatus.Wax,
+                    OrderStatus.DC,
+                    OrderStatus.Casted,
+                    OrderStatus.PendingDisp,
+                    OrderStatus.partialDelivery,
+                    OrderStatus.Completed,
+                    OrderStatus.Delivered,
+                    OrderStatus.cancelled,
+                  ].map((status) {
+                    final isVirtual =
+                        status == OrderStatus.due ||
+                        status == OrderStatus.delay;
+                    final count = statusCounts[status] ?? 0;
+                    final isSelected = _selectedStatus == status;
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedStatus = isSelected ? null : status;
+                        });
+                        if (!isVirtual) {
+                          _loadData(); // real status → API call
+                        } else {
+                          _applyFilters(); // Due/Delay → local filter
+                        }
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              isSelected
+                                  ? _getStatusColor(status).withOpacity(0.2)
+                                  : _getStatusColor(status).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color:
+                                isSelected
+                                    ? _getStatusColor(status)
+                                    : _getStatusColor(status).withOpacity(0.3),
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: _getStatusColor(status),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${_getStatusText(status)} ($count)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _getStatusColor(status),
+                                fontWeight:
+                                    isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}  Widget _buildEmptyState() {
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
     return Container(
       padding: const EdgeInsets.all(40),
       child: Column(
@@ -2229,14 +2271,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     );
   }
 
-  bool _isAdmin() {   
+  bool _isAdmin() {
     final currentUser = AuthService.currentUser;
     return currentUser?.role == UserRole.admin;
   }
 
   String _formatOrderDetailsForCopy(Order order) {
     final buffer = StringBuffer();
-    
+
     buffer.writeln('');
     buffer.writeln('║           📋 ORDER DETAILS                         ');
     buffer.writeln('');
@@ -2246,32 +2288,39 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     buffer.writeln('🔹 Client Name: ${order.clientName}');
     buffer.writeln('🔹 Status: ${_getStatusText(order.status)}');
     buffer.writeln('🔹 Description: ${order.description}');
-    buffer.writeln('🔹 Order Date: ${_formatDate(order.orderDate!)}');
-    
+    buffer.writeln(
+      '🔹 Order Date: ${_formatDate(order.orderDate ?? order.createdAt)}',
+    );
+
     if (order.orderType != null) {
       buffer.writeln('🔹 Order Type: ${order.orderType}');
     }
-    
+
     if (order.partynameDisplay != null) {
       buffer.writeln('🔹 Party Name: ${order.partynameDisplay}');
     }
-    
+
     if (order.images.isNotEmpty) {
       buffer.writeln('🔹 Images: ${order.images.length}');
     }
-    
+
     if (order.totalQuantity != null) {
       buffer.writeln('🔹 Total Quantity: ${order.totalQuantity}');
     }
-    
-    if (order.status == OrderStatus.partialDelivery && order.totalDeliveryCount != null) {
-      buffer.writeln('🔹 Delivered: ${order.totalDeliveryCount}/${order.totalQuantity}');
+
+    if (order.status == OrderStatus.partialDelivery &&
+        order.totalDeliveryCount != null) {
+      buffer.writeln(
+        '🔹 Delivered: ${order.totalDeliveryCount}/${order.totalQuantity}',
+      );
     }
-    
+
     if (order.updatedBy != null && order.updatedAt != null) {
-      buffer.writeln('🔹 Last Updated: ${_formatDate(order.updatedAt!)} by ${order.updatedBy}');
+      buffer.writeln(
+        '🔹 Last Updated: ${_formatDate(order.updatedAt!)} by ${order.updatedBy}',
+      );
     }
-    
+
     if (order.ornamentDetails.isNotEmpty) {
       buffer.writeln('');
       buffer.writeln('╔═════════');
@@ -2301,10 +2350,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         }
       }
     }
-    
+
     buffer.writeln('');
     buffer.writeln('');
-    
+
     return buffer.toString();
   }
 
@@ -2429,8 +2478,11 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                               const SizedBox(width: 8),
                               GestureDetector(
                                 onTap: () {
-                                  final orderDetails = _formatOrderDetailsForCopy(order);
-                                  final data = ClipboardData(text: orderDetails);
+                                  final orderDetails =
+                                      _formatOrderDetailsForCopy(order);
+                                  final data = ClipboardData(
+                                    text: orderDetails,
+                                  );
                                   Clipboard.setData(data);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
@@ -2447,7 +2499,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                           ),
                                         ],
                                       ),
-                                      backgroundColor: AppConstants.successColor,
+                                      backgroundColor:
+                                          AppConstants.successColor,
                                       behavior: SnackBarBehavior.floating,
                                       duration: const Duration(seconds: 2),
                                       shape: RoundedRectangleBorder(
@@ -2547,7 +2600,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _formatDate(order.orderDate!),
+                          _formatDate(order.orderDate ?? order.createdAt),
                           style: TextStyle(
                             color: Colors.grey.shade500,
                             fontSize: 12,
@@ -2660,7 +2713,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    order.partynameDisplay!,
+                                    order.partynameDisplay ?? "No party name",
                                     style: TextStyle(
                                       color: Colors.purple.shade700,
                                       fontSize: 11,
@@ -2966,38 +3019,39 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
         const SizedBox(width: 16),
         Expanded(
           flex: 3,
-          child: isStatus && status != null
-            ? Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: _getStatusColor(status).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: _getStatusColor(status).withOpacity(0.3),
+          child:
+              isStatus && status != null
+                  ? Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _getStatusColor(status).withOpacity(0.3),
+                      ),
+                    ),
+                    child: Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _getStatusColor(status),
+                      ),
+                    ),
+                  )
+                  : Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                child: Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: _getStatusColor(status),
-                  ),
-                ),
-              )
-            : Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
         ),
       ],
     );
@@ -3129,7 +3183,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-           
+
               child: Row(
                 children: [
                   // Icon(
@@ -3207,7 +3261,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _buildOrnamentDetailRow('Weight', '${detail.weight} ${detail.unit ?? 'g'}'),
+                    _buildOrnamentDetailRow(
+                      'Weight',
+                      '${detail.weight} ${detail.unit ?? 'g'}',
+                    ),
                     const SizedBox(height: 10),
                     _buildOrnamentDetailRow('Purity', detail.purity),
                     const SizedBox(height: 10),
@@ -3328,10 +3385,16 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        pd.deliverynote?.isNotEmpty == true ? pd.deliverynote! : '-',
+                                        pd.deliverynote?.isNotEmpty == true
+                                            ? pd.deliverynote!
+                                            : '-',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: pd.deliverynote?.isNotEmpty == true ? Colors.black87 : Colors.grey,
+                                          color:
+                                              pd.deliverynote?.isNotEmpty ==
+                                                      true
+                                                  ? Colors.black87
+                                                  : Colors.grey,
                                         ),
                                         maxLines: null,
                                         overflow: TextOverflow.ellipsis,
@@ -3369,7 +3432,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             return GestureDetector(
                               onTap:
                                   () => _showImagePreview(
-                                   imageUrl, galleryImages: detail.images
+                                    imageUrl,
+                                    galleryImages: detail.images,
                                   ),
                               child: Container(
                                 margin: const EdgeInsets.only(right: 12),
@@ -3552,6 +3616,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       );
     }
   }
+
   Widget _buildDetailSection(String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3861,6 +3926,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     }
   }
 }
+
 class FullScreenImageViewer extends StatefulWidget {
   final List<String> images;
   final int initialIndex;
@@ -3915,10 +3981,7 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
   }
 
   PhotoViewController _getController(int index) {
-    return _controllers.putIfAbsent(
-      index,
-      () => PhotoViewController(),
-    );
+    return _controllers.putIfAbsent(index, () => PhotoViewController());
   }
 
   void _handleKeyEvent(RawKeyEvent event) {
@@ -3944,8 +4007,7 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
       return;
     }
 
-    if (key == LogicalKeyboardKey.arrowLeft ||
-        key == LogicalKeyboardKey.keyA) {
+    if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.keyA) {
       if (_currentIndex > 0) {
         _pageController.previousPage(
           duration: const Duration(milliseconds: 200),
@@ -3971,8 +4033,7 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
     }
 
     // Reset zoom
-    if (key == LogicalKeyboardKey.digit0 ||
-        key == LogicalKeyboardKey.numpad0) {
+    if (key == LogicalKeyboardKey.digit0 || key == LogicalKeyboardKey.numpad0) {
       _resetZoom();
     }
   }
@@ -4074,30 +4135,32 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
             );
           },
           itemCount: widget.images.length,
-          loadingBuilder: (context, event) => Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: CircularProgressIndicator(
-                    value: event == null
-                        ? null
-                        : event.cumulativeBytesLoaded /
-                            (event.expectedTotalBytes ?? 1),
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
+          loadingBuilder:
+              (context, event) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: CircularProgressIndicator(
+                        value:
+                            event == null
+                                ? null
+                                : event.cumulativeBytesLoaded /
+                                    (event.expectedTotalBytes ?? 1),
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Loading image...',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Loading image...',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
+              ),
           backgroundDecoration: const BoxDecoration(color: Colors.black),
           pageController: _pageController,
           onPageChanged: (index) {
