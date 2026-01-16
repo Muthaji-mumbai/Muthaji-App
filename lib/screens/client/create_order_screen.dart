@@ -127,21 +127,21 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     if (_formKey.currentState!.validate() &&
         !_isLoading &&
         _existingOrder != null) {
-     if (!_hasRequiredFiles()) {
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isEditMode
-              ? 'You may add new files, but it is not required.'
-              : 'Please upload at least one file for the first item.',
-        ),
-        backgroundColor: AppConstants.errorColor,
-      ),
-    );
-  }
-  return;
-}
+      if (!_hasRequiredFiles()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _isEditMode
+                    ? 'You may add new files, but it is not required.'
+                    : 'Please upload at least one file for the first item.',
+              ),
+              backgroundColor: AppConstants.errorColor,
+            ),
+          );
+        }
+        return;
+      }
 
       setState(() => _isLoading = true);
       try {
@@ -418,9 +418,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   'deliverycount': d.deliverycount,
                   'deliveryqty': null,
                   'deliverydate': null,
-                  'deliverynote': d.partialDelivery?.isNotEmpty == true 
-                      ? (d.partialDelivery!.last.deliverynote ?? '')
-                      : '',
+                  'deliverynote':
+                      d.partialDelivery?.isNotEmpty == true
+                          ? (d.partialDelivery!.last.deliverynote ?? '')
+                          : '',
                   'partialdelivery':
                       d.partialDelivery?.map((e) => e.toJson()).toList() ?? [],
                 },
@@ -708,37 +709,38 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       });
     }
   }
-bool _areFilesRequiredForItem(int index) {
-  // Edit mode → never required (existing images are already on the server)
-  if (_isEditMode) return false;
 
-  // Create mode → only the first item is required
-  return index == 0;
-}
+  bool _areFilesRequiredForItem(int index) {
+    // Edit mode → never required (existing images are already on the server)
+    if (_isEditMode) return false;
 
-bool _hasRequiredFiles() {
-  return _ornamentImages
-      .asMap()
-      .entries
-      .every((entry) => !_areFilesRequiredForItem(entry.key) || entry.value.isNotEmpty);
-}
-  Future<void> _createOrder() async {
-    if (_formKey.currentState!.validate() && !_isLoading) {
-if (!_hasRequiredFiles()) {
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isEditMode
-              ? 'You may add new files, but it is not required.'
-              : 'Please upload at least one file for the first item.',
-        ),
-        backgroundColor: AppConstants.errorColor,
-      ),
+    // Create mode → only the first item is required
+    return index == 0;
+  }
+
+  bool _hasRequiredFiles() {
+    return _ornamentImages.asMap().entries.every(
+      (entry) => !_areFilesRequiredForItem(entry.key) || entry.value.isNotEmpty,
     );
   }
-  return;
-}
+
+  Future<void> _createOrder() async {
+    if (_formKey.currentState!.validate() && !_isLoading) {
+      if (!_hasRequiredFiles()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _isEditMode
+                    ? 'You may add new files, but it is not required.'
+                    : 'Please upload at least one file for the first item.',
+              ),
+              backgroundColor: AppConstants.errorColor,
+            ),
+          );
+        }
+        return;
+      }
       setState(() {
         _isLoading = true;
       });
@@ -1413,185 +1415,122 @@ if (!_hasRequiredFiles()) {
   }
 
   Widget _buildOrderDetailsSection() {
-  return Card(
-    elevation: 2,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppConstants.radiusM),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(AppConstants.spacingM),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-            
-              if (_isEditMode && _existingOrder?.orderNo != null)
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppConstants.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Order No: ${_existingOrder!.orderNo}',
-                        style: TextStyle(
-                          color: AppConstants.primaryColor,
-                          fontWeight: FontWeight.w600,
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.spacingM),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (_isEditMode && _existingOrder?.orderNo != null)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppConstants.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Order No: ${_existingOrder!.orderNo}',
+                            style: TextStyle(
+                              color: AppConstants.primaryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (_existingOrder!.partynameDisplay != null &&
+                            _existingOrder!.partynameDisplay!.isNotEmpty) ...[
+                          const SizedBox(height: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppConstants.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Party Name: ${_existingOrder!.partynameDisplay}',
+                              style: TextStyle(
+                                color: AppConstants.primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    SizedBox(width: 5),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppConstants.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Party Name: ${_existingOrder!.partynameDisplay}',
-                        style: TextStyle(
-                          color: AppConstants.primaryColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-          const SizedBox(height: AppConstants.spacingM),
-          // --- Order No field for Bulk orders (admin/employee only) ---
-          if (_shouldShowOrderTypeSelection() && _selectedOrderType == 'Bulk') ...[
-            Text(
-              'Order No',
-              style: AppConstants.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppConstants.spacingS),
-            TextFormField(
-              initialValue: _orderNo ?? '',
-              decoration: InputDecoration(
-                labelText: 'Enter Order No',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingS,
-                  vertical: AppConstants.spacingS,
-                ),
-              ),
-              onChanged: (val) => setState(() => _orderNo = val),
-              validator: (val) {
-                if (_selectedOrderType == 'Bulk' && (val == null || val.isEmpty)) {
-                  return 'Order No is required for bulk orders';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: AppConstants.spacingM),
-          ],
-          GestureDetector(
-            onTap: _selectDate,
-            child: CustomTextField(
-              controller: _orderDateController,
-              labelText: 'Order Date',
-              hintText: 'Select date',
-              enabled: false,
-              validator: (value) => value!.isEmpty ? 'Please select a date' : null,
-            ),
-          ),
-          const SizedBox(height: AppConstants.spacingM),
-          Text(
-            'Priority',
-            style: AppConstants.bodyMedium.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppConstants.spacingS),
-          DropdownButtonFormField<String>(
-            value: _selectedPriority,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppConstants.radiusS),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingS,
-                vertical: AppConstants.spacingS,
-              ),
-            ),
-            items: _priorityOptions
-                .map((p) => DropdownMenuItem<String>(value: p, child: Text(p)))
-                .toList(),
-            onChanged: (val) => setState(() => _selectedPriority = val ?? 'Regular'),
-          ),
-          // Show order type selection only for admin and employee users (not when editing)
-          if (_shouldShowOrderTypeSelection() && !_isEditMode) ...[
-            const SizedBox(height: AppConstants.spacingM),
-            Text(
-              'Order Type',
-              style: AppConstants.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppConstants.spacingS),
-            Wrap(
-              spacing: AppConstants.spacingS,
-              children: _availableOrderTypes.map((type) {
-                final isSelected = _selectedOrderType == type;
-                return FilterChip(
-                  label: Text(type),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedOrderType = type;
-                      // Load parties when switching to bulk orders
-                      if (type == 'Bulk' && _allUsers.isEmpty && !_loadingParties) {
-                        _fetchParties();
-                      }
-                    });
-                  },
-                  backgroundColor: AppConstants.surfaceColor,
-                  selectedColor: AppConstants.primaryColor.withOpacity(0.2),
-                  checkmarkColor: AppConstants.primaryColor,
-                  labelStyle: TextStyle(
-                    color: isSelected ? AppConstants.primaryColor : AppConstants.textPrimaryColor,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
-                );
-              }).toList(),
+              ],
             ),
-          ],
-          // Party Selection (always show for Bulk orders, optional for Single)
-         // Party Selection (always show for Bulk orders, optional for Single)
-if ((_selectedOrderType == 'Bulk' || 
-     (_selectedOrderType == 'Single' && _shouldShowOrderTypeSelection())) 
-    && !_isEditMode) ...[
-  const SizedBox(height: AppConstants.spacingM),
-  _buildPartySelectionField(),
-],
-          // Show status only for admin/employee in edit mode
-          if (_isEditMode && _shouldShowOrderTypeSelection()) ...[
+            const SizedBox(height: AppConstants.spacingM),
+            // --- Order No field for Bulk orders (admin/employee only) ---
+            if (_shouldShowOrderTypeSelection() &&
+                _selectedOrderType == 'Bulk') ...[
+              Text(
+                'Order No',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppConstants.spacingS),
+              TextFormField(
+                initialValue: _orderNo ?? '',
+                decoration: InputDecoration(
+                  labelText: 'Enter Order No',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingS,
+                    vertical: AppConstants.spacingS,
+                  ),
+                ),
+                onChanged: (val) => setState(() => _orderNo = val),
+                validator: (val) {
+                  if (_selectedOrderType == 'Bulk' &&
+                      (val == null || val.isEmpty)) {
+                    return 'Order No is required for bulk orders';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppConstants.spacingM),
+            ],
+            GestureDetector(
+              onTap: _selectDate,
+              child: CustomTextField(
+                controller: _orderDateController,
+                labelText: 'Order Date',
+                hintText: 'Select date',
+                enabled: false,
+                validator:
+                    (value) => value!.isEmpty ? 'Please select a date' : null,
+              ),
+            ),
             const SizedBox(height: AppConstants.spacingM),
             Text(
-              'Status',
+              'Priority',
               style: AppConstants.bodyMedium.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: AppConstants.spacingS),
-            DropdownButtonFormField<OrderStatus>(
-              value: _selectedStatus,
+            DropdownButtonFormField<String>(
+              value: _selectedPriority,
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppConstants.radiusS),
@@ -1601,27 +1540,117 @@ if ((_selectedOrderType == 'Bulk' ||
                   vertical: AppConstants.spacingS,
                 ),
               ),
-              items: OrderStatus.values
-                  .map((s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(s.toString().split('.').last),
-                      ))
-                  .toList(),
-              onChanged: (val) => setState(() {
-                _selectedStatus = val;
-                // Set default delivery date to today when status changes to partial delivery
-                if (val == OrderStatus.partialDelivery) {
-                  for (var detail in _ornamentDetails) {
-                    if (detail['deliverydate'] == null) {
-                      detail['deliverydate'] = DateTime.now();
-                    }
-                  }
-                }
-              }),
+              items:
+                  _priorityOptions
+                      .map(
+                        (p) =>
+                            DropdownMenuItem<String>(value: p, child: Text(p)),
+                      )
+                      .toList(),
+              onChanged:
+                  (val) => setState(() => _selectedPriority = val ?? 'Regular'),
             ),
+            // Show order type selection only for admin and employee users (not when editing)
+            if (_shouldShowOrderTypeSelection() && !_isEditMode) ...[
+              const SizedBox(height: AppConstants.spacingM),
+              Text(
+                'Order Type',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppConstants.spacingS),
+              Wrap(
+                spacing: AppConstants.spacingS,
+                children:
+                    _availableOrderTypes.map((type) {
+                      final isSelected = _selectedOrderType == type;
+                      return FilterChip(
+                        label: Text(type),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedOrderType = type;
+                            // Load parties when switching to bulk orders
+                            if (type == 'Bulk' &&
+                                _allUsers.isEmpty &&
+                                !_loadingParties) {
+                              _fetchParties();
+                            }
+                          });
+                        },
+                        backgroundColor: AppConstants.surfaceColor,
+                        selectedColor: AppConstants.primaryColor.withOpacity(
+                          0.2,
+                        ),
+                        checkmarkColor: AppConstants.primaryColor,
+                        labelStyle: TextStyle(
+                          color:
+                              isSelected
+                                  ? AppConstants.primaryColor
+                                  : AppConstants.textPrimaryColor,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      );
+                    }).toList(),
+              ),
+            ],
+            // Party Selection (always show for Bulk orders, optional for Single)
+            // Party Selection (always show for Bulk orders, optional for Single)
+            if ((_selectedOrderType == 'Bulk' ||
+                    (_selectedOrderType == 'Single' &&
+                        _shouldShowOrderTypeSelection())) &&
+                !_isEditMode) ...[
+              const SizedBox(height: AppConstants.spacingM),
+              _buildPartySelectionField(),
+            ],
+            // Show status only for admin/employee in edit mode
+            if (_isEditMode && _shouldShowOrderTypeSelection()) ...[
+              const SizedBox(height: AppConstants.spacingM),
+              Text(
+                'Status',
+                style: AppConstants.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppConstants.spacingS),
+              DropdownButtonFormField<OrderStatus>(
+                value: _selectedStatus,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingS,
+                    vertical: AppConstants.spacingS,
+                  ),
+                ),
+                items:
+                    OrderStatus.values
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(s.toString().split('.').last),
+                          ),
+                        )
+                        .toList(),
+                onChanged:
+                    (val) => setState(() {
+                      _selectedStatus = val;
+                      // Set default delivery date to today when status changes to partial delivery
+                      if (val == OrderStatus.partialDelivery) {
+                        for (var detail in _ornamentDetails) {
+                          if (detail['deliverydate'] == null) {
+                            detail['deliverydate'] = DateTime.now();
+                          }
+                        }
+                      }
+                    }),
+              ),
+            ],
           ],
-        ],
-      )
+        ),
       ),
     );
   }
@@ -1741,7 +1770,9 @@ if ((_selectedOrderType == 'Bulk' ||
                         vertical: AppConstants.spacingS,
                       ),
                     ),
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     onTap: () {
                       // Auto-select all text when tapped for easy editing
                       Future.delayed(const Duration(milliseconds: 100), () {
@@ -1989,9 +2020,9 @@ if ((_selectedOrderType == 'Bulk' ||
               ),
             ),
             keyboardType: TextInputType.multiline,
-              maxLines: null,
-              minLines: 3,
-              expands: false,
+            maxLines: null,
+            minLines: 3,
+            expands: false,
             onChanged:
                 (value) => setState(() {
                   _ornamentDetails[index]['remarks'] = value;

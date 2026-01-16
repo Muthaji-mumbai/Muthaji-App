@@ -285,12 +285,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     return p == 'urgent' || p.contains('urgent');
   }
 
-  bool _isPending(Order order) {
-    return order.status == OrderStatus.pending;
+  bool _isFinished(Order order) {
+    return order.status == OrderStatus.Completed ||
+        order.status == OrderStatus.Delivered ||
+        order.status == OrderStatus.cancelled;
   }
 
   bool _isDue(Order order) {
-    if (!_isPending(order) || order.orderDate == null) return false;
+    if (_isFinished(order) || order.orderDate == null) return false;
     final now = DateTime.now();
     final days = now.difference(order.orderDate!).inDays;
 
@@ -303,7 +305,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   }
 
   bool _isDelay(Order order) {
-    if (!_isPending(order) || order.orderDate == null) return false;
+    if (_isFinished(order) || order.orderDate == null) return false;
     final now = DateTime.now();
     final days = now.difference(order.orderDate!).inDays;
 
@@ -326,27 +328,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
       ),
       child: const Text(
         'URGENT',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPendingRibbon() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppConstants.warningColor,
-        borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(8),
-          bottomLeft: Radius.circular(8),
-        ),
-      ),
-      child: const Text(
-        'PENDING',
         style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w700,
@@ -418,17 +399,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
 
             final matchesSearch =
                 _searchQuery.isEmpty ||
-                order.clientName.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
-                order.description.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
                 (order.partynameDisplay?.toLowerCase().contains(
                       _searchQuery.toLowerCase(),
                     ) ??
                     false) ||
-                order.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
                 (order.orderNo?.toLowerCase().contains(
                       _searchQuery.toLowerCase(),
                     ) ??
@@ -2471,8 +2445,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                     fontWeight: FontWeight.w700,
                                     fontSize: 16,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  // maxLines: 1, // Removed to allow wrapping
+                                  // overflow: TextOverflow.ellipsis, // Removed to allow wrapping
                                 ),
                               ),
                               const SizedBox(width: 8),

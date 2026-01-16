@@ -10,7 +10,7 @@ import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
 import '../../services/user_service.dart';
-import '../../models/user.dart';  
+import '../../models/user.dart';
 import '../../models/order.dart';
 import '../dashboard_screen.dart';
 import '../client/create_order_screen.dart';
@@ -50,11 +50,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   // Party/User filtering for reports
   String? _selectedUserId;
-  
+
   String? _selectedUserName;
   List<User> _allUsers = [];
   bool _loadingUsers = false;
-bool _isLoadingOrders = false;
+  bool _isLoadingOrders = false;
 
   // Date filtering for reports
   DateTime? _startDate;
@@ -299,7 +299,13 @@ bool _isLoadingOrders = false;
       };
       _dashboardStats = {
         'orderTypeCounts': {'single': 0, 'bulk': 0, 'total': 0},
-        'statusCounts': {'pending': 0, 'Wax': 0, 'DC': 0, 'cancelled': 0 ,'Delivered': 0},
+        'statusCounts': {
+          'pending': 0,
+          'Wax': 0,
+          'DC': 0,
+          'cancelled': 0,
+          'Delivered': 0,
+        },
       };
     }
 
@@ -326,84 +332,86 @@ bool _isLoadingOrders = false;
       // Silently fail for user loading as it's not critical
     }
   }
-Future<void> _loadOrdersWithPartyFilter() async {
-  setState(() {
-    _isLoadingOrders = true; // Show loader
-  });
-  try {
-    print('Selected party ID: $_selectedUserId');
-    print('Selected party name: $_selectedUserName');
-    final authProvider = context.read<AuthProvider>();
-    final token = authProvider.currentUser?.token;
-    
-    if (token != null) {
-      
-      final allOrders = await OrderService.getAllOrders(
-        token,
-        partyname: _selectedUserId,
-        startDate: _startDate,
-        endDate: _endDate,
-      );
-      print('Fetched orders: $allOrders');
-      if (!mounted) return;
 
-      setState(() {
-        _allOrders = allOrders;
-        _isLoadingOrders = false; // Hide loader after data is loaded
-      });
-    }
-  } catch (e) {
-    print('Error loading orders with party filter: $e');
-    if (mounted) {
-      setState(() {
-        _isLoadingOrders = false; // Hide loader on error
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to load orders: $e'),
-          backgroundColor: AppConstants.errorColor,
-        ),
-      );
-    }
-  }
-}  
-Future<void> _selectDate({required bool isStartDate}) async {
-  final initialDate = isStartDate
-      ? (_startDate ?? DateTime.now())
-      : (_endDate ?? DateTime.now());
-
-  final pickedDate = await showDatePicker(
-    context: context,
-    initialDate: initialDate,
-    firstDate: DateTime(2020),
-    lastDate: DateTime(2030),
-  );
-
-  if (pickedDate != null) {
+  Future<void> _loadOrdersWithPartyFilter() async {
     setState(() {
-      if (isStartDate) {
-        _startDate = pickedDate;
-        if (_endDate != null && _endDate!.isBefore(_startDate!)) {
-          _endDate = _startDate;
-        }
-      } else {
-        _endDate = pickedDate;
-        if (_startDate != null && _startDate!.isAfter(_endDate!)) {
-          _startDate = _endDate;
-        }
-      }
+      _isLoadingOrders = true; // Show loader
     });
-    await _loadOrdersWithPartyFilter(); // Reload orders with new dates
-  }
-}
+    try {
+      print('Selected party ID: $_selectedUserId');
+      print('Selected party name: $_selectedUserName');
+      final authProvider = context.read<AuthProvider>();
+      final token = authProvider.currentUser?.token;
 
-void _clearDateFilters() {
-  setState(() {
-    _startDate = null;
-    _endDate = null;
-  });
-  _loadOrdersWithPartyFilter(); // Reload orders without date filters
-}
+      if (token != null) {
+        final allOrders = await OrderService.getAllOrders(
+          token,
+          partyname: _selectedUserId,
+          startDate: _startDate,
+          endDate: _endDate,
+        );
+        print('Fetched orders: $allOrders');
+        if (!mounted) return;
+
+        setState(() {
+          _allOrders = allOrders;
+          _isLoadingOrders = false; // Hide loader after data is loaded
+        });
+      }
+    } catch (e) {
+      print('Error loading orders with party filter: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingOrders = false; // Hide loader on error
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load orders: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _selectDate({required bool isStartDate}) async {
+    final initialDate =
+        isStartDate
+            ? (_startDate ?? DateTime.now())
+            : (_endDate ?? DateTime.now());
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+
+    if (pickedDate != null) {
+      setState(() {
+        if (isStartDate) {
+          _startDate = pickedDate;
+          if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+            _endDate = _startDate;
+          }
+        } else {
+          _endDate = pickedDate;
+          if (_startDate != null && _startDate!.isAfter(_endDate!)) {
+            _startDate = _endDate;
+          }
+        }
+      });
+      await _loadOrdersWithPartyFilter(); // Reload orders with new dates
+    }
+  }
+
+  void _clearDateFilters() {
+    setState(() {
+      _startDate = null;
+      _endDate = null;
+    });
+    _loadOrdersWithPartyFilter(); // Reload orders without date filters
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1530,38 +1538,36 @@ void _clearDateFilters() {
       ),
     );
   }
+
   Widget _buildReportsView() {
-  print('Rendering Reports - Orders count: ${_allOrders.length}');
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _buildPartySelectionSection(),
-      const SizedBox(height: AppConstants.spacingL),
-      if (_isLoadingOrders)
-        const Center(
-          child: CircularProgressIndicator(
-            color: AppConstants.primaryColor,
-          ),
-        )
-      else if (_allOrders.isEmpty)
-        const Center(
-          child: Text(
-            'No orders available for the selected party.',
-         
-          ),
-        )
-      else ...[
-        _buildDetailedStatistics(),
+    print('Rendering Reports - Orders count: ${_allOrders.length}');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildPartySelectionSection(),
         const SizedBox(height: AppConstants.spacingL),
-        _buildTypePieChartsSection(),
-        const SizedBox(height: AppConstants.spacingL),
-        // _buildTypeStatusBarCharts(),
-        // const SizedBox(height: AppConstants.spacingL),
-        _buildPieChartsSection(),
+        if (_isLoadingOrders)
+          const Center(
+            child: CircularProgressIndicator(color: AppConstants.primaryColor),
+          )
+        else if (_allOrders.isEmpty)
+          const Center(
+            child: Text('No orders available for the selected party.'),
+          )
+        else ...[
+          _buildDetailedStatistics(),
+          const SizedBox(height: AppConstants.spacingL),
+          _buildTypePieChartsSection(),
+          const SizedBox(height: AppConstants.spacingL),
+          // _buildTypeStatusBarCharts(),
+          // const SizedBox(height: AppConstants.spacingL),
+          _buildPieChartsSection(),
+        ],
       ],
-    ],
-  );
-}  Widget _buildPartySelectionSection() {
+    );
+  }
+
+  Widget _buildPartySelectionSection() {
     return Container(
       padding: const EdgeInsets.all(AppConstants.spacingM),
       decoration: BoxDecoration(
@@ -1637,10 +1643,7 @@ void _clearDateFilters() {
                     ..._allUsers.map(
                       (user) => DropdownMenuItem<String>(
                         value: user.id,
-                        child: Text(
-                          user.name,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: Text(user.name, overflow: TextOverflow.ellipsis),
                       ),
                     ),
                   ],
@@ -1804,7 +1807,7 @@ void _clearDateFilters() {
         bulkDC = 0,
         bulkCompleted = 0,
         bulkCancelled = 0,
-        bulkDelivered =0 ,
+        bulkDelivered = 0,
         bulkCasted = 0,
         bulkPendingDisp = 0;
 
@@ -1848,7 +1851,7 @@ void _clearDateFilters() {
             toSingle ? singleCompleted++ : bulkCompleted++;
             break;
           case OrderStatus.Delivered:
-             toSingle ? singleDelivered++ : bulkDelivered++;
+            toSingle ? singleDelivered++ : bulkDelivered++;
             break;
         }
       }
@@ -1936,7 +1939,7 @@ void _clearDateFilters() {
         'value': bulkPartialDelivery.toDouble(),
         'color': AppConstants.partialDeliveryColor,
       },
-         {
+      {
         'label': 'Delivered',
         'value': bulkDelivered.toDouble(),
         'color': AppConstants.deliveredColor,
@@ -2035,10 +2038,13 @@ void _clearDateFilters() {
         singleDC = 0,
         singleCompleted = 0,
         singleCancelled = 0,
-        singleDelivered=0,
+        singleDelivered = 0,
         singleCasted = 0;
-        
-    int singleDelay = 0, singleDue = 0, singlePartialDelivery = 0;
+
+    int singleDelay = 0,
+        singleDue = 0,
+        singlePartialDelivery = 0,
+        singlePendingDisp = 0;
     int bulkPending = 0,
         bulkWax = 0,
         bulkDC = 0,
@@ -2046,7 +2052,10 @@ void _clearDateFilters() {
         bulkCompleted = 0,
         bulkDelivered = 0,
         bulkCasted = 0;
-    int bulkDelay = 0, bulkDue = 0, bulkPartialDelivery = 0;
+    int bulkDelay = 0,
+        bulkDue = 0,
+        bulkPartialDelivery = 0,
+        bulkPendingDisp = 0;
     for (final o in filteredOrders) {
       final isSingle = (o.orderType ?? '').toLowerCase().contains('single');
       final isBulk = (o.orderType ?? '').toLowerCase().contains('bulk');
@@ -2079,7 +2088,7 @@ void _clearDateFilters() {
             toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
             break;
           case OrderStatus.PendingDisp:
-            toSingle ? singlePartialDelivery++ : bulkPartialDelivery++;
+            toSingle ? singlePendingDisp++ : bulkPendingDisp++;
             break;
           case OrderStatus.Completed:
             toSingle ? singleCompleted++ : bulkCompleted++;
@@ -2120,7 +2129,7 @@ void _clearDateFilters() {
         'value': singleCompleted.toDouble(),
         'color': AppConstants.Completed,
       },
-       {
+      {
         'label': 'Delivered',
         'value': singleDelivered.toDouble(),
         'color': AppConstants.deliveredColor,
@@ -2129,6 +2138,16 @@ void _clearDateFilters() {
         'label': 'Cancelled',
         'value': singleCancelled.toDouble(),
         'color': AppConstants.errorColor,
+      },
+      {
+        'label': 'Partial Delivery',
+        'value': singlePartialDelivery.toDouble(),
+        'color': AppConstants.partialDeliveryColor,
+      },
+      {
+        'label': 'Pending Disp',
+        'value': singlePendingDisp.toDouble(),
+        'color': AppConstants.secondaryColor,
       },
     ];
 
@@ -2158,7 +2177,7 @@ void _clearDateFilters() {
         'value': bulkCompleted.toDouble(),
         'color': AppConstants.Completed,
       },
-       {
+      {
         'label': 'Delivered',
         'value': bulkDelivered.toDouble(),
         'color': AppConstants.deliveredColor,
@@ -2167,6 +2186,16 @@ void _clearDateFilters() {
         'label': 'Cancelled',
         'value': bulkCancelled.toDouble(),
         'color': AppConstants.errorColor,
+      },
+      {
+        'label': 'Partial Delivery',
+        'value': bulkPartialDelivery.toDouble(),
+        'color': AppConstants.partialDeliveryColor,
+      },
+      {
+        'label': 'Pending Disp',
+        'value': bulkPendingDisp.toDouble(),
+        'color': AppConstants.secondaryColor,
       },
     ];
 
@@ -2300,9 +2329,7 @@ void _clearDateFilters() {
     final orderTypeCounts = {
       'single':
           filteredOrders
-              .where(
-                (o) => (o.orderType ?? '').toLowerCase() == 'single',
-              )
+              .where((o) => (o.orderType ?? '').toLowerCase() == 'single')
               .length,
       'bulk':
           filteredOrders
@@ -2325,10 +2352,13 @@ void _clearDateFilters() {
       'casted':
           filteredOrders.where((o) => o.status == OrderStatus.Casted).length,
       'partial delivery':
-          filteredOrders.where((o) => o.status == OrderStatus.partialDelivery).length,
+          filteredOrders
+              .where((o) => o.status == OrderStatus.partialDelivery)
+              .length,
       'pendingdisp':
-          filteredOrders.where((o) => o.status == OrderStatus.PendingDisp).length,
-
+          filteredOrders
+              .where((o) => o.status == OrderStatus.PendingDisp)
+              .length,
     };
 
     return Column(
@@ -2824,8 +2854,7 @@ void _clearDateFilters() {
                     },
                     {
                       'label': 'Delivered',
-                      'value':
-                          _orderStats['Delivered']?.toString() ?? '0',
+                      'value': _orderStats['Delivered']?.toString() ?? '0',
                     },
                     {
                       'label': 'Cancelled',
@@ -3116,7 +3145,7 @@ void _clearDateFilters() {
       case 'wax':
         status = OrderStatus.Wax;
         break;
-      
+
       case 'dc':
         status = OrderStatus.DC;
         break;
