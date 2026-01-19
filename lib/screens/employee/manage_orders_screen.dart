@@ -3079,7 +3079,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
               color: Colors.black87,
             ),
             maxLines: null,
-            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
