@@ -222,7 +222,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           if (_orderNo != null && _orderNo!.isNotEmpty)
             'orderno': _orderNo, // <-- Pass orderNo to API
         };
-
+        // if (_selectedOrderType == 'Bulk' ||
+        //           (_orderNo != null && _orderNo!.isNotEmpty)) {
+        //         updateData['orderno'] = _orderNo;
+        //       }
         // Include status in update only for admin/employee users
         if (_selectedStatus != null && _shouldShowOrderTypeSelection()) {
           updateData['status'] = Order.statusToApiString(_selectedStatus!);
@@ -864,8 +867,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedOrderDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(

@@ -2010,16 +2010,37 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     if (_allOrders.isEmpty && !_hasActiveFilters())
       return const SizedBox.shrink();
 
-    // ---- Live counts for every status (updated on every API call) ----
+    // Calculate base list for counts (apply search and type filters, but NOT status)
+    final baseOrders =
+        _allOrders.where((order) {
+          final matchesSearch =
+              _searchQuery.isEmpty ||
+              (order.partynameDisplay?.toLowerCase().contains(
+                    _searchQuery.toLowerCase(),
+                  ) ??
+                  false) ||
+              (order.orderNo?.toLowerCase().contains(
+                    _searchQuery.toLowerCase(),
+                  ) ??
+                  false);
+
+          final matchesType =
+              _selectedOrderType == null ||
+              (_selectedOrderType == (order.orderType ?? 'Single'));
+
+          return matchesSearch && matchesType;
+        }).toList();
+
+    // ---- Live counts for every status ----
     final statusCounts = <OrderStatus, int>{};
     for (final status in OrderStatus.values) {
       if (status == OrderStatus.due) {
-        statusCounts[status] = _allOrders.where(_isDue).length;
+        statusCounts[status] = baseOrders.where(_isDue).length;
       } else if (status == OrderStatus.delay) {
-        statusCounts[status] = _allOrders.where(_isDelay).length;
+        statusCounts[status] = baseOrders.where(_isDelay).length;
       } else {
         statusCounts[status] =
-            _allOrders.where((o) => o.status == status).length;
+            baseOrders.where((o) => o.status == status).length;
       }
     }
 
@@ -2075,7 +2096,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'All (${_allOrders.length})', // ← NEVER CHANGES
+                            'All (${baseOrders.length})',
                             style: TextStyle(
                               fontSize: 12,
                               color:
@@ -3293,7 +3314,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                               ),
                               child: Row(
                                 children: const [
-                                  Expanded(
+                                  SizedBox(
+                                    width: 90,
                                     child: Text(
                                       'Date',
                                       style: TextStyle(
@@ -3304,17 +3326,17 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                   ),
                                   SizedBox(width: 8),
                                   SizedBox(
-                                    width: 60,
+                                    width: 40,
                                     child: Text(
                                       'Qty',
-                                      textAlign: TextAlign.right,
+                                      textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
-                                  SizedBox(width: 8),
+                                  SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
                                       'Note',
@@ -3335,8 +3357,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                   vertical: 10,
                                 ),
                                 child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Expanded(
+                                    SizedBox(
+                                      width: 90,
                                       child: Text(
                                         DateFormat(
                                           'dd/MM/yyyy',
@@ -3346,17 +3370,17 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                     ),
                                     const SizedBox(width: 8),
                                     SizedBox(
-                                      width: 60,
+                                      width: 40,
                                       child: Text(
                                         pd.qty.toString(),
-                                        textAlign: TextAlign.right,
+                                        textAlign: TextAlign.center,
                                         style: const TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 12),
                                     Expanded(
                                       child: Text(
                                         pd.deliverynote?.isNotEmpty == true
@@ -3369,9 +3393,8 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                                       true
                                                   ? Colors.black87
                                                   : Colors.grey,
+                                          height: 1.3,
                                         ),
-                                        maxLines: null,
-                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
