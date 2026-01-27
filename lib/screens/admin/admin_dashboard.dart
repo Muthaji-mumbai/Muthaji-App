@@ -2807,6 +2807,36 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildDetailedStatistics() {
     final isMobile = ResponsiveBreakpoints.of(context).isMobile;
 
+    // Calculate stats dynamicallly from _allOrders to respect filters
+    final totalOrders = _allOrders.length;
+    final pendingOrders =
+        _allOrders.where((o) => o.status == OrderStatus.pending).length;
+    final waxOrders =
+        _allOrders.where((o) => o.status == OrderStatus.Wax).length;
+    final castedOrders =
+        _allOrders.where((o) => o.status == OrderStatus.Casted).length;
+    final dcOrders = _allOrders.where((o) => o.status == OrderStatus.DC).length;
+    final pendingDispOrders =
+        _allOrders.where((o) => o.status == OrderStatus.PendingDisp).length;
+    final partialDeliveryOrders =
+        _allOrders.where((o) => o.status == OrderStatus.partialDelivery).length;
+    final completedOrders =
+        _allOrders.where((o) => o.status == OrderStatus.Completed).length;
+    final deliveredOrders =
+        _allOrders.where((o) => o.status == OrderStatus.Delivered).length;
+    final cancelledOrders =
+        _allOrders.where((o) => o.status == OrderStatus.cancelled).length;
+
+    // Calculate Single and Bulk counts
+    final singleOrders =
+        _allOrders
+            .where((o) => (o.orderType ?? '').toLowerCase() == 'single')
+            .length;
+    final bulkOrders =
+        _allOrders
+            .where((o) => (o.orderType ?? '').toLowerCase() == 'bulk')
+            .length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2818,49 +2848,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 _buildStatisticCard(
                   'Order Performance',
                   [
+                    {'label': 'Total Orders', 'value': totalOrders.toString()},
                     {
-                      'label': 'Total Orders',
-                      'value': _orderStats['totalOrders']?.toString() ?? '0',
+                      'label': 'Single Orders',
+                      'value': singleOrders.toString(),
                     },
+                    {'label': 'Bulk Orders', 'value': bulkOrders.toString()},
                     {
                       'label': 'Pending Orders',
-                      'value': _orderStats['pendingOrders']?.toString() ?? '0',
+                      'value': pendingOrders.toString(),
                     },
-                    {
-                      'label': 'Wax',
-                      'value': _orderStats['WaxOrders']?.toString() ?? '0',
-                    },
-                    {
-                      'label': 'Casted',
-                      'value': _orderStats['CastedOrders']?.toString() ?? '0',
-                    },
-                    {
-                      'label': 'DC',
-                      'value': _orderStats['DCOrders']?.toString() ?? '0',
-                    },
+                    {'label': 'Wax', 'value': waxOrders.toString()},
+                    {'label': 'Casted', 'value': castedOrders.toString()},
+                    {'label': 'DC', 'value': dcOrders.toString()},
                     {
                       'label': 'Pending Disp',
-                      'value': _orderStats['PendingDisp']?.toString() ?? '0',
+                      'value': pendingDispOrders.toString(),
                     },
                     {
                       'label': 'Partial Delivery',
-                      'value':
-                          _orderStats['Partial Delivery']?.toString() ?? '0',
+                      'value': partialDeliveryOrders.toString(),
                     },
-                    {
-                      'label': 'Completed',
-                      'value':
-                          _orderStats['completedOrders']?.toString() ?? '0',
-                    },
-                    {
-                      'label': 'Delivered',
-                      'value': _orderStats['Delivered']?.toString() ?? '0',
-                    },
-                    {
-                      'label': 'Cancelled',
-                      'value':
-                          _orderStats['cancelledOrders']?.toString() ?? '0',
-                    },
+                    {'label': 'Completed', 'value': completedOrders.toString()},
+                    {'label': 'Delivered', 'value': deliveredOrders.toString()},
+                    {'label': 'Cancelled', 'value': cancelledOrders.toString()},
                   ],
                   Icons.analytics,
                   AppConstants.primaryColor,
@@ -2911,47 +2922,39 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     [
                       {
                         'label': 'Total Orders',
-                        'value': _orderStats['totalOrders']?.toString() ?? '0',
+                        'value': totalOrders.toString(),
                       },
+                      {
+                        'label': 'Single Orders',
+                        'value': singleOrders.toString(),
+                      },
+                      {'label': 'Bulk Orders', 'value': bulkOrders.toString()},
                       {
                         'label': 'Pending Orders',
-                        'value':
-                            _orderStats['pendingOrders']?.toString() ?? '0',
+                        'value': pendingOrders.toString(),
                       },
-                      {
-                        'label': 'Wax',
-                        'value': _orderStats['WaxOrders']?.toString() ?? '0',
-                      },
-                      {
-                        'label': 'Casted',
-                        'value': _orderStats['CastedOrders']?.toString() ?? '0',
-                      },
-                      {
-                        'label': 'DC',
-                        'value': _orderStats['DCOrders']?.toString() ?? '0',
-                      },
+                      {'label': 'Wax', 'value': waxOrders.toString()},
+                      {'label': 'Casted', 'value': castedOrders.toString()},
+                      {'label': 'DC', 'value': dcOrders.toString()},
                       {
                         'label': 'Pending Disp',
-                        'value': _orderStats['PendingDisp']?.toString() ?? '0',
+                        'value': pendingDispOrders.toString(),
                       },
                       {
                         'label': 'Partial Delivery',
-                        'value':
-                            _orderStats['Partial Delivery']?.toString() ?? '0',
+                        'value': partialDeliveryOrders.toString(),
                       },
                       {
                         'label': 'Completed',
-                        'value':
-                            _orderStats['completedOrders']?.toString() ?? '0',
+                        'value': completedOrders.toString(),
                       },
                       {
                         'label': 'Delivered',
-                        'value': _orderStats['Delivered']?.toString() ?? '0',
+                        'value': deliveredOrders.toString(),
                       },
                       {
                         'label': 'Cancelled',
-                        'value':
-                            _orderStats['cancelledOrders']?.toString() ?? '0',
+                        'value': cancelledOrders.toString(),
                       },
                     ],
                     Icons.analytics,

@@ -1121,7 +1121,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
 
       // Add headers
       csvContent.writeln(
-        'Order No,Client Name,Status,Order Type,Order Date,Priority,Description,Total Quantity,Delivery Count,Ornament Name,Weight,Purity,Quantity,Size,Colorstone,Rhodium,Dull,Remarks,Partial Delivery Date,Partial Delivery Qty,Delivery Note',
+        'Order No,Client Name,Status,Order Type,Order Date,Priority,Description,Total Quantity,Delivery Count,Ornament Name,Weight,Purity,Quantity,Size,Unit,Colorstone,Rhodium,Dull,Remarks,Partial Delivery Date,Partial Delivery Qty,Delivery Note',
       );
 
       // Add data rows
@@ -1169,6 +1169,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 '${_escapeCSV(detail.purity)},'
                 '${detail.quantity},'
                 '${_escapeCSV(detail.size ?? '')},'
+                '${_escapeCSV(detail.unit ?? '')},'
                 '${_escapeCSV(detail.colorstone ?? '')},'
                 '${_escapeCSV(detail.rhodium ?? '')},'
                 '${_escapeCSV(detail.dull ?? '')},'
@@ -1197,6 +1198,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                   '${j == 0 ? _escapeCSV(detail.purity) : ''},'
                   '${j == 0 ? detail.quantity : ''},'
                   '${j == 0 ? _escapeCSV(detail.size ?? '') : ''},'
+                  '${j == 0 ? _escapeCSV(detail.unit ?? '') : ''},'
                   '${j == 0 ? _escapeCSV(detail.colorstone ?? '') : ''},'
                   '${j == 0 ? _escapeCSV(detail.rhodium ?? '') : ''},'
                   '${j == 0 ? _escapeCSV(detail.dull ?? '') : ''},'
@@ -2454,72 +2456,19 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                 title: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Row 1: Order Number
+                    Text(
+                      order.orderNo ?? order.id,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Row 2: Status Badge + Copy Icon
                     Row(
                       children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  order.orderNo ?? order.id,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 16,
-                                  ),
-                                  // maxLines: 1, // Removed to allow wrapping
-                                  // overflow: TextOverflow.ellipsis, // Removed to allow wrapping
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              GestureDetector(
-                                onTap: () {
-                                  final orderDetails =
-                                      _formatOrderDetailsForCopy(order);
-                                  final data = ClipboardData(
-                                    text: orderDetails,
-                                  );
-                                  Clipboard.setData(data);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.check_circle,
-                                            color: Colors.white,
-                                            size: 20,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          const Expanded(
-                                            child: Text('All details copied'),
-                                          ),
-                                        ],
-                                      ),
-                                      backgroundColor:
-                                          AppConstants.successColor,
-                                      behavior: SnackBarBehavior.floating,
-                                      duration: const Duration(seconds: 2),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Icon(
-                                    Icons.content_copy_rounded,
-                                    size: 16,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        // Status Badge
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -2545,9 +2494,56 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                             ),
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        // Copy Icon
+                        GestureDetector(
+                          onTap: () {
+                            final orderDetails = _formatOrderDetailsForCopy(
+                              order,
+                            );
+                            final data = ClipboardData(text: orderDetails);
+                            Clipboard.setData(data);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.check_circle,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Expanded(
+                                      child: Text('All details copied'),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: AppConstants.successColor,
+                                behavior: SnackBarBehavior.floating,
+                                duration: const Duration(seconds: 2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(
+                              Icons.content_copy_rounded,
+                              size: 16,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
+                    // Row 3: Client Name
                     Row(
                       children: [
                         Icon(
@@ -2877,9 +2873,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     //   );
                     // }
                   },
-
                   itemBuilder:
                       (context) => [
+                        
                         PopupMenuItem(
                           value: 'edit',
                           child: Row(
@@ -3266,6 +3262,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     if (detail.size != null) ...[
                       const SizedBox(height: 10),
                       _buildOrnamentDetailRow('Size', detail.size!),
+                    ],
+                    if (detail.unit != null) ...[
+                      const SizedBox(height: 10),
+                      _buildOrnamentDetailRow('Unit', detail.unit!),
                     ],
                     if (detail.colorstone != null) ...[
                       const SizedBox(height: 10),
