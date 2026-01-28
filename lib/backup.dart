@@ -1,1175 +1,959 @@
-import 'dart:io';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:photo_view/photo_view.dart';
-import 'package:photo_view/photo_view_gallery.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter/services.dart'; // For loading asset images
+import 'package:soloshine/screens/common/pdf_viewer_screen.dart';
+import 'package:soloshine/screens/employee/manage_orders_screen.dart';
+import 'package:intl/intl.dart';
+import 'package:soloshine/screens/client/order_image_generator.dart';
+import 'package:soloshine/screens/client/create_order_screen.dart';
+import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
+import '../../services/order_service.dart';
 import '../../models/order.dart';
+import '../../services/auth_service.dart';
 
-class OrderImageGenerator extends StatefulWidget {
-  final Order order;
-  const OrderImageGenerator({super.key, required this.order});
+class OrderHistoryScreen extends StatefulWidget {
+  const OrderHistoryScreen({super.key});
+
   @override
-  State<OrderImageGenerator> createState() => _OrderImageGeneratorState();
+  State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
 }
 
-class _OrderImageGeneratorState extends State<OrderImageGenerator> {
-  final GlobalKey _repaintBoundaryKey = GlobalKey();
-  final Map<int, List<GlobalKey>> _ornamentPageKeys = {};
-  PageController? _ornamentPageController;
-  PageController? _imagePageController;
-  int _currentOrnamentIndex = 0;
-  int _currentImageIndex = 0;
-  bool _isGeneratingImage = false;
+class _OrderHistoryScreenState extends State<OrderHistoryScreen>
+    with SingleTickerProviderStateMixin {
+  List<Order> _allOrders = [];
+  List<Order> _filteredOrders = [];
+  bool _isLoading = true;
+  String _searchQuery = '';
+  DateTime? _fromDate;
+  DateTime? _toDate;
+  final Set<int> _expanded = <int>{};
+  late TabController _tabController;
+
+  // New filters
+  OrderStatus? _selectedStatus; // enum-based status filter
+  String? _orderType; // 'Single' | 'Bulk'
+
+  // Tab definitions
+  late List<String> _tabs;
+  int _selectedTabIndex = 0;
+  String _mapOrderToUiStatus(Order order) {
+    switch (order.status) {
+      case OrderStatus.pending:
+        return 'Pending';
+      case OrderStatus.partialDelivery:
+        return 'Partially Delivered'; // Show for both bulk and single orders
+      case OrderStatus.cancelled:
+        return 'Cancelled';
+      case OrderStatus.Delivered:
+        return 'Delivered';
+      case OrderStatus.Completed:
+        return 'Completed'; // Separate status for Completed
+      // In Progress: all other statuses (Casted, Wax, PendingDisp, etc.)
+      default:
+        return 'In Progress';
+    }
+  }
+
+  bool _isUrgent(Order order) {
+    final p = (order.orderPriority ?? '').toLowerCase().trim();
+    return p == 'urgent' || p.contains('urgent');
+  }
+
+  bool _isPending(Order order) {
+    return order.status == OrderStatus.pending;
+  }
+
+  bool _isDue(Order order) {
+    if (!_isPending(order) || order.orderDate == null) return false;
+    final now = DateTime.now();
+    final days = now.difference(order.orderDate!).inDays;
+    return days >= 7 && days < 10;
+  }
+
+  bool _isDelay(Order order) {
+    if (!_isPending(order) || order.orderDate == null) return false;
+    final now = DateTime.now();
+    final days = now.difference(order.orderDate!).inDays;
+    return days >= 10;
+  }
+
+  Widget _buildDueRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFFA000),
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(8),
+          bottomLeft: Radius.circular(8),
+        ),
+      ),
+      child: const Text(
+        'DUE',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDelayRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppConstants.errorColor,
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(8),
+          bottomLeft: Radius.circular(8),
+        ),
+      ),
+      child: const Text(
+        'DELAY',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
+  String? _getFirstImageUrl(Order order) {
+    // Prefer per-ornament images
+    for (final d in order.ornamentDetails) {
+      if (d.images.isNotEmpty) return d.images.first;
+    }
+    // Fallback to order-level images
+    if (order.images.isNotEmpty) return order.images.first;
+    return null;
+  }
+
+  Widget _buildUrgentRibbon() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppConstants.errorColor,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(8),
+          bottomRight: Radius.circular(8),
+        ),
+      ),
+      child: const Text(
+        'URGENT',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
-    _ornamentPageController = PageController();
-    _imagePageController = PageController();
+    // Tabs: All, Pending, In Progress, Delivered, Cancelled (+ Partially Delivered for bulk)
+    _tabs = [
+      'All',
+      'Pending',
+      'In Progress',
+      'Partially Delivered',
+      'Completed',
+      'Delivered',
+      'Cancelled',
+    ];
+    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController.addListener(() {
+      setState(() {
+        _selectedTabIndex = _tabController.index;
+        _applyFilters();
+      });
+    });
+    _loadOrders();
+  }
+
+  _updateTabs() {
+    if (_orderType?.toLowerCase() == 'Bulk') {
+      _tabs = [
+        'All',
+        'Pending',
+        'In Progress',
+        'Partially Delivered',
+        'Completed',
+        'Delivered',
+        'Cancelled',
+      ];
+    } else {
+      _tabs = [
+        'All',
+        'Pending',
+        'In Progress',
+        'Partially Delivered', // Added for single orders too
+        'Completed',
+        'Delivered',
+        'Cancelled',
+      ];
+    }
+    if (_tabController.length != _tabs.length) {
+      _tabController.dispose();
+      // _initializeTabController(); // Reinitialize with new length
+    }
+    setState(() {}); // Refresh UI
   }
 
   @override
   void dispose() {
-    _ornamentPageController?.dispose();
-    _imagePageController?.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
-  List<String> get _currentOrnamentImages {
-    if (widget.order.ornamentDetails.isEmpty) return widget.order.images;
-    final selectedOrnament =
-        widget.order.ornamentDetails[_currentOrnamentIndex];
-    return selectedOrnament.images.isNotEmpty
-        ? selectedOrnament.images
-        : widget.order.images;
+  Future<void> _loadOrders() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final currentUser = context.read<AuthProvider>().currentUser;
+      final token = AuthService.currentToken;
+
+      if (currentUser != null && token != null) {
+        // Use API-level filtering with date parameters
+        final clientOrders = await OrderService.getOrdersByClient(
+          currentUser.id,
+          token,
+          startDate: _fromDate,
+          endDate: _toDate,
+          orderType: _orderType,
+        );
+
+        List<Order> effectiveOrders = clientOrders;
+
+        // Temporary debug fallback: if none matched but server has data, show all
+        if (clientOrders.isEmpty) {
+          "No orders found for client";
+        }
+
+        setState(() {
+          _allOrders = effectiveOrders;
+          _applyFilters();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _allOrders = [];
+          _filteredOrders = [];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _allOrders = [];
+        _filteredOrders = [];
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load orders: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
+    }
   }
 
-  List<List<String>> _partitionImages(List<String> images, {int pageSize = 4}) {
-    final List<List<String>> pages = [];
-    for (int i = 0; i < images.length; i += pageSize) {
-      pages.add(
-        images.sublist(
-          i,
-          i + pageSize > images.length ? images.length : i + pageSize,
-        ),
-      );
+  void _applyFilters() {
+    // Filter by tab
+    String? tabStatus;
+    if (_selectedTabIndex > 0) {
+      tabStatus = _tabs[_selectedTabIndex];
     }
-    return pages.isEmpty ? [[]] : pages;
+    _filteredOrders =
+        _allOrders.where((order) {
+          final uiStatus = _mapOrderToUiStatus(order);
+          // Tab filter
+          if (tabStatus != null &&
+              tabStatus != 'All' &&
+              uiStatus != tabStatus) {
+            return false;
+          }
+          // Status dropdown filter (legacy, can be removed if not needed)
+          if (_selectedStatus != null && order.status != _selectedStatus) {
+            return false;
+          }
+          // Order type filter
+          if (_orderType != null &&
+              (order.orderType ?? 'Single') != _orderType) {
+            return false;
+          }
+          // Search filter
+          if (_searchQuery.isNotEmpty) {
+            final query = _searchQuery.toLowerCase();
+            final matches =
+                order.description.toLowerCase().contains(query) ||
+                order.id.toLowerCase().contains(query) ||
+                (order.orderNo?.toLowerCase().contains(query) ?? false) ||
+                order.statusText.toLowerCase().contains(query);
+            if (!matches) return false;
+          }
+          return true;
+        }).toList();
+    // Sort by creation date (newest first)
+    _filteredOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
-  List<GlobalKey> _ensurePageKeys(int ornamentIndex, int pageCount) {
-    final existing = _ornamentPageKeys[ornamentIndex] ?? [];
-    if (existing.length != pageCount) {
-      _ornamentPageKeys[ornamentIndex] = List.generate(
-        pageCount,
-        (_) => GlobalKey(),
-      );
+  Map<String, int> _getStatusCounts() {
+    final counts = <String, int>{};
+    for (final order in _allOrders) {
+      final status = _mapOrderToUiStatus(order);
+      counts[status] = (counts[status] ?? 0) + 1;
     }
-    return _ornamentPageKeys[ornamentIndex]!;
+    return counts;
+  }
+
+  Widget _buildTabWithCount(String tabName) {
+    final counts = _getStatusCounts();
+    int count = 0;
+
+    if (tabName == 'All') {
+      count = _allOrders.length;
+    } else {
+      count = counts[tabName] ?? 0;
+    }
+
+    return Tab(text: '$tabName($count)', height: 48);
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: _buildAppBar(),
-      body: RepaintBoundary(
-        key: _repaintBoundaryKey,
-        child: Container(
-          color: const Color(0xFFF8FAFC),
-          child:
-              widget.order.ornamentDetails.isEmpty
-                  ? _buildSingleOrderView()
-                  : _buildMultiOrnamentView(),
-        ),
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      foregroundColor: const Color(0xFF1E293B),
-      elevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle.dark,
-      centerTitle: true,
-      title: Column(
-        children: [
-          Text(
-            'Order Details',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF1E293B),
-            ),
-          ),
-          Text(
-            '#${widget.order.id.substring(0, 8).toUpperCase()}',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFF64748B),
-            ),
-          ),
+      backgroundColor: AppConstants.backgroundColor,
+      appBar: AppBar(
+        title: const Text('Order History'),
+        backgroundColor: AppConstants.primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadOrders),
         ],
-      ),
-      actions: [
-        Container(
-          margin: const EdgeInsets.only(right: 12),
-          child: Material(
-            color:
-                _isGeneratingImage
-                    ? const Color(0xFFE2E8F0)
-                    : const Color(0xFF3B82F6),
-            borderRadius: BorderRadius.circular(10),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: _isGeneratingImage ? null : _generateAndShareImage,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_isGeneratingImage)
-                      SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: const Color(0xFF64748B),
-                        ),
-                      )
-                    else
-                      Icon(Icons.share_outlined, size: 16, color: Colors.white),
-                    const SizedBox(width: 6),
-                    Text(
-                      _isGeneratingImage ? 'Sharing...' : 'Share',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color:
-                            _isGeneratingImage
-                                ? const Color(0xFF64748B)
-                                : Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            color: AppConstants.primaryColor,
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              indicatorColor: Colors.white,
+              indicatorWeight: 3,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
               ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSingleOrderView() {
-    final pages = _partitionImages(widget.order.images);
-    final keys = _ensurePageKeys(-1, pages.length);
-    return Column(
-      children: [
-        Expanded(
-          child: PageView.builder(
-            controller: _imagePageController,
-            onPageChanged: (i) => setState(() => _currentImageIndex = i),
-            itemCount: pages.length,
-            itemBuilder:
-                (context, index) => _buildComposedPage(
-                  pageKey: keys[index],
-                  ornamentName: 'Order',
-                  purity: '-',
-                  unit: '-',
-                  size: '-',
-                  colorstone: '-',
-                  rhodium: '-',
-                  dull: '-',
-                  weight: '-',
-                  quantity: '-',
-                  remarks: widget.order.notes ?? '',
-                  images: pages[index],
-                ),
-          ),
-        ),
-        if (pages.length > 1) _buildGeneratedPageIndicators(pages.length),
-      ],
-    );
-  }
-
-  Widget _buildMultiOrnamentView() {
-    return Column(
-      children: [
-        Expanded(
-          child: PageView.builder(
-            controller: _ornamentPageController,
-            onPageChanged: (index) {
-              setState(() {
-                _currentOrnamentIndex = index;
-                _currentImageIndex = 0;
-                _imagePageController = PageController();
-              });
-            },
-            itemCount: widget.order.ornamentDetails.length,
-            itemBuilder: (context, index) {
-              final ornament = widget.order.ornamentDetails[index];
-              final images =
-                  ornament.images.isNotEmpty
-                      ? ornament.images
-                      : widget.order.images;
-              final pages = _partitionImages(images);
-              final keys = _ensurePageKeys(index, pages.length);
-              return Column(
-                children: [
-                  Expanded(
-                    child: PageView.builder(
-                      controller: _imagePageController,
-                      onPageChanged:
-                          (i) => setState(() => _currentImageIndex = i),
-                      itemCount: pages.length,
-                      itemBuilder:
-                          (context, pageIdx) => _buildComposedPage(
-                            pageKey: keys[pageIdx],
-                            ornamentName: ornament.name,
-                            purity: ornament.purity,
-                            unit: ornament.unit ?? '-',
-                            size: ornament.size ?? '-',
-                            colorstone: ornament.colorstone ?? '-',
-                            rhodium: ornament.rhodium ?? '-',
-                            dull: ornament.dull ?? '-',
-                            weight: '${ornament.weight}g',
-                            quantity: '${ornament.quantity}',
-                            remarks: ornament.remarks ?? '',
-                            images: pages[pageIdx],
-                          ),
-                    ),
-                  ),
-                  if (pages.length > 1)
-                    _buildGeneratedPageIndicators(pages.length),
-                ],
-              );
-            },
-          ),
-        ),
-        if (widget.order.ornamentDetails.length > 1)
-          _buildModernPageIndicators(),
-      ],
-    );
-  }
-
-  Widget _buildComposedPage({
-    required GlobalKey pageKey,
-    required String ornamentName,
-    required String purity,
-    required String weight,
-    required String quantity,
-    required String remarks,
-    required List<String> images,
-    required String unit,
-    required String size,
-    required String colorstone,
-    required String rhodium,
-    required String dull,
-  }) {
-    return RepaintBoundary(
-      key: pageKey,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isMobile = constraints.maxWidth < 700;
-            return Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: isMobile ? 600 : 900),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child:
-                      isMobile
-                          ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: _buildDetailsTable(
-                                  ornamentName,
-                                  purity,
-                                  weight,
-                                  quantity,
-                                  remarks,
-                                  unit,
-                                  size,
-                                  colorstone,
-                                  rhodium,
-                                  dull,
-                                ),
-                              ),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF8FAFC),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: const Color(0xFFE2E8F0),
-                                      ),
-                                    ),
-                                    child: _buildImagesGridForPage(
-                                      images,
-                                      isMobile: true,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                          : Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(
-                                flex: 10,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    border: Border(
-                                      right: BorderSide(
-                                        color: const Color(0xFFE2E8F0),
-                                      ),
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: _buildDetailsTable(
-                                      ornamentName,
-                                      purity,
-                                      weight,
-                                      quantity,
-                                      remarks,
-                                      unit,
-                                      size,
-                                      colorstone,
-                                      rhodium,
-                                      dull,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 15,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF8FAFC),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: const Color(0xFFE2E8F0),
-                                      ),
-                                    ),
-                                    child: _buildImagesGridForPage(images),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailsTable(
-    String ornamentName,
-    String purity,
-    String weight,
-    String quantity,
-    String remarks,
-    String unit,
-    String size,
-    String colorstone,
-    String rhodium,
-    String dull,
-  ) {
-    Text cell(String text, {bool bold = false, Color? color}) => Text(
-      text,
-      style: TextStyle(
-        fontSize: 12, // Reduced from 14
-        fontWeight:
-            bold ? FontWeight.w700 : FontWeight.w400, // Adjusted weights
-        color: color ?? const Color(0xFF0F172A),
-      ),
-    );
-    Widget row(String label1, String value1, String label2, String value2) =>
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: const Color(0xFFE2E8F0))),
-          ),
-          child: Row(
-            children: [
-              Flexible(
-                flex: 1,
-                child: cell(
-                  '$label1 :',
-                  bold: true,
-                  color: const Color(0xFF334155),
-                ),
-              ),
-              Flexible(
-                flex: 2,
-                child: cell(value1, color: const Color(0xFF111827)),
-              ),
-              if (label2.isNotEmpty)
-                Flexible(
-                  flex: 1,
-                  child: cell(
-                    '$label2 :',
-                    bold: true,
-                    color: const Color(0xFF334155),
-                  ),
-                ),
-              if (label2.isNotEmpty)
-                Flexible(
-                  flex: 2,
-                  child: cell(value2, color: const Color(0xFF111827)),
-                ),
-            ],
-          ),
-        );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        row(
-          'Order No.',
-          widget.order.orderNo ?? widget.order.id.substring(0, 8).toUpperCase(),
-          'Order Date',
-          _formatDate(widget.order.orderDate ?? widget.order.createdAt),
-        ),
-        row('Party Name', widget.order.clientName, '', ''),
-        row('Items', ornamentName, '', ''),
-        row('Purity', purity, 'Unit', unit),
-        row('Size', size, 'Weight', weight),
-        row('Qty', quantity, 'Colorstone', colorstone),
-        row('Rhodium', rhodium, '', ''),
-        row('Dull', dull, '', ''),
-        row('Remarks', remarks.isNotEmpty ? remarks : '-', '', ''),
-      ],
-    );
-  }
-
-  Widget _buildImagesGridForPage(List<String> images, {bool isMobile = false}) {
-    if (images.isEmpty) {
-      return Center(child: _buildNoImagesState());
-    }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final crossAxisCount =
-            isMobile
-                ? (width < 400 ? 1 : (width < 600 ? 2 : 3))
-                : (width < 800 ? 2 : (width < 1000 ? 3 : 4));
-        return Padding(
-          padding: const EdgeInsets.all(8),
-          child: GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 3 / 4,
-            ),
-            itemCount: images.length,
-            itemBuilder: (context, i) => _buildModernImageCard(images[i]),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildGeneratedPageIndicators(int length) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(length, (i) => _dot(i == _currentImageIndex)),
-      ),
-    );
-  }
-
-  Widget _dot(bool active) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-      width: active ? 16 : 6,
-      height: 6,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
-        color: active ? const Color(0xFF3B82F6) : const Color(0xFFE2E8F0),
-      ),
-    );
-  }
-
-  Widget _buildOrderSummaryCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1E293B).withOpacity(0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.receipt_long,
-                  color: const Color(0xFF3B82F6),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Order Summary',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Order tracking and details',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _buildStatusBadge(widget.order.statusText),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildInfoGrid(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(String status) {
-    Color backgroundColor;
-    Color textColor;
-
-    switch (status.toLowerCase()) {
-      case 'DC':
-        backgroundColor = const Color(0xFF10B981).withOpacity(0.1);
-        textColor = const Color(0xFF10B981);
-        break;
-      case 'pending':
-        backgroundColor = const Color(0xFFF59E0B).withOpacity(0.1);
-        textColor = const Color(0xFFF59E0B);
-        break;
-      case 'processing':
-        backgroundColor = const Color(0xFF3B82F6).withOpacity(0.1);
-        textColor = const Color(0xFF3B82F6);
-        break;
-      default:
-        backgroundColor = const Color(0xFF64748B).withOpacity(0.1);
-        textColor = const Color(0xFF64748B);
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        status,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-          color: textColor,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoGrid() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildInfoItem(
-                'Order Number',
-                widget.order.orderNo!,
-                Icons.tag,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildInfoItem(
-                'Created',
-                _formatDate(widget.order.createdAt),
-                Icons.calendar_today,
-              ),
-            ),
-          ],
-        ),
-        if (widget.order.orderDate != null) ...[
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildInfoItem(
-                  'Order Date',
-                  _formatDate(widget.order.orderDate!),
-                  Icons.event,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(child: SizedBox()),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildInfoItem(String label, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 14, color: const Color(0xFF64748B)),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF64748B),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF1E293B),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrnamentCard(ornament) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF3B82F6).withOpacity(0.2),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF3B82F6).withOpacity(0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.diamond,
-                  color: const Color(0xFF3B82F6),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      ornament.name,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Ornament Details',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildOrnamentSpecs(ornament),
-          if (ornament.remarks != null && ornament.remarks!.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _buildRemarksSection(ornament.remarks!),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrnamentSpecs(ornament) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildSpecItem(
-            'Purity',
-            ornament.purity.toString(),
-            Icons.verified_outlined,
-            const Color(0xFF10B981),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildSpecItem(
-            'Weight',
-            '${ornament.weight}g',
-            Icons.scale_outlined,
-            const Color(0xFF3B82F6),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildSpecItem(
-            'Quantity',
-            '${ornament.quantity}',
-            Icons.inventory_2_outlined,
-            const Color(0xFFF59E0B),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSpecItem(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 20, color: color),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF1E293B),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRemarksSection(String remarks) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFEF3C7),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: const Color(0xFFD97706).withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.note_outlined,
-                size: 14,
-                color: const Color(0xFFD97706),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Special Notes',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFFD97706),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            remarks,
-            style: TextStyle(
-              fontSize: 12,
-              color: const Color(0xFF92400E),
-              height: 1.3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImagesSection(List<String> images, String title) {
-    if (images.isEmpty) {
-      return _buildNoImagesState();
-    }
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1E293B).withOpacity(0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B5CF6).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.photo_library_outlined,
-                    color: const Color(0xFF8B5CF6),
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1E293B),
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${images.length} image${images.length > 1 ? 's' : ''}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: const Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: images.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder:
-                (context, index) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildModernImageCard(images[index]),
-                ),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModernImageCard(String imageUrl) {
-    return AspectRatio(
-      aspectRatio: 3 / 4,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: const Color(0xFFF1F5F9),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.network(
-            imageUrl,
-            fit: BoxFit.contain,
-            width: double.infinity,
-            height: double.infinity,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: const Color(0xFF3B82F6),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Loading image...',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) => _buildImageError(),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImageError() {
-    return Container(
-      color: const Color(0xFFFEF2F2),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEF4444).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.broken_image_outlined,
-                size: 24,
-                color: const Color(0xFFEF4444),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Image not available',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFFEF4444),
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              'Failed to load image',
-              style: TextStyle(fontSize: 10, color: const Color(0xFF64748B)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNoImagesState() {
-    return Container(
-      height: 150,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1E293B).withOpacity(0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: const Color(0xFF64748B).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.image_not_supported_outlined,
-                size: 36,
-                color: const Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 15),
-            Text(
-              'No Images Available',
-              style: TextStyle(
+              unselectedLabelStyle: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFF64748B),
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              tabs: _tabs.map((t) => _buildTabWithCount(t)).toList(),
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Images will appear here when uploaded',
-              style: TextStyle(fontSize: 12, color: const Color(0xFF94A3B8)),
-            ),
-          ],
+          ),
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: List.generate(_tabs.length, (tabIdx) {
+          if (_selectedTabIndex == tabIdx) {
+            _applyFilters(); // Ensure filters are applied for the current tab
+          }
+          return Column(
+            children: [
+              // _buildStatusCountSection(),
+              _buildSearchAndFilterSection(),
+              _buildDateFilterSection(),
+              Expanded(
+                child:
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _filteredOrders.isEmpty
+                        ? _buildEmptyState()
+                        : RefreshIndicator(
+                          onRefresh: () async => _loadOrders(),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(
+                              AppConstants.spacingM,
+                            ),
+                            itemCount: _filteredOrders.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == 0) return const SizedBox.shrink();
+                              final rowIndex = index - 1;
+                              final order = _filteredOrders[rowIndex];
+                              return _buildOrderTile(rowIndex, order);
+                            },
+                          ),
+                        ),
+              ),
+            ],
+          );
+        }),
       ),
     );
   }
 
-  Widget _buildModernPageIndicators() {
+  Widget _buildDateFilterSection() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        boxShadow: AppConstants.cardShadow,
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _pickDate(isFrom: true),
+              child: _buildDateField(label: 'From', date: _fromDate),
+            ),
+          ),
+          const SizedBox(width: AppConstants.spacingM),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _pickDate(isFrom: false),
+              child: _buildDateField(label: 'To', date: _toDate),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget _buildStatusCountSection() {
+  //   final counts = _getStatusCounts();
+  //   final statusColors = {
+  //     'Pending': Colors.orange,
+  //     'In Progress': Colors.blue,
+  //     'Partially Delivered': Colors.purple,
+  //     'Completed': Colors.green,
+  //     'Delivered': Colors.teal,
+  //     'Cancelled': Colors.red,
+  //     'All': AppConstants.primaryColor,
+  //   };
+
+  //   return Container(
+  //     padding: const EdgeInsets.all(AppConstants.spacingM),
+
+  //   );
+  // }
+
+  Widget _buildStatusCountCard(String status, String count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingM,
+        vertical: AppConstants.spacingS,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            count,
+            style: AppConstants.bodyLarge.copyWith(
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            status,
+            style: AppConstants.bodySmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchAndFilterSection() {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceColor,
+        boxShadow: AppConstants.cardShadow,
+      ),
+      child: Column(
+        children: [
+          // Search Bar
+          TextField(
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+                _applyFilters();
+              });
+            },
+            decoration: InputDecoration(
+              hintText: 'Search orders...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                borderSide: BorderSide(
+                  color: AppConstants.textSecondaryColor.withOpacity(0.2),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                borderSide: BorderSide(
+                  color: AppConstants.textSecondaryColor.withOpacity(0.2),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                borderSide: const BorderSide(
+                  color: AppConstants.primaryColor,
+                  width: 2,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingM,
+                vertical: AppConstants.spacingM,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: AppConstants.spacingM),
+
+          // Filters row (Status, Order Type, Date Range)
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String?>(
+                  value: _orderType,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Order Type',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  items: const [
+                    DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('All Types'),
+                    ),
+                    DropdownMenuItem<String?>(
+                      value: 'Single',
+                      child: Text('Single'),
+                    ),
+                    DropdownMenuItem<String?>(
+                      value: 'Bulk',
+                      child: Text('Bulk'),
+                    ),
+                  ],
+                  onChanged: (val) async {
+                    setState(() => _orderType = val);
+                    await _loadOrders();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // String _statusLabel(OrderStatus s) {
+  //   switch (s) {
+  //     case OrderStatus.pending:
+  //       return 'Pending';
+  //     case OrderStatus.Casted:
+  //       return 'Casted';
+  //     case OrderStatus.Wax:
+  //       return 'Wax';
+  //     case OrderStatus.DC:
+  //       return 'DC';
+  //     case OrderStatus.cancelled:
+  //       return 'Cancelled';
+  //     case OrderStatus.delay:
+  //       return 'Delay';
+  //     case OrderStatus.due:
+  //       return 'Due';
+  //     case OrderStatus.partialDelivery:
+  //       return 'Partial Delivery';
+  //     case OrderStatus.PendingDisp:
+  //       return 'PendingDisp';
+  //   }
+  // }
+
+  Future<void> _pickDate({required bool isFrom}) async {
+    final initial =
+        isFrom ? (_fromDate ?? DateTime.now()) : (_toDate ?? DateTime.now());
+    final first = DateTime(2000);
+    final last = DateTime(2100);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: first,
+      lastDate: last,
+    );
+    if (picked != null) {
+      setState(() {
+        if (isFrom) {
+          _fromDate = picked;
+          if (_toDate != null && _toDate!.isBefore(_fromDate!)) {
+            _toDate = _fromDate;
+          }
+        } else {
+          _toDate = picked;
+          if (_fromDate != null && _fromDate!.isAfter(_toDate!)) {
+            _fromDate = _toDate;
+          }
+        }
+        _loadOrders(); // Reload data from API with new date filters
+      });
+    }
+  }
+
+  // Collapsible row with summary and expandable details
+  Widget _buildOrderTile(int index, Order order) {
+    final isOpen = _expanded.contains(index);
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
+          decoration: BoxDecoration(
+            color: AppConstants.surfaceColor,
+            borderRadius: BorderRadius.circular(AppConstants.radiusM),
+            boxShadow: AppConstants.cardShadow,
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              initiallyExpanded: isOpen,
+              onExpansionChanged: (open) {
+                setState(() {
+                  if (open) {
+                    _expanded.add(index);
+                  } else {
+                    _expanded.remove(index);
+                  }
+                });
+              },
+              tilePadding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingM,
+                vertical: AppConstants.spacingS,
+              ),
+              // trailing:
+              //     isOpen ? _buildStatusChip(order) : _buildStatusChip(order),
+              title: _buildOrderSummary(index, order),
+              childrenPadding: const EdgeInsets.all(AppConstants.spacingM),
+              children: [_buildOrderDetails(order)],
+            ),
+          ),
+        ),
+        if (_isUrgent(order))
+          Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
+        // Status ribbon positioned on the right end
+        Positioned(
+          top: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              color:
+                  order.status == OrderStatus.Completed
+                      ? Colors
+                          .green
+                          .shade600 // Distinct color for Completed
+                      : order.statusColor,
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(AppConstants.radiusM),
+                bottomLeft: Radius.circular(8),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF1E293B).withOpacity(0.1),
-                  blurRadius: 8,
+                  color: (order.status == OrderStatus.Completed
+                          ? Colors.green.shade600
+                          : order.statusColor)
+                      .withOpacity(0.3),
+                  blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(
-                widget.order.ornamentDetails.length,
-                (index) => GestureDetector(
-                  onTap: () {
-                    _ornamentPageController?.animateToPage(
-                      index,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
+            child:
+                ([
+                      OrderStatus.Casted,
+                      OrderStatus.DC,
+                      OrderStatus.PendingDisp,
+                      OrderStatus.Wax,
+                    ].contains(order.status))
+                    ? Text(
+                      "In Progress",
+                      style: AppConstants.bodySmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                        letterSpacing: 0.5,
+                      ),
+                    )
+                    : Text(
+                      order.status == OrderStatus.Completed
+                          ? "COMPLETED"
+                          : order.statusText.toUpperCase(),
+                      style: AppConstants.bodySmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+          ),
+        ),
+        // Show Delay over Due when both conditions could be true (positioned below status ribbon)
+        if (_isDelay(order))
+          Positioned(top: 30, right: 0, child: _buildDelayRibbon())
+        else if (_isDue(order))
+          Positioned(top: 30, right: 0, child: _buildDueRibbon()),
+      ],
+    );
+  }
+
+  Widget _buildOrderSummary(int index, Order order) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: Builder(
+                builder: (context) {
+                  final url = _getFirstImageUrl(order);
+                  if (url == null || url.isEmpty) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey.shade400,
+                        size: 20,
+                      ),
                     );
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: index == _currentOrnamentIndex ? 20 : 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(3),
-                      color:
-                          index == _currentOrnamentIndex
-                              ? const Color(0xFF3B82F6)
-                              : const Color(0xFFE2E8F0),
+                  }
+                  final isPdf = url.toLowerCase().endsWith('.pdf');
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child:
+                        isPdf
+                            ? Container(
+                              color: Colors.red.shade50,
+                              child: Icon(
+                                Icons.picture_as_pdf,
+                                color: Colors.red.shade400,
+                                size: 24,
+                              ),
+                            )
+                            : Image.network(
+                              url,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (c, e, s) => Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.broken_image_outlined,
+                                      color: Colors.grey.shade400,
+                                      size: 20,
+                                    ),
+                                  ),
+                            ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: AppConstants.spacingM),
+            Expanded(
+              flex: 4,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      order.orderNo?.isNotEmpty == true
+                          ? order.orderNo!
+                          : order.id.substring(0, 8),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppConstants.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppConstants.primaryColor,
+                      ),
                     ),
                   ),
+                  if (order.orderType != null) ...[
+                    const SizedBox(width: 8),
+                    _buildOrderTypeChip(order.orderType!),
+                  ],
+                ],
+              ),
+            ),
+            SizedBox(width: 5),
+            Expanded(
+              flex: 3,
+              child: Text(
+                _formatFriendlyDate(order.orderDate ?? order.createdAt),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppConstants.bodySmall.copyWith(
+                  color: AppConstants.textSecondaryColor,
                 ),
               ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOrderDetails(Order order) {
+    return Stack(
+      children: [
+        Card(
+          elevation: 2,
+
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with status and actions
+
+              // Order Information Section
+              _buildOrderInfoSection(order),
+
+              // Partial Delivery Status
+              if (order.status == OrderStatus.partialDelivery) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppConstants.partialDeliveryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: AppConstants.partialDeliveryColor.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.local_shipping_outlined,
+                        size: 14,
+                        color: AppConstants.partialDeliveryColor,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Delivered: ${order.totalDeliveryCount}/${order.totalQuantity}',
+                        style: TextStyle(
+                          color: AppConstants.partialDeliveryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (order.shouldBeDelivered) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'READY FOR COMPLETION',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+
+              // Ornament Details Section
+              if (order.ornamentDetails.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.spacingL),
+                _buildOrnamentDetailsSection(order),
+              ],
+
+              // Notes Section
+              if (order.notes != null && order.notes!.isNotEmpty) ...[
+                const SizedBox(height: AppConstants.spacingL),
+                _buildNotesSection(order),
+              ],
+
+              const SizedBox(height: AppConstants.spacingL),
+
+              // Action Buttons Section
+              _buildActionButtonsSection(order),
+            ],
+          ),
+        ),
+
+        // Status ribbon positioned on the right
+      ],
+    );
+  }
+
+  Widget _buildOrderTypeChip(String type) {
+    final isBulk = type.toLowerCase() == 'bulk';
+    final bg = isBulk ? Colors.purple.shade50 : Colors.blue.shade50;
+    final fg = isBulk ? Colors.purple.shade700 : Colors.blue.shade700;
+    final border = isBulk ? Colors.purple.shade200 : Colors.blue.shade200;
+    final icon = isBulk ? Icons.groups_2_outlined : Icons.person_outline;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: fg),
+          const SizedBox(width: 4),
+          Text(
+            type,
+            style: AppConstants.bodySmall.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -1177,136 +961,863 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     );
   }
 
-  Future<void> _generateAndShareImage() async {
-    if (_isGeneratingImage) return;
-    setState(() {
-      _isGeneratingImage = true;
-    });
+  Widget _buildOrderInfoSection(Order order) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Order Information',
+          style: AppConstants.bodyLarge.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppConstants.primaryColor,
+          ),
+        ),
 
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
+        const SizedBox(height: AppConstants.spacingM),
+
+        Container(
+          padding: const EdgeInsets.all(AppConstants.spacingM),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+          ),
+          child: Column(
             children: [
-              SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
+              // _buildInfoRow(
+              //   icon: Icons.calendar_today_outlined,
+              //   label: 'Created',
+              //   value: _formatDate(order.createdAt),
+              // ),
+              if (order.updatedAt != null) ...[
+                const SizedBox(height: AppConstants.spacingS),
+                _buildInfoRow(
+                  icon: Icons.update_outlined,
+                  label: 'Updated',
+                  value: _formatDate(order.updatedAt!),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Text('Preparing order details for sharing...'),
+              ],
+
+              if (order.orderDate != null) ...[
+                const SizedBox(height: AppConstants.spacingS),
+                _buildInfoRow(
+                  icon: Icons.event_outlined,
+                  label: 'Order Date',
+                  value: _formatDate(order.orderDate!),
+                ),
+              ],
             ],
           ),
-          backgroundColor: const Color(0xFF3B82F6),
-          duration: const Duration(seconds: 2),
         ),
-      );
+      ],
+    );
+  }
 
-      final List<Uint8List> pagePngs = [];
-      final sortedKeys = _ornamentPageKeys.keys.toList()..sort();
-      for (final ornamentIndex in sortedKeys) {
-        final keys = _ornamentPageKeys[ornamentIndex] ?? [];
-        for (int i = 0; i < keys.length; i++) {
-          final key = keys[i];
-          final boundary =
-              key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-          if (boundary == null) continue;
-          final pageImage = await boundary.toImage(pixelRatio: 3.0);
-          final pageBytes = await pageImage.toByteData(
-            format: ui.ImageByteFormat.png,
-          );
-          if (pageBytes == null) continue;
-          pagePngs.add(pageBytes.buffer.asUint8List());
-        }
-      }
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: AppConstants.textSecondaryColor),
+        const SizedBox(width: AppConstants.spacingS),
+        Text(
+          '$label:',
+          style: AppConstants.bodyMedium.copyWith(
+            fontWeight: FontWeight.w500,
+            color: AppConstants.textSecondaryColor,
+          ),
+        ),
+        const SizedBox(width: AppConstants.spacingS),
+        Expanded(
+          child: Text(
+            value,
+            style: AppConstants.bodyMedium,
+            textAlign: TextAlign.end,
+          ),
+        ),
+      ],
+    );
+  }
 
-      if (kIsWeb) {
-        final files = <XFile>[];
-        for (int i = 0; i < pagePngs.length; i++) {
-          files.add(
-            XFile.fromData(
-              pagePngs[i],
-              mimeType: 'image/png',
-              name: 'order_${widget.order.id}_$i.png',
-            ),
-          );
-        }
-        await Share.shareXFiles(
-          files,
-          text: 'Order Details - ${widget.order.id}',
-        );
-      } else {
-        final directory = await getTemporaryDirectory();
-        final files = <XFile>[];
-        for (int i = 0; i < pagePngs.length; i++) {
-          final file = File(
-            '${directory.path}/generated_${widget.order.id}_$i.png',
-          );
-          await file.writeAsBytes(pagePngs[i]);
-          files.add(XFile(file.path));
-        }
-        await Share.shareXFiles(
-          files,
-          text: 'Order Details - ${widget.order.id}',
-        );
-      }
+  Widget _buildOrnamentDetailsSection(Order order) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Ornament Details',
+          style: AppConstants.bodyLarge.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppConstants.primaryColor,
+          ),
+        ),
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white, size: 18),
-                const SizedBox(width: 12),
-                Text('Order details shared successfully!'),
+        const SizedBox(height: AppConstants.spacingM),
+
+        ...order.ornamentDetails.asMap().entries.map((entry) {
+          final index = entry.key;
+          final detail = entry.value;
+          return Container(
+            margin: const EdgeInsets.only(bottom: AppConstants.spacingM),
+            padding: const EdgeInsets.all(AppConstants.spacingM),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppConstants.primaryColor.withOpacity(0.2),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
               ],
             ),
-            backgroundColor: const Color(0xFF10B981),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.error_outline, color: Colors.white, size: 18),
-                const SizedBox(width: 12),
-                Expanded(child: Text('Failed to share: $e')),
+                // Header with name and index
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacingS,
+                        vertical: AppConstants.spacingXS,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppConstants.primaryColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${index + 1}',
+                        style: AppConstants.bodySmall.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppConstants.spacingS),
+                    Expanded(
+                      child: Text(
+                        detail.name,
+                        style: AppConstants.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacingS,
+                        vertical: AppConstants.spacingXS,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppConstants.accentColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${detail.purity}',
+                        style: AppConstants.bodySmall.copyWith(
+                          color: AppConstants.accentColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: AppConstants.spacingM),
+
+                // Specifications grid
+                Container(
+                  padding: const EdgeInsets.all(AppConstants.spacingS),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildSpecItem(
+                              'Weight',
+                              '${detail.weight} ${detail.unit ?? ''}',
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildSpecItem(
+                              'Quantity',
+                              '${detail.quantity}',
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (detail.size != null) ...[
+                        const SizedBox(height: AppConstants.spacingS),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildSpecItem('Size', '${detail.size}'),
+                            ),
+                            const Expanded(child: SizedBox()),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // Additional properties
+                if (detail.colorstone != null ||
+                    detail.rhodium != null ||
+                    detail.dull != null) ...[
+                  const SizedBox(height: AppConstants.spacingM),
+                  Wrap(
+                    spacing: AppConstants.spacingS,
+                    runSpacing: AppConstants.spacingXS,
+                    children: [
+                      if (detail.colorstone != null)
+                        _buildPropertyChip('Colorstone', detail.colorstone!),
+                      if (detail.rhodium != null)
+                        _buildPropertyChip('Rhodium', detail.rhodium!),
+                      if (detail.dull != null)
+                        _buildPropertyChip('Dull', detail.dull!),
+                    ],
+                  ),
+                ],
+
+                // Remarks
+                if (detail.remarks != null && detail.remarks!.isNotEmpty) ...[
+                  const SizedBox(height: AppConstants.spacingM),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppConstants.spacingS),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.blue.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Remarks',
+                          style: AppConstants.bodySmall.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue,
+                          ),
+                        ),
+                        const SizedBox(height: AppConstants.spacingXS),
+                        Text(detail.remarks!, style: AppConstants.bodySmall),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Partial Delivery
+                if (detail.partialDelivery != null &&
+                    detail.partialDelivery!.isNotEmpty) ...[
+                  const SizedBox(height: AppConstants.spacingM),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppConstants.spacingS),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.teal.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.local_shipping_outlined,
+                              size: 16,
+                              color: Colors.teal,
+                            ),
+                            const SizedBox(width: AppConstants.spacingXS),
+                            Text(
+                              'Partial Delivery (${detail.partialDelivery!.length})',
+                              style: AppConstants.bodySmall.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.teal,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppConstants.spacingS),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Column(
+                            children: [
+                              // Header row
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppConstants.spacingS,
+                                  vertical: AppConstants.spacingXS,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.teal.withOpacity(0.1),
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(6),
+                                    topRight: Radius.circular(6),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Delivery Date',
+                                        style: AppConstants.bodySmall.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 50,
+                                      child: Text(
+                                        'Qty',
+                                        textAlign: TextAlign.left,
+                                        style: AppConstants.bodySmall.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 100,
+                                      child: Text(
+                                        'Notes',
+                                        textAlign: TextAlign.right,
+                                        style: AppConstants.bodySmall.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Data rows
+                              ...detail.partialDelivery!.asMap().entries.map((
+                                entry,
+                              ) {
+                                final pd = entry.value;
+                                final isLast =
+                                    entry.key ==
+                                    detail.partialDelivery!.length - 1;
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppConstants.spacingS,
+                                    vertical: AppConstants.spacingS,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border:
+                                        isLast
+                                            ? null
+                                            : Border(
+                                              bottom: BorderSide(
+                                                color: Colors.grey.withOpacity(
+                                                  0.2,
+                                                ),
+                                                width: 1,
+                                              ),
+                                            ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          DateFormat(
+                                            'dd MMM yyyy',
+                                          ).format(pd.deliverydate),
+                                          style: AppConstants.bodySmall,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 30,
+                                        child: Text(
+                                          pd.qty.toString(),
+                                          textAlign: TextAlign.left,
+                                          style: AppConstants.bodySmall
+                                              .copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.teal,
+                                              ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 140,
+                                        child: Text(
+                                          pd.deliverynote ?? '',
+                                          textAlign: TextAlign.right,
+                                          style: AppConstants.bodySmall
+                                              .copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.teal,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Images
+                if (detail.images.isNotEmpty) ...[
+                  const SizedBox(height: AppConstants.spacingM),
+                  _buildImageThumbnails(detail.images),
+                ],
               ],
             ),
-            backgroundColor: const Color(0xFFEF4444),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildSpecItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppConstants.bodySmall.copyWith(
+            color: AppConstants.textSecondaryColor,
+            fontWeight: FontWeight.w500,
           ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isGeneratingImage = false;
-        });
-      }
-    }
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: AppConstants.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPropertyChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingS,
+        vertical: AppConstants.spacingXS,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1),
+      ),
+      child: Text(
+        '$label: $value',
+        style: AppConstants.bodySmall.copyWith(
+          color: Colors.orange.shade700,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotesSection(Order order) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Notes',
+          style: AppConstants.bodyLarge.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppConstants.primaryColor,
+          ),
+        ),
+
+        const SizedBox(height: AppConstants.spacingM),
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppConstants.spacingM),
+          decoration: BoxDecoration(
+            color: Colors.amber.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.amber.withOpacity(0.3), width: 1),
+          ),
+          child: Text(order.notes!, style: AppConstants.bodyMedium),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtonsSection(Order order) {
+    final isBulk = (order.orderType?.toLowerCase() == 'bulk');
+    final isSingle = !isBulk;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Actions',
+          style: AppConstants.bodyLarge.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppConstants.primaryColor,
+          ),
+        ),
+        const SizedBox(height: AppConstants.spacingS),
+        Wrap(
+          spacing: AppConstants.spacingS,
+          runSpacing: AppConstants.spacingS,
+          children: [
+            if (isSingle)
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final created = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) => CreateOrderScreen(
+                            orderToEdit: order,
+                            cloneFromOrder: true,
+                          ),
+                    ),
+                  );
+                  if (created == true) {
+                    _loadOrders();
+                  }
+                },
+                icon: const Icon(Icons.content_copy_outlined, size: 18),
+                label: const Text('Clone'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingM,
+                    vertical: AppConstants.spacingS,
+                  ),
+                ),
+              ),
+            // No edit/cancel for single, nothing for bulk
+          ],
+        ),
+        const SizedBox(height: AppConstants.spacingM),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OrderImageGenerator(order: order),
+                      ),
+                    ),
+                icon: const Icon(Icons.image_outlined),
+                label: const Text('Generate Image'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.accentColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppConstants.spacingM,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.history,
+            size: 64,
+            color: AppConstants.textSecondaryColor.withOpacity(0.5),
+          ),
+          const SizedBox(height: AppConstants.spacingM),
+          Text(
+            _searchQuery.isNotEmpty || _tabController.index > 0
+                ? 'No orders match your filters'
+                : 'No orders yet',
+            style: AppConstants.headingSmall,
+          ),
+          const SizedBox(height: AppConstants.spacingS),
+          Text(
+            _searchQuery.isNotEmpty || _tabController.index > 0
+                ? 'Try adjusting your search or filters'
+                : 'Create your first order to get started',
+            style: AppConstants.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+          if (_searchQuery.isNotEmpty || _tabController.index > 0) ...[
+            const SizedBox(height: AppConstants.spacingM),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _searchQuery = '';
+                  _tabController.index = 0;
+                  _applyFilters();
+                });
+              },
+              child: const Text('Clear Filters'),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   String _formatDate(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${date.day} ${months[date.month - 1]} ${date.year}';
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
+
+  String _formatFriendlyDate(DateTime date) {
+    final now = DateTime.now();
+    final d = DateTime(date.year, date.month, date.day);
+    final today = DateTime(now.year, now.month, now.day);
+    final diff = d.difference(today).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == -1) return 'Yesterday';
+    return _formatDate(date);
+  }
+
+  // Color _getStatusColor(OrderStatus status) {
+  //   switch (status) {
+  //     case OrderStatus.pending:
+  //       return AppConstants.warningColor;
+  //     case OrderStatus.Casted:
+  //       return AppConstants.accentColor;
+  //     case OrderStatus.Wax:
+  //       return AppConstants.secondaryColor;
+  //     case OrderStatus.DC:
+  //       return AppConstants.successColor;
+  //     case OrderStatus.cancelled:
+  //       return AppConstants.errorColor;
+  //     case OrderStatus.delay:
+  //       return AppConstants.errorColor;
+  //     case OrderStatus.due:
+  //       return AppConstants.errorColor;
+  //   }
+  // }
+
+  Widget _buildImageThumbnails(List<String> images) {
+    return SizedBox(
+      height: 90,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: images.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final url = images[index];
+          final isPdf = url.toLowerCase().endsWith('.pdf');
+
+          return GestureDetector(
+            onTap:
+                () =>
+                    _showImagePreview(url, galleryImages: images), // ✅ UPDATED
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppConstants.radiusS),
+              child: AspectRatio(
+                aspectRatio: 1,
+                child:
+                    isPdf
+                        ? Container(
+                          color: Colors.red.shade50,
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.picture_as_pdf,
+                                color: Colors.red.shade400,
+                                size: 40,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'PDF',
+                                style: TextStyle(
+                                  color: Colors.red.shade400,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                        : Image.network(
+                          url,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (context, error, stack) => Container(
+                                color: AppConstants.backgroundColor,
+                                alignment: Alignment.center,
+                                child: const Icon(Icons.broken_image),
+                              ),
+                        ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showImagePreview(String url, {List<String>? galleryImages}) async {
+    // If single image or no gallery context, show single image
+
+    if (galleryImages == null || galleryImages.length == 1) {
+      if (url.toLowerCase().endsWith('.pdf')) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) =>
+                    PdfViewerScreen(pdfUrl: url, title: 'Order Document'),
+          ),
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder:
+              (context) => Dialog(
+                insetPadding: const EdgeInsets.all(16),
+                child: Stack(
+                  children: [
+                    InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 4,
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Image.network(
+                          url,
+                          fit: BoxFit.contain,
+                          errorBuilder:
+                              (context, error, stack) => SizedBox(
+                                height: 300,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(Icons.broken_image, size: 40),
+                                      SizedBox(height: 8),
+                                      Text('Failed to load image'),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+        );
+      }
+      return;
+    }
+
+    // Gallery mode - Find index and show full screen gallery
+    final initialIndex = galleryImages.indexOf(url);
+    if (initialIndex == -1) return; // Safety check
+
+    if (url.toLowerCase().endsWith('.pdf')) {
+      // If first image is PDF, open PDF viewer
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                  PdfViewerScreen(pdfUrl: url, title: 'Order Document'),
+        ),
+      );
+    } else {
+      // Show swipeable image gallery
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => FullScreenImageViewer(
+                images: galleryImages,
+                initialIndex: initialIndex,
+              ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildDateField({required String label, DateTime? date}) {
+    final text =
+        date == null
+            ? label
+            : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingM,
+        vertical: AppConstants.spacingS,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+        border: Border.all(
+          color: AppConstants.textSecondaryColor.withOpacity(0.25),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.calendar_today, size: 18),
+          const SizedBox(width: AppConstants.spacingS),
+          Expanded(
+            child: Text(
+              text,
+              style: AppConstants.bodySmall.copyWith(
+                color:
+                    date == null
+                        ? AppConstants.textSecondaryColor
+                        : AppConstants.textPrimaryColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
+
+
+//Order history
