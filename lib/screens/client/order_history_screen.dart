@@ -182,12 +182,26 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   }
 
   void _applyFilters() {
+    // Define "In Progress" statuses
+    final inProgressStatuses = [
+      OrderStatus.Wax,
+      OrderStatus.DC,
+      OrderStatus.Casted,
+      OrderStatus.PendingDisp,
+    ];
+
     setState(() {
       _filteredOrders =
           _allOrders.where((order) {
             bool matchesStatus = true;
             if (_selectedStatus != null) {
-              matchesStatus = order.status == _selectedStatus;
+              // If selected status is one of the "In Progress" statuses,
+              // show all orders with any "In Progress" status
+              if (inProgressStatuses.contains(_selectedStatus)) {
+                matchesStatus = inProgressStatuses.contains(order.status);
+              } else {
+                matchesStatus = order.status == _selectedStatus;
+              }
             }
 
             final matchesSearch =
@@ -419,10 +433,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
               _selectedStatus,
               [
                     OrderStatus.pending,
-                    OrderStatus.Wax,
-                    OrderStatus.DC,
-                    OrderStatus.Casted,
-                    OrderStatus.PendingDisp,
+                    OrderStatus.Wax, // Represents "In Progress"
                     OrderStatus.partialDelivery,
                     OrderStatus.Completed,
                     OrderStatus.Delivered,
@@ -468,10 +479,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                     _selectedStatus,
                     [
                           OrderStatus.pending,
-                          OrderStatus.Wax,
-                          OrderStatus.DC,
-                          OrderStatus.Casted,
-                          OrderStatus.PendingDisp,
+                          OrderStatus.Wax, // Represents "In Progress"
                           OrderStatus.partialDelivery,
                           OrderStatus.Completed,
                           OrderStatus.Delivered,
@@ -704,14 +712,31 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           return matchesSearch && matchesType;
         }).toList();
 
-    final statusCounts = <OrderStatus, int>{};
-    for (final status in OrderStatus.values) {
-      // Skip delay and due as they are not shown to clients
-      if (status == OrderStatus.due || status == OrderStatus.delay) {
-        continue;
-      }
-      statusCounts[status] = baseOrders.where((o) => o.status == status).length;
-    }
+    // Define "In Progress" statuses
+    final inProgressStatuses = [
+      OrderStatus.Wax,
+      OrderStatus.DC,
+      OrderStatus.Casted,
+      OrderStatus.PendingDisp,
+    ];
+
+    // Calculate counts
+    final pendingCount =
+        baseOrders.where((o) => o.status == OrderStatus.pending).length;
+    final inProgressCount =
+        baseOrders.where((o) => inProgressStatuses.contains(o.status)).length;
+    final partialDeliveryCount =
+        baseOrders.where((o) => o.status == OrderStatus.partialDelivery).length;
+    final completedCount =
+        baseOrders.where((o) => o.status == OrderStatus.Completed).length;
+    final deliveredCount =
+        baseOrders.where((o) => o.status == OrderStatus.Delivered).length;
+    final cancelledCount =
+        baseOrders.where((o) => o.status == OrderStatus.cancelled).length;
+
+    // Check if "In Progress" is selected
+    final isInProgressSelected =
+        _selectedStatus != null && inProgressStatuses.contains(_selectedStatus);
 
     return Container(
       color: Colors.white,
@@ -723,6 +748,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
+                  // All chip
                   GestureDetector(
                     onTap: () {
                       setState(() => _selectedStatus = null);
@@ -781,24 +807,24 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                       ),
                     ),
                   ),
-                  ...[
-                    OrderStatus.pending,
-                    OrderStatus.Wax,
-                    OrderStatus.DC,
-                    OrderStatus.Casted,
-                    OrderStatus.PendingDisp,
-                    OrderStatus.partialDelivery,
-                    OrderStatus.Completed,
-                    OrderStatus.Delivered,
-                    OrderStatus.cancelled,
-                  ].map((status) {
-                    final count = statusCounts[status] ?? 0;
-                    final isSelected = _selectedStatus == status;
 
-                    return GestureDetector(
+                  // Pending chip
+                  if (pendingCount > 0)
+                    _buildStatusChip(
+                      'Pending',
+                      pendingCount,
+                      OrderStatus.pending,
+                      _selectedStatus == OrderStatus.pending,
+                    ),
+
+                  // In Progress chip (consolidated)
+                  if (inProgressCount > 0)
+                    GestureDetector(
                       onTap: () {
                         setState(() {
-                          _selectedStatus = isSelected ? null : status;
+                          // Toggle between first in-progress status and null
+                          _selectedStatus =
+                              isInProgressSelected ? null : OrderStatus.Wax;
                         });
                         _applyFilters();
                       },
@@ -810,16 +836,16 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                         ),
                         decoration: BoxDecoration(
                           color:
-                              isSelected
-                                  ? _getStatusColor(status).withOpacity(0.2)
-                                  : _getStatusColor(status).withOpacity(0.1),
+                              isInProgressSelected
+                                  ? Colors.blue.withOpacity(0.2)
+                                  : Colors.blue.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color:
-                                isSelected
-                                    ? _getStatusColor(status)
-                                    : _getStatusColor(status).withOpacity(0.3),
-                            width: isSelected ? 2 : 1,
+                                isInProgressSelected
+                                    ? Colors.blue
+                                    : Colors.blue.withOpacity(0.3),
+                            width: isInProgressSelected ? 2 : 1,
                           ),
                         ),
                         child: Row(
@@ -828,19 +854,19 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                             Container(
                               width: 8,
                               height: 8,
-                              decoration: BoxDecoration(
-                                color: _getStatusColor(status),
+                              decoration: const BoxDecoration(
+                                color: Colors.blue,
                                 shape: BoxShape.circle,
                               ),
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              '${_getStatusText(status)} ($count)',
+                              'In Progress ($inProgressCount)',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: _getStatusColor(status),
+                                color: Colors.blue,
                                 fontWeight:
-                                    isSelected
+                                    isInProgressSelected
                                         ? FontWeight.w600
                                         : FontWeight.w500,
                               ),
@@ -848,13 +874,104 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                           ],
                         ),
                       ),
-                    );
-                  }).toList(),
+                    ),
+
+                  // Partially Delivered chip
+                  if (partialDeliveryCount > 0)
+                    _buildStatusChip(
+                      'Partially Delivered',
+                      partialDeliveryCount,
+                      OrderStatus.partialDelivery,
+                      _selectedStatus == OrderStatus.partialDelivery,
+                    ),
+
+                  // Completed chip
+                  if (completedCount > 0)
+                    _buildStatusChip(
+                      'Completed',
+                      completedCount,
+                      OrderStatus.Completed,
+                      _selectedStatus == OrderStatus.Completed,
+                    ),
+
+                  // Delivered chip
+                  if (deliveredCount > 0)
+                    _buildStatusChip(
+                      'Delivered',
+                      deliveredCount,
+                      OrderStatus.Delivered,
+                      _selectedStatus == OrderStatus.Delivered,
+                    ),
+
+                  // Cancelled chip
+                  if (cancelledCount > 0)
+                    _buildStatusChip(
+                      'Cancelled',
+                      cancelledCount,
+                      OrderStatus.cancelled,
+                      _selectedStatus == OrderStatus.cancelled,
+                    ),
                 ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(
+    String label,
+    int count,
+    OrderStatus status,
+    bool isSelected,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedStatus = isSelected ? null : status;
+        });
+        _applyFilters();
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color:
+              isSelected
+                  ? _getStatusColor(status).withOpacity(0.2)
+                  : _getStatusColor(status).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color:
+                isSelected
+                    ? _getStatusColor(status)
+                    : _getStatusColor(status).withOpacity(0.3),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: _getStatusColor(status),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '$label ($count)',
+              style: TextStyle(
+                fontSize: 12,
+                color: _getStatusColor(status),
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1677,26 +1794,17 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     switch (status) {
       case OrderStatus.pending:
         return 'Pending';
-      case OrderStatus.Casted:
-        return 'Casted';
-      case OrderStatus.Wax:
-        return 'Wax';
-      case OrderStatus.DC:
-        return 'DC';
+      case OrderStatus.partialDelivery:
+        return 'Partially Delivered'; // Show for both bulk and single orders
       case OrderStatus.cancelled:
         return 'Cancelled';
-      case OrderStatus.delay:
-        return 'Delay';
-      case OrderStatus.due:
-        return 'Due';
-      case OrderStatus.partialDelivery:
-        return 'Partial Delivery';
-      case OrderStatus.PendingDisp:
-        return 'PendingDisp';
-      case OrderStatus.Completed:
-        return 'Completed';
       case OrderStatus.Delivered:
         return 'Delivered';
+      case OrderStatus.Completed:
+        return 'Completed'; // Separate status for Completed
+      // In Progress: all other statuses (Casted, Wax, PendingDisp, etc.)
+      default:
+        return 'In Progress';
     }
   }
 }
