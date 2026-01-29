@@ -2467,6 +2467,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                     const SizedBox(height: 8),
                     // Row 2: Status Badge + Copy Icon
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         // Status Badge
                         Container(
@@ -2875,7 +2876,6 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                   },
                   itemBuilder:
                       (context) => [
-                        
                         PopupMenuItem(
                           value: 'edit',
                           child: Row(
@@ -3251,10 +3251,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _buildOrnamentDetailRow(
-                      'Weight',
-                      '${detail.weight} ${detail.unit ?? 'g'}',
-                    ),
+                    _buildOrnamentDetailRow('Weight', '${detail.weight} '),
                     const SizedBox(height: 10),
                     _buildOrnamentDetailRow('Purity', detail.purity),
                     const SizedBox(height: 10),

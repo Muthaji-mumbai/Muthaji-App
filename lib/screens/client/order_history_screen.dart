@@ -85,31 +85,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         order.status == OrderStatus.cancelled;
   }
 
-  bool _isDue(Order order) {
-    if (_isFinished(order) || order.orderDate == null) return false;
-    final now = DateTime.now();
-    final days = now.difference(order.orderDate!).inDays;
-
-    final isSingleOrder =
-        order.orderType == 'Single' || order.orderType == null;
-    final dueThreshold = isSingleOrder ? 7 : 10;
-    final delayThreshold = isSingleOrder ? 10 : 15;
-
-    return days >= dueThreshold && days < delayThreshold;
-  }
-
-  bool _isDelay(Order order) {
-    if (_isFinished(order) || order.orderDate == null) return false;
-    final now = DateTime.now();
-    final days = now.difference(order.orderDate!).inDays;
-
-    final isSingleOrder =
-        order.orderType == 'Single' || order.orderType == null;
-    final delayThreshold = isSingleOrder ? 10 : 15;
-
-    return days >= delayThreshold;
-  }
-
   Widget _buildUrgentRibbon() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -122,48 +97,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       ),
       child: const Text(
         'URGENT',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDueRibbon() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFA000),
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(8),
-          bottomLeft: Radius.circular(8),
-        ),
-      ),
-      child: const Text(
-        'DUE',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDelayRibbon() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppConstants.errorColor,
-        borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(8),
-          bottomLeft: Radius.circular(8),
-        ),
-      ),
-      child: const Text(
-        'DELAY',
         style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w700,
@@ -254,13 +187,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           _allOrders.where((order) {
             bool matchesStatus = true;
             if (_selectedStatus != null) {
-              if (_selectedStatus == OrderStatus.due) {
-                matchesStatus = _isDue(order);
-              } else if (_selectedStatus == OrderStatus.delay) {
-                matchesStatus = _isDelay(order);
-              } else {
-                matchesStatus = order.status == _selectedStatus;
-              }
+              matchesStatus = order.status == _selectedStatus;
             }
 
             final matchesSearch =
@@ -492,8 +419,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
               _selectedStatus,
               [
                     OrderStatus.pending,
-                    OrderStatus.delay,
-                    OrderStatus.due,
                     OrderStatus.Wax,
                     OrderStatus.DC,
                     OrderStatus.Casted,
@@ -543,8 +468,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                     _selectedStatus,
                     [
                           OrderStatus.pending,
-                          OrderStatus.delay,
-                          OrderStatus.due,
                           OrderStatus.Wax,
                           OrderStatus.DC,
                           OrderStatus.Casted,
@@ -783,14 +706,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
 
     final statusCounts = <OrderStatus, int>{};
     for (final status in OrderStatus.values) {
-      if (status == OrderStatus.due) {
-        statusCounts[status] = baseOrders.where(_isDue).length;
-      } else if (status == OrderStatus.delay) {
-        statusCounts[status] = baseOrders.where(_isDelay).length;
-      } else {
-        statusCounts[status] =
-            baseOrders.where((o) => o.status == status).length;
+      // Skip delay and due as they are not shown to clients
+      if (status == OrderStatus.due || status == OrderStatus.delay) {
+        continue;
       }
+      statusCounts[status] = baseOrders.where((o) => o.status == status).length;
     }
 
     return Container(
@@ -863,8 +783,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                   ),
                   ...[
                     OrderStatus.pending,
-                    OrderStatus.delay,
-                    OrderStatus.due,
                     OrderStatus.Wax,
                     OrderStatus.DC,
                     OrderStatus.Casted,
@@ -1341,10 +1259,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         ),
         if (_isUrgent(order))
           Positioned(top: 0, left: 0, child: _buildUrgentRibbon()),
-        if (_isDelay(order))
-          Positioned(top: 0, right: 0, child: _buildDelayRibbon())
-        else if (_isDue(order))
-          Positioned(top: 0, right: 0, child: _buildDueRibbon()),
       ],
     );
   }

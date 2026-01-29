@@ -1661,6 +1661,35 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   },
                 ),
               ),
+          if (_selectedUserId != null) ...[
+            const SizedBox(width: AppConstants.spacingM),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => ManageOrdersScreen(
+                          initialUserId: _selectedUserId,
+                          initialUserName: _selectedUserName,
+                          initialStartDate: _startDate,
+                          initialEndDate: _endDate,
+                        ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.list_alt, size: 18),
+              label: const Text('View Orders'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: AppConstants.spacingM),
           _buildDateFilterSection(),
         ],
@@ -3179,7 +3208,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ManageOrdersScreen(initialStatus: status),
+        builder:
+            (context) => ManageOrdersScreen(
+              initialStatus: status,
+              initialUserId: _selectedUserId,
+              initialUserName: _selectedUserName,
+              initialStartDate: _startDate,
+              initialEndDate: _endDate,
+            ),
       ),
     );
   }
@@ -3203,7 +3239,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ManageOrdersScreen(initialOrderType: orderType),
+        builder:
+            (context) => ManageOrdersScreen(
+              initialOrderType: orderType,
+              initialUserId: _selectedUserId,
+              initialUserName: _selectedUserName,
+              initialStartDate: _startDate,
+              initialEndDate: _endDate,
+            ),
       ),
     );
   }
