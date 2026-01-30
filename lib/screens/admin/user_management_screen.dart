@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:responsive_framework/responsive_framework.dart';
@@ -16,7 +15,8 @@ class UserManagementScreen extends StatefulWidget {
   State<UserManagementScreen> createState() => _UserManagementScreenState();
 }
 
-class _UserManagementScreenState extends State<UserManagementScreen> with SingleTickerProviderStateMixin {
+class _UserManagementScreenState extends State<UserManagementScreen>
+    with SingleTickerProviderStateMixin {
   List<User> _users = [];
   bool _isLoading = true;
   String? _error;
@@ -28,7 +28,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this); // 4 tabs: All, Customers, Employees, Admins
+    _tabController = TabController(
+      length: 4,
+      vsync: this,
+    ); // 4 tabs: All, Customers, Employees, Admins
     _loadUsers();
   }
 
@@ -73,7 +76,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
   List<User> get _filteredUsers {
     var filtered = _users;
     if (_selectedRoleFilter != null) {
-      filtered = filtered.where((user) => user.role == _selectedRoleFilter).toList();
+      filtered =
+          filtered.where((user) => user.role == _selectedRoleFilter).toList();
     }
     if (_searchQuery.isEmpty) return filtered;
 
@@ -115,13 +119,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
           ],
           onTap: (index) {
             setState(() {
-              _selectedRoleFilter = index == 0
-                  ? null
-                  : index == 1
+              _selectedRoleFilter =
+                  index == 0
+                      ? null
+                      : index == 1
                       ? UserRole.customer
                       : index == 2
-                          ? UserRole.employee
-                          : UserRole.admin;
+                      ? UserRole.employee
+                      : UserRole.admin;
               _searchQuery = ''; // Reset search when switching tabs
               _searchController.clear();
             });
@@ -137,35 +142,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
               color: AppConstants.surfaceColor,
               boxShadow: AppConstants.cardShadow,
             ),
-            child: isMobile
-                ? Column(
-                    children: [
-                      CustomTextField(
-                        controller: _searchController,
-                        labelText: 'Search Users',
-                        hintText: 'Search by name, email, or phone...',
-                        prefixIcon: Icons.search,
-                        onChanged: (value) {
-                          setState(() {
-                            _searchQuery = value;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: AppConstants.spacingM),
-                      CustomButton(
-                        onPressed: () => _showAddUserDialog(context),
-                        text: 'Add User',
-                        icon: Icons.person_add,
-                        backgroundColor: AppConstants.successColor,
-                        width: double.infinity,
-                      ),
-                    ],
-                  )
-                : Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: CustomTextField(
+            child:
+                isMobile
+                    ? Column(
+                      children: [
+                        CustomTextField(
                           controller: _searchController,
                           labelText: 'Search Users',
                           hintText: 'Search by name, email, or phone...',
@@ -176,25 +157,51 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                             });
                           },
                         ),
-                      ),
-                      const SizedBox(width: AppConstants.spacingM),
-                      Expanded(
-                        flex: 1,
-                        child: CustomButton(
+                        const SizedBox(height: AppConstants.spacingM),
+                        CustomButton(
                           onPressed: () => _showAddUserDialog(context),
                           text: 'Add User',
                           icon: Icons.person_add,
                           backgroundColor: AppConstants.successColor,
+                          width: double.infinity,
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    )
+                    : Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: CustomTextField(
+                            controller: _searchController,
+                            labelText: 'Search Users',
+                            hintText: 'Search by name, email, or phone...',
+                            prefixIcon: Icons.search,
+                            onChanged: (value) {
+                              setState(() {
+                                _searchQuery = value;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: AppConstants.spacingM),
+                        Expanded(
+                          flex: 1,
+                          child: CustomButton(
+                            onPressed: () => _showAddUserDialog(context),
+                            text: 'Add User',
+                            icon: Icons.person_add,
+                            backgroundColor: AppConstants.successColor,
+                          ),
+                        ),
+                      ],
+                    ),
           ),
           // Users List
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _error != null
                     ? _buildErrorWidget()
                     : _buildUsersList(),
           ),
@@ -254,10 +261,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
             ),
             if (_searchQuery.isEmpty) ...[
               const SizedBox(height: AppConstants.spacingS),
-              Text(
-                'Add a user to get started',
-                style: AppConstants.bodyMedium,
-              ),
+              Text('Add a user to get started', style: AppConstants.bodyMedium),
             ],
           ],
         ),
@@ -284,213 +288,268 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.spacingS),
-        child: isMobile
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: _getRoleColor(user.role).withOpacity(0.1),
-                        child: Icon(
-                          _getRoleIcon(user.role),
-                          color: _getRoleColor(user.role),
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: AppConstants.spacingS),
-                      Expanded(
-                        child: Text(
-                          user.name,
-                          style: AppConstants.bodyLarge.copyWith(
-                            fontWeight: FontWeight.w600,
+        child:
+            isMobile
+                ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: _getRoleColor(
+                            user.role,
+                          ).withOpacity(0.1),
+                          child: Icon(
+                            _getRoleIcon(user.role),
+                            color: _getRoleColor(user.role),
+                            size: 20,
                           ),
                         ),
-                      ),
-                      PopupMenuButton<String>(
-                        onSelected: (value) {
-                          switch (value) {
-                            case 'edit':
-                              _showEditUserDialog(context, user);
-                              break;
-                            case 'delete':
-                              _showDeleteUserDialog(context, user);
-                              break;
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, color: AppConstants.accentColor),
-                                SizedBox(width: AppConstants.spacingS),
-                                Text('Edit'),
-                              ],
+                        const SizedBox(width: AppConstants.spacingS),
+                        Expanded(
+                          child: Text(
+                            user.name,
+                            style: AppConstants.bodyLarge.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, color: AppConstants.errorColor),
-                                SizedBox(width: AppConstants.spacingS),
-                                Text('Delete'),
+                        ),
+                        PopupMenuButton<String>(
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'edit':
+                                _showEditUserDialog(context, user);
+                                break;
+                              case 'delete':
+                                _showDeleteUserDialog(context, user);
+                                break;
+                              case 'reset_password':
+                                _showResetPasswordDialog(context, user);
+                                break;
+                            }
+                          },
+                          itemBuilder:
+                              (context) => [
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.edit,
+                                        color: AppConstants.accentColor,
+                                      ),
+                                      SizedBox(width: AppConstants.spacingS),
+                                      Text('Edit'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.delete,
+                                        color: AppConstants.errorColor,
+                                      ),
+                                      SizedBox(width: AppConstants.spacingS),
+                                      Text('Delete'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'reset_password',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.lock_reset,
+                                        color: AppConstants.warningColor,
+                                      ),
+                                      SizedBox(width: AppConstants.spacingS),
+                                      Text('Reset Password'),
+                                    ],
+                                  ),
+                                ),
                               ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppConstants.spacingS),
+                    Text(
+                      user.email,
+                      style: AppConstants.bodyMedium.copyWith(
+                        color: AppConstants.textSecondaryColor,
+                      ),
+                    ),
+                    if (user.phone.isNotEmpty)
+                      Text(
+                        'Phone: ${user.phone}',
+                        style: AppConstants.bodySmall.copyWith(
+                          color: AppConstants.textSecondaryColor,
+                        ),
+                      ),
+                    if (user.address != null && user.address!.isNotEmpty)
+                      Text(
+                        'Address: ${user.address}',
+                        style: AppConstants.bodySmall.copyWith(
+                          color: AppConstants.textSecondaryColor,
+                        ),
+                      ),
+                    const SizedBox(height: AppConstants.spacingS),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacingS,
+                        vertical: AppConstants.spacingXS,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getRoleColor(user.role).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusS,
+                        ),
+                      ),
+                      child: Text(
+                        _getRoleText(user.role),
+                        style: AppConstants.bodySmall.copyWith(
+                          color: _getRoleColor(user.role),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+                : Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: _getRoleColor(
+                        user.role,
+                      ).withOpacity(0.1),
+                      child: Icon(
+                        _getRoleIcon(user.role),
+                        color: _getRoleColor(user.role),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: AppConstants.spacingM),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user.name,
+                            style: AppConstants.bodyLarge.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            user.email,
+                            style: AppConstants.bodyMedium.copyWith(
+                              color: AppConstants.textSecondaryColor,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: AppConstants.spacingS),
-                  Text(
-                    user.email,
-                    style: AppConstants.bodyMedium.copyWith(
-                      color: AppConstants.textSecondaryColor,
                     ),
-                  ),
-                  if (user.phone.isNotEmpty)
-                    Text(
-                      'Phone: ${user.phone}',
-                      style: AppConstants.bodySmall.copyWith(
-                        color: AppConstants.textSecondaryColor,
-                      ),
-                    ),
-                  if (user.address != null && user.address!.isNotEmpty)
-                    Text(
-                      'Address: ${user.address}',
-                      style: AppConstants.bodySmall.copyWith(
-                        color: AppConstants.textSecondaryColor,
-                      ),
-                    ),
-                  const SizedBox(height: AppConstants.spacingS),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingS,
-                      vertical: AppConstants.spacingXS,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getRoleColor(user.role).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                    child: Text(
-                      _getRoleText(user.role),
-                      style: AppConstants.bodySmall.copyWith(
-                        color: _getRoleColor(user.role),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            : Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: _getRoleColor(user.role).withOpacity(0.1),
-                    child: Icon(
-                      _getRoleIcon(user.role),
-                      color: _getRoleColor(user.role),
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: AppConstants.spacingM),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user.name,
-                          style: AppConstants.bodyLarge.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        user.phone.isNotEmpty ? user.phone : 'N/A',
+                        style: AppConstants.bodyMedium.copyWith(
+                          color: AppConstants.textSecondaryColor,
                         ),
-                        Text(
-                          user.email,
-                          style: AppConstants.bodyMedium.copyWith(
-                            color: AppConstants.textSecondaryColor,
-                          ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        user.address != null && user.address!.isNotEmpty
+                            ? user.address!
+                            : 'N/A',
+                        style: AppConstants.bodyMedium.copyWith(
+                          color: AppConstants.textSecondaryColor,
                         ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      user.phone.isNotEmpty ? user.phone : 'N/A',
-                      style: AppConstants.bodyMedium.copyWith(
-                        color: AppConstants.textSecondaryColor,
                       ),
                     ),
-                  ),
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      user.address != null && user.address!.isNotEmpty
-                          ? user.address!
-                          : 'N/A',
-                      style: AppConstants.bodyMedium.copyWith(
-                        color: AppConstants.textSecondaryColor,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacingS,
+                        vertical: AppConstants.spacingXS,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getRoleColor(user.role).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusS,
+                        ),
+                      ),
+                      child: Text(
+                        _getRoleText(user.role),
+                        style: AppConstants.bodySmall.copyWith(
+                          color: _getRoleColor(user.role),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingS,
-                      vertical: AppConstants.spacingXS,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getRoleColor(user.role).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    ),
-                    child: Text(
-                      _getRoleText(user.role),
-                      style: AppConstants.bodySmall.copyWith(
-                        color: _getRoleColor(user.role),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppConstants.spacingM),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      switch (value) {
-                        case 'edit':
-                          _showEditUserDialog(context, user);
-                          break;
-                        case 'delete':
-                          _showDeleteUserDialog(context, user);
-                          break;
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, color: AppConstants.accentColor),
-                            SizedBox(width: AppConstants.spacingS),
-                            Text('Edit'),
+                    const SizedBox(width: AppConstants.spacingM),
+                    PopupMenuButton<String>(
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'edit':
+                            _showEditUserDialog(context, user);
+                            break;
+                          case 'delete':
+                            _showDeleteUserDialog(context, user);
+                            break;
+                          case 'reset_password':
+                            _showResetPasswordDialog(context, user);
+                            break;
+                        }
+                      },
+                      itemBuilder:
+                          (context) => [
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.edit,
+                                    color: AppConstants.accentColor,
+                                  ),
+                                  SizedBox(width: AppConstants.spacingS),
+                                  Text('Edit'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.delete,
+                                    color: AppConstants.errorColor,
+                                  ),
+                                  SizedBox(width: AppConstants.spacingS),
+                                  Text('Delete'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'reset_password',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.lock_reset,
+                                    color: AppConstants.warningColor,
+                                  ),
+                                  SizedBox(width: AppConstants.spacingS),
+                                  Text('Reset Password'),
+                                ],
+                              ),
+                            ),
                           ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, color: AppConstants.errorColor),
-                            SizedBox(width: AppConstants.spacingS),
-                            Text('Delete'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
       ),
     );
   }
@@ -512,24 +571,32 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
   void _showDeleteUserDialog(BuildContext context, User user) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete User'),
-        content: Text('Are you sure you want to delete ${user.name}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete User'),
+            content: Text('Are you sure you want to delete ${user.name}?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              CustomButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  await _deleteUser(user);
+                },
+                text: 'Delete',
+                backgroundColor: AppConstants.errorColor,
+              ),
+            ],
           ),
-          CustomButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await _deleteUser(user);
-            },
-            text: 'Delete',
-            backgroundColor: AppConstants.errorColor,
-          ),
-        ],
-      ),
+    );
+  }
+
+  void _showResetPasswordDialog(BuildContext context, User user) {
+    showDialog(
+      context: context,
+      builder: (context) => ResetPasswordDialog(user: user),
     );
   }
 
@@ -596,6 +663,144 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
       case UserRole.customer:
         return Icons.person;
     }
+  }
+}
+
+class ResetPasswordDialog extends StatefulWidget {
+  final User user;
+  const ResetPasswordDialog({super.key, required this.user});
+
+  @override
+  State<ResetPasswordDialog> createState() => _ResetPasswordDialogState();
+}
+
+class _ResetPasswordDialogState extends State<ResetPasswordDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _resetPassword() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final token = authProvider.currentUser?.token;
+
+      if (token == null) {
+        throw Exception('No authentication token available');
+      }
+
+      await UserService.resetPassword(
+        email: widget.user.email,
+        newPassword: _passwordController.text,
+        token: token,
+      );
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password reset successfully'),
+            backgroundColor: AppConstants.successColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Reset Password for ${widget.user.name}'),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusL),
+      ),
+      content: SizedBox(
+        width:
+            ResponsiveValue<double>(
+              context,
+              defaultValue: 400,
+              conditionalValues: [
+                const Condition.equals(name: MOBILE, value: double.infinity),
+                const Condition.equals(name: TABLET, value: 400),
+                const Condition.equals(name: DESKTOP, value: 400),
+              ],
+            ).value,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CustomTextField(
+                controller: _passwordController,
+                labelText: 'New Password',
+                hintText: 'Enter new password',
+                prefixIcon: Icons.lock,
+                obscureText: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Password is required';
+                  }
+                  if (value.length < 6) {
+                    return 'Password must be at least 6 characters';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppConstants.spacingM),
+              CustomTextField(
+                controller: _confirmPasswordController,
+                labelText: 'Confirm Password',
+                hintText: 'Confirm new password',
+                prefixIcon: Icons.lock_outline,
+                obscureText: true,
+                validator: (value) {
+                  if (value != _passwordController.text) {
+                    return 'Passwords do not match';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        CustomButton(
+          onPressed: _isLoading ? null : _resetPassword,
+          text: _isLoading ? 'Resetting...' : 'Reset Password',
+          backgroundColor: AppConstants.warningColor,
+          icon: _isLoading ? null : Icons.lock_reset,
+        ),
+      ],
+    );
   }
 }
 
@@ -682,15 +887,16 @@ class _AddUserDialogState extends State<AddUserDialog> {
         borderRadius: BorderRadius.circular(AppConstants.radiusL),
       ),
       content: SizedBox(
-        width: ResponsiveValue<double>(
-          context,
-          defaultValue: 400,
-          conditionalValues: [
-            const Condition.equals(name: MOBILE, value: double.infinity),
-            const Condition.equals(name: TABLET, value: 500),
-            const Condition.equals(name: DESKTOP, value: 400),
-          ],
-        ).value!,
+        width:
+            ResponsiveValue<double>(
+              context,
+              defaultValue: 400,
+              conditionalValues: [
+                const Condition.equals(name: MOBILE, value: double.infinity),
+                const Condition.equals(name: TABLET, value: 500),
+                const Condition.equals(name: DESKTOP, value: 400),
+              ],
+            ).value,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -720,7 +926,9 @@ class _AddUserDialogState extends State<AddUserDialog> {
                     if (value == null || value.trim().isEmpty) {
                       return 'Email is required';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -780,12 +988,15 @@ class _AddUserDialogState extends State<AddUserDialog> {
                       borderRadius: BorderRadius.circular(AppConstants.radiusM),
                     ),
                   ),
-                  items: UserRole.values
-                      .map((role) => DropdownMenuItem(
-                            value: role,
-                            child: Text(_getRoleText(role)),
-                          ))
-                      .toList(),
+                  items:
+                      UserRole.values
+                          .map(
+                            (role) => DropdownMenuItem(
+                              value: role,
+                              child: Text(_getRoleText(role)),
+                            ),
+                          )
+                          .toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setState(() => _selectedRole = value);
@@ -933,15 +1144,16 @@ class _EditUserDialogState extends State<EditUserDialog> {
         borderRadius: BorderRadius.circular(AppConstants.radiusL),
       ),
       content: SizedBox(
-        width: ResponsiveValue<double>(
-          context,
-          defaultValue: 400,
-          conditionalValues: [
-            const Condition.equals(name: MOBILE, value: double.infinity),
-            const Condition.equals(name: TABLET, value: 500),
-            const Condition.equals(name: DESKTOP, value: 400),
-          ],
-        ).value!,
+        width:
+            ResponsiveValue<double>(
+              context,
+              defaultValue: 400,
+              conditionalValues: [
+                const Condition.equals(name: MOBILE, value: double.infinity),
+                const Condition.equals(name: TABLET, value: 500),
+                const Condition.equals(name: DESKTOP, value: 400),
+              ],
+            ).value,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -971,7 +1183,9 @@ class _EditUserDialogState extends State<EditUserDialog> {
                     if (value == null || value.trim().isEmpty) {
                       return 'Email is required';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -1014,12 +1228,15 @@ class _EditUserDialogState extends State<EditUserDialog> {
                       borderRadius: BorderRadius.circular(AppConstants.radiusM),
                     ),
                   ),
-                  items: UserRole.values
-                      .map((role) => DropdownMenuItem(
-                            value: role,
-                            child: Text(_getRoleText(role)),
-                          ))
-                      .toList(),
+                  items:
+                      UserRole.values
+                          .map(
+                            (role) => DropdownMenuItem(
+                              value: role,
+                              child: Text(_getRoleText(role)),
+                            ),
+                          )
+                          .toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setState(() => _selectedRole = value);

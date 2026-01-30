@@ -201,6 +201,42 @@ class UserService {
     }
   }
 
+  // Reset password (Admin)
+  static Future<void> resetPassword({
+    required String email,
+    required String newPassword,
+    String? token,
+  }) async {
+    try {
+      if (email.isEmpty) throw Exception('Email is required');
+      if (newPassword.isEmpty) throw Exception('New password is required');
+      if (newPassword.length < 6) {
+        throw Exception('Password must be at least 6 characters long');
+      }
+
+      final response = await ApiService.post(
+        '${AppConstants.usersEndpoint}/forget-password',
+        body: {'email': email, 'newPassword': newPassword},
+        token: token,
+      );
+
+      if (response['success'] != true) {
+        throw Exception(response['message'] ?? 'Failed to reset password');
+      }
+    } catch (e) {
+      final errorMessage = e.toString();
+      if (errorMessage.contains('Network error')) {
+        throw Exception('Network connection failed');
+      } else if (errorMessage.contains('403')) {
+        throw Exception('Permission denied');
+      } else if (errorMessage.contains('404')) {
+        throw Exception('User not found');
+      } else {
+        rethrow;
+      }
+    }
+  }
+
   // Update user
   static Future<User> updateUser({
     required String userId,

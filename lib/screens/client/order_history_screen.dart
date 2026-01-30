@@ -1486,14 +1486,275 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _buildOrnamentDetailRow(
-                      'Weight',
-                      '${detail.weight} ${detail.unit ?? 'g'}',
+                    Container(
+                      padding: const EdgeInsets.all(AppConstants.spacingS),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildSpecItem(
+                                  'Weight',
+                                  '${detail.weight} ${detail.unit ?? ''}',
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildSpecItem('Purity', detail.purity),
+                              ),
+                              Expanded(
+                                child: _buildSpecItem(
+                                  'Quantity',
+                                  '${detail.quantity}',
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (detail.size != null) ...[
+                            const SizedBox(height: AppConstants.spacingS),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildSpecItem(
+                                    'Size',
+                                    '${detail.size}',
+                                  ),
+                                ),
+                                const Expanded(child: SizedBox()),
+                                const Expanded(child: SizedBox()),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                    _buildOrnamentDetailRow('Purity', detail.purity),
-                    const SizedBox(height: 10),
-                    _buildOrnamentDetailRow('Quantity', '${detail.quantity}'),
+
+                    // Additional properties
+                    if (detail.colorstone != null ||
+                        detail.rhodium != null ||
+                        detail.dull != null) ...[
+                      const SizedBox(height: AppConstants.spacingM),
+                      Wrap(
+                        spacing: AppConstants.spacingS,
+                        runSpacing: AppConstants.spacingXS,
+                        children: [
+                          if (detail.colorstone != null)
+                            _buildPropertyChip(
+                              'Colorstone',
+                              detail.colorstone!,
+                            ),
+                          if (detail.rhodium != null)
+                            _buildPropertyChip('Rhodium', detail.rhodium!),
+                          if (detail.dull != null)
+                            _buildPropertyChip('Dull', detail.dull!),
+                        ],
+                      ),
+                    ],
+
+                    // Remarks
+                    if (detail.remarks != null &&
+                        detail.remarks!.isNotEmpty) ...[
+                      const SizedBox(height: AppConstants.spacingM),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppConstants.spacingS),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.blue.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Remarks',
+                              style: AppConstants.bodySmall.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            const SizedBox(height: AppConstants.spacingXS),
+                            Text(
+                              detail.remarks!,
+                              style: AppConstants.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Partial Delivery
+                    if (detail.partialDelivery != null &&
+                        detail.partialDelivery!.isNotEmpty) ...[
+                      const SizedBox(height: AppConstants.spacingM),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppConstants.spacingS),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.teal.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.local_shipping_outlined,
+                                  size: 16,
+                                  color: Colors.teal,
+                                ),
+                                const SizedBox(width: AppConstants.spacingXS),
+                                Text(
+                                  'Partial Delivery (${detail.partialDelivery!.length})',
+                                  style: AppConstants.bodySmall.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.teal,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppConstants.spacingS),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Column(
+                                children: [
+                                  // Header row
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppConstants.spacingS,
+                                      vertical: AppConstants.spacingXS,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal.withOpacity(0.1),
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(6),
+                                        topRight: Radius.circular(6),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'Delivery Date',
+                                            style: AppConstants.bodySmall
+                                                .copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 50,
+                                          child: Text(
+                                            'Qty',
+                                            textAlign: TextAlign.left,
+                                            style: AppConstants.bodySmall
+                                                .copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 100,
+                                          child: Text(
+                                            'Notes',
+                                            textAlign: TextAlign.right,
+                                            style: AppConstants.bodySmall
+                                                .copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Data rows
+                                  ...detail.partialDelivery!
+                                      .asMap()
+                                      .entries
+                                      .map((entry) {
+                                        final pd = entry.value;
+                                        final isLast =
+                                            entry.key ==
+                                            detail.partialDelivery!.length - 1;
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: AppConstants.spacingS,
+                                            vertical: AppConstants.spacingS,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            border:
+                                                isLast
+                                                    ? null
+                                                    : Border(
+                                                      bottom: BorderSide(
+                                                        color: Colors.grey
+                                                            .withOpacity(0.2),
+                                                        width: 1,
+                                                      ),
+                                                    ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  DateFormat(
+                                                    'dd MMM yyyy',
+                                                  ).format(pd.deliverydate),
+                                                  style: AppConstants.bodySmall,
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                width: 30,
+                                                child: Text(
+                                                  pd.qty.toString(),
+                                                  textAlign: TextAlign.left,
+                                                  style: AppConstants.bodySmall
+                                                      .copyWith(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Colors.teal,
+                                                      ),
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                width: 140,
+                                                child: Text(
+                                                  pd.deliverynote ?? '',
+                                                  textAlign: TextAlign.right,
+                                                  style: AppConstants.bodySmall
+                                                      .copyWith(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Colors.teal,
+                                                      ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      })
+                                      .toList(),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     if (detail.images.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       SizedBox(
@@ -1647,37 +1908,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     );
   }
 
-  Widget _buildOrnamentDetailRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 2,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Colors.grey,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          flex: 3,
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   void _showImagePreview(String url, {List<String>? galleryImages}) async {
     if (galleryImages == null || galleryImages.length == 1) {
       if (url.toLowerCase().endsWith('.pdf')) {
@@ -1806,5 +2036,62 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       default:
         return 'In Progress';
     }
+  }
+
+  Widget _buildSpecItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPropertyChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
