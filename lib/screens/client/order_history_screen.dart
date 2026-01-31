@@ -876,14 +876,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                       ),
                     ),
 
-                  // Partially Delivered chip
-                  if (partialDeliveryCount > 0)
-                    _buildStatusChip(
-                      'Partially Delivered',
-                      partialDeliveryCount,
-                      OrderStatus.partialDelivery,
-                      _selectedStatus == OrderStatus.partialDelivery,
-                    ),
+                  // Partially Delivered chip - ALWAYS SHOW (even if 0)
+                  _buildStatusChip(
+                    'Partially Delivered',
+                    partialDeliveryCount,
+                    OrderStatus.partialDelivery,
+                    _selectedStatus == OrderStatus.partialDelivery,
+                  ),
 
                   // Completed chip
                   if (completedCount > 0)
@@ -1351,6 +1350,27 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
+                            if (order.shouldBeDelivered) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'READY',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -1392,6 +1412,23 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     buffer.writeln(
       '🔹 Order Date: ${_formatDate(order.orderDate ?? order.createdAt)}',
     );
+    if (order.orderType != null) {
+      buffer.writeln('🔹 Order Type: ${order.orderType}');
+    }
+
+    // Add partial delivery info
+    if (order.status == OrderStatus.partialDelivery) {
+      buffer.writeln(
+        '🔹 Delivery Status: ${order.totalDeliveryCount}/${order.totalQuantity}',
+      );
+      if (order.shouldBeDelivered) {
+        buffer.writeln('🔹 Ready for Completion: Yes');
+      }
+    }
+
+    if (order.notes != null && order.notes!.isNotEmpty) {
+      buffer.writeln('🔹 Notes: ${order.notes}');
+    }
 
     if (order.ornamentDetails.isNotEmpty) {
       buffer.writeln('');
@@ -1404,6 +1441,33 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         buffer.writeln('    • Weight: ${detail.weight} ${detail.unit ?? 'g'}');
         buffer.writeln('    • Purity: ${detail.purity}');
         buffer.writeln('    • Quantity: ${detail.quantity}');
+        if (detail.size != null) {
+          buffer.writeln('    • Size: ${detail.size}');
+        }
+        if (detail.colorstone != null) {
+          buffer.writeln('    • Colorstone: ${detail.colorstone}');
+        }
+        if (detail.rhodium != null) {
+          buffer.writeln('    • Rhodium: ${detail.rhodium}');
+        }
+        if (detail.dull != null) {
+          buffer.writeln('    • Dull: ${detail.dull}');
+        }
+        if (detail.remarks != null && detail.remarks!.isNotEmpty) {
+          buffer.writeln('    • Remarks: ${detail.remarks}');
+        }
+
+        // Add partial delivery details
+        if (detail.partialDelivery != null &&
+            detail.partialDelivery!.isNotEmpty) {
+          buffer.writeln('    • Partial Deliveries:');
+          for (var pd in detail.partialDelivery!) {
+            buffer.writeln(
+              '      - ${DateFormat('dd MMM yyyy').format(pd.deliverydate)}: Qty ${pd.qty}${pd.deliverynote != null && pd.deliverynote!.isNotEmpty ? ' (${pd.deliverynote})' : ''}',
+            );
+          }
+        }
+        buffer.writeln('');
       }
     }
     return buffer.toString();
@@ -1419,6 +1483,135 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Order Information Section
+          if (order.updatedAt != null || order.orderDate != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Order Information',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppConstants.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (order.updatedAt != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.update_outlined,
+                            size: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Updated: ',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              _formatDate(order.updatedAt!),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (order.orderDate != null)
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.event_outlined,
+                          size: 16,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Order Date: ',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            _formatDate(order.orderDate!),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.end,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Notes Section
+          if (order.notes != null && order.notes!.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.amber.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.sticky_note_2_outlined,
+                        size: 16,
+                        color: Colors.amber.shade700,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Notes',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: Colors.amber.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(order.notes!, style: const TextStyle(fontSize: 13)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Ornament Details Section
           if (order.ornamentDetails.isNotEmpty) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
@@ -1437,7 +1630,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             ...order.ornamentDetails.asMap().entries.map((entry) {
               final idx = entry.key;
               final detail = entry.value;
@@ -1455,6 +1648,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Detail header
                     Row(
                       children: [
                         Container(
@@ -1477,119 +1671,36 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                       ],
                     ),
                     const SizedBox(height: 12),
+
+                    // Ornament name
                     Text(
                       detail.name,
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
-                        fontSize: 15,
+                        fontSize: 16,
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(AppConstants.spacingS),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildSpecItem(
-                                  'Weight',
-                                  '${detail.weight} ${detail.unit ?? ''}',
-                                ),
-                              ),
-                              Expanded(
-                                child: _buildSpecItem('Purity', detail.purity),
-                              ),
-                              Expanded(
-                                child: _buildSpecItem(
-                                  'Quantity',
-                                  '${detail.quantity}',
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (detail.size != null) ...[
-                            const SizedBox(height: AppConstants.spacingS),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildSpecItem(
-                                    'Size',
-                                    '${detail.size}',
-                                  ),
-                                ),
-                                const Expanded(child: SizedBox()),
-                                const Expanded(child: SizedBox()),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                    const SizedBox(height: 16),
 
-                    // Additional properties
-                    if (detail.colorstone != null ||
-                        detail.rhodium != null ||
-                        detail.dull != null) ...[
-                      const SizedBox(height: AppConstants.spacingM),
-                      Wrap(
-                        spacing: AppConstants.spacingS,
-                        runSpacing: AppConstants.spacingXS,
-                        children: [
-                          if (detail.colorstone != null)
-                            _buildPropertyChip(
-                              'Colorstone',
-                              detail.colorstone!,
-                            ),
-                          if (detail.rhodium != null)
-                            _buildPropertyChip('Rhodium', detail.rhodium!),
-                          if (detail.dull != null)
-                            _buildPropertyChip('Dull', detail.dull!),
-                        ],
-                      ),
-                    ],
+                    // Specifications in two-column layout
+                    _buildDetailRow('Weight', '${detail.weight}'),
+                    _buildDetailRow('Purity', detail.purity),
+                    _buildDetailRow('Quantity', '${detail.quantity}'),
+                    if (detail.size != null)
+                      _buildDetailRow('Size', '${detail.size}'),
+                    if (detail.unit != null)
+                      _buildDetailRow('Unit', detail.unit!),
+                    if (detail.colorstone != null)
+                      _buildDetailRow('Colorstone', detail.colorstone!),
+                    if (detail.rhodium != null)
+                      _buildDetailRow('Rhodium', detail.rhodium!),
+                    if (detail.dull != null)
+                      _buildDetailRow('Dull', detail.dull!),
+                    if (detail.remarks != null && detail.remarks!.isNotEmpty)
+                      _buildDetailRow('Remarks', detail.remarks!),
 
-                    // Remarks
-                    if (detail.remarks != null &&
-                        detail.remarks!.isNotEmpty) ...[
-                      const SizedBox(height: AppConstants.spacingM),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(AppConstants.spacingS),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.blue.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Remarks',
-                              style: AppConstants.bodySmall.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.blue,
-                              ),
-                            ),
-                            const SizedBox(height: AppConstants.spacingXS),
-                            Text(
-                              detail.remarks!,
-                              style: AppConstants.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    // Partial Delivery
+                    // Partial Delivery Table
                     if (detail.partialDelivery != null &&
                         detail.partialDelivery!.isNotEmpty) ...[
                       const SizedBox(height: AppConstants.spacingM),
@@ -1755,8 +1866,19 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                         ),
                       ),
                     ],
+
+                    // Images
                     if (detail.images.isNotEmpty) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Images (${detail.images.length})',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       SizedBox(
                         height: 100,
                         child: ListView.builder(
@@ -1848,6 +1970,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
               );
             }),
           ],
+
           const SizedBox(height: 20),
           Row(
             children: [
@@ -2025,69 +2148,45 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       case OrderStatus.pending:
         return 'Pending';
       case OrderStatus.partialDelivery:
-        return 'Partially Delivered'; // Show for both bulk and single orders
+        return 'Partially Delivered';
       case OrderStatus.cancelled:
         return 'Cancelled';
       case OrderStatus.Delivered:
         return 'Delivered';
       case OrderStatus.Completed:
-        return 'Completed'; // Separate status for Completed
+        return 'Completed';
       // In Progress: all other statuses (Casted, Wax, PendingDisp, etc.)
       default:
         return 'In Progress';
     }
   }
 
-  Widget _buildSpecItem(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPropertyChip(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '$label: ',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
             ),
           ),
         ],
