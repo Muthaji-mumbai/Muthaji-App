@@ -1400,6 +1400,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     );
   }
 
+  String _formatDate(DateTime date) {
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final timeFormat = DateFormat('h:mm:ss a'); // 12-hour format with AM/PM
+    return '${dateFormat.format(date)} ${timeFormat.format(date)}';
+  }
+
   String _formatOrderDetailsForCopy(Order order) {
     final buffer = StringBuffer();
     buffer.writeln('');
@@ -1524,7 +1530,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                           ),
                           Expanded(
                             child: Text(
-                              _formatDate(order.updatedAt!),
+                              _formatDate(order.updatedAt!.toLocal()),
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
@@ -2108,12 +2114,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         ),
       );
     }
-  }
-
-  String _formatDate(DateTime date) {
-    final dateFormat = DateFormat('dd/MM/yyyy');
-    final timeFormat = DateFormat('h:mm:ss a');
-    return '${dateFormat.format(date)} ${timeFormat.format(date)}';
   }
 
   Color _getStatusColor(OrderStatus status) {

@@ -176,7 +176,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             ),
                             _chip(
                               'Client',
-                              widget.order.clientName,
+                              widget.order.partynameDisplay!,
                               Icons.person_outline,
                             ),
                             _chip(
