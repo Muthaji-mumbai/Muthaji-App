@@ -4,7 +4,7 @@ import 'api_service.dart';
 class AdminDashboardService {
   static Future<Map<String, dynamic>> getDashboardStatistics(
     String token,
-  ) async {   
+  ) async {
     try {
       // Validate token
       if (token.isEmpty) {
@@ -140,6 +140,48 @@ class AdminDashboardService {
       }
     } catch (e) {
       throw Exception('Unexpected error fetching graph data: ${e.toString()}');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getStorageStats(String token) async {
+    try {
+      if (token.isEmpty) {
+        throw Exception('Authentication token is required');
+      }
+
+      final response = await ApiService.get(
+        AppConstants.storageStatsEndpoint,
+        token: token,
+      );
+
+      if (response['success'] == true && response['data'] != null) {
+        return response['data'] as Map<String, dynamic>;
+      } else {
+        throw Exception(response['message'] ?? 'Failed to fetch storage stats');
+      }
+    } catch (e) {
+      throw Exception('Error fetching storage stats: ${e.toString()}');
+    }
+  }
+
+  static Future<Map<String, dynamic>> cleanupStorage(String token) async {
+    try {
+      if (token.isEmpty) {
+        throw Exception('Authentication token is required');
+      }
+
+      final response = await ApiService.delete(
+        AppConstants.storageCleanupEndpoint,
+        token: token,
+      );
+
+      if (response['success'] == true) {
+        return response['data'] as Map<String, dynamic>;
+      } else {
+        throw Exception(response['message'] ?? 'Failed to clean up storage');
+      }
+    } catch (e) {
+      throw Exception('Error cleaning up storage: ${e.toString()}');
     }
   }
 }

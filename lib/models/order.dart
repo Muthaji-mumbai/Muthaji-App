@@ -18,7 +18,7 @@ enum OrderStatus {
 class PartialDeliveryEntry {
   final DateTime deliverydate;
   final int qty;
-  
+
   final String? deliverynote;
 
   PartialDeliveryEntry({
@@ -29,10 +29,16 @@ class PartialDeliveryEntry {
 
   factory PartialDeliveryEntry.fromJson(Map<String, dynamic> json) {
     return PartialDeliveryEntry(
-      deliverydate: DateTime.parse((json['deliverydate'] ?? json['date']).toString()),
-      qty: (json['qty'] ?? json['quantity'] ?? 0) is int
-          ? (json['qty'] ?? json['quantity'] ?? 0)
-          : int.tryParse((json['qty'] ?? json['quantity'] ?? '0').toString()) ?? 0,
+      deliverydate: DateTime.parse(
+        (json['deliverydate'] ?? json['date']).toString(),
+      ),
+      qty:
+          (json['qty'] ?? json['quantity'] ?? 0) is int
+              ? (json['qty'] ?? json['quantity'] ?? 0)
+              : int.tryParse(
+                    (json['qty'] ?? json['quantity'] ?? '0').toString(),
+                  ) ??
+                  0,
       deliverynote: json['deliverynote']?.toString(),
     );
   }
@@ -43,6 +49,37 @@ class PartialDeliveryEntry {
       'qty': qty,
       if (deliverynote != null && deliverynote!.isNotEmpty)
         'deliverynote': deliverynote,
+    };
+  }
+}
+
+class StatusHistoryEntry {
+  final OrderStatus status;
+  final String? updatedBy;
+  final DateTime updatedAt;
+
+  StatusHistoryEntry({
+    required this.status,
+    this.updatedBy,
+    required this.updatedAt,
+  });
+
+  factory StatusHistoryEntry.fromJson(Map<String, dynamic> json) {
+    return StatusHistoryEntry(
+      status: Order._parseStatus(json['status']?.toString()),
+      updatedBy: Order._parseUpdatedBy(json['updatedby']),
+      updatedAt:
+          json['updatedAt'] != null
+              ? DateTime.parse(json['updatedAt'])
+              : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'status': Order.statusToApiString(status),
+      'updatedby': updatedBy,
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 }
@@ -64,7 +101,8 @@ class OrnamentDetail {
   final String? rhodium; // rhodium option
   final String? dull; // dull option
   final int? deliverycount; // delivery count for partial delivery
-  final List<PartialDeliveryEntry>? partialDelivery; // detailed partial delivery entries
+  final List<PartialDeliveryEntry>?
+  partialDelivery; // detailed partial delivery entries
 
   OrnamentDetail({
     required this.id,
@@ -108,10 +146,14 @@ class OrnamentDetail {
     // Partial delivery list (if provided by API)
     List<PartialDeliveryEntry> entries = [];
     if (json['partialdelivery'] is List) {
-      entries = (json['partialdelivery'] as List)
-          .whereType<dynamic>()
-          .map((e) => PartialDeliveryEntry.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
+      entries =
+          (json['partialdelivery'] as List)
+              .whereType<dynamic>()
+              .map(
+                (e) =>
+                    PartialDeliveryEntry.fromJson(Map<String, dynamic>.from(e)),
+              )
+              .toList();
     }
 
     return OrnamentDetail(
@@ -174,7 +216,6 @@ class Order {
   final String? notes;
   final String? assignedEmployeeId;
   final String? updatedBy;
-  
 
   // New fields from API
   final String? orderType; // server may set it to "Single"
@@ -184,10 +225,11 @@ class Order {
   final String? partyname; // Party ID for bulk orders
   final String? partynameDisplay; // Party name for display
   final List<OrnamentDetail> ornamentDetails;
-  
+
   final List<String>
   images; // kept for backward compatibility if order-level images exist
   final List<String> pdfs;
+  final List<StatusHistoryEntry> statusHistory;
 
   Order({
     required this.id,
@@ -210,6 +252,7 @@ class Order {
     this.ornamentDetails = const [],
     this.images = const [],
     this.pdfs = const [],
+    this.statusHistory = const [],
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -261,6 +304,18 @@ class Order {
       pdfs = List<String>.from(json['pdf']);
     }
 
+    List<StatusHistoryEntry> statusHistory = [];
+    if (json['statushistory'] != null && json['statushistory'] is List) {
+      statusHistory =
+          (json['statushistory'] as List)
+              .whereType<dynamic>()
+              .map(
+                (e) =>
+                    StatusHistoryEntry.fromJson(Map<String, dynamic>.from(e)),
+              )
+              .toList();
+    }
+
     return Order(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       clientId: clientId,
@@ -287,6 +342,7 @@ class Order {
       ornamentDetails: ornamentDetails,
       images: images,
       pdfs: pdfs,
+      statusHistory: statusHistory,
     );
   }
 
@@ -407,6 +463,8 @@ class Order {
       'ornamentDetails': ornamentDetails.map((d) => d.toJson()).toList(),
       'images': images,
       'pdfs': pdfs,
+      if (statusHistory.isNotEmpty)
+        'statushistory': statusHistory.map((h) => h.toJson()).toList(),
     };
   }
 
@@ -431,6 +489,7 @@ class Order {
     List<OrnamentDetail>? ornamentDetails,
     List<String>? images,
     List<String>? pdfs,
+    List<StatusHistoryEntry>? statusHistory,
   }) {
     return Order(
       id: id ?? this.id,
@@ -453,6 +512,7 @@ class Order {
       ornamentDetails: ornamentDetails ?? this.ornamentDetails,
       images: images ?? this.images,
       pdfs: pdfs ?? this.pdfs,
+      statusHistory: statusHistory ?? this.statusHistory,
     );
   }
 

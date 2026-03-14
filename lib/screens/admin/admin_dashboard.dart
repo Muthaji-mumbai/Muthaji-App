@@ -1295,6 +1295,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
           }
         },
       },
+      {
+        'title': 'Storage Cleanup',
+        'subtitle': 'Manage DB & Storage usage',
+        'icon': Icons.storage,
+        'color': AppConstants.warningColor,
+        'onTap': () => _showStorageStatsDialog(),
+      },
     ];
 
     return Column(
@@ -1317,7 +1324,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       .toList(),
             )
             : GridView.count(
-              crossAxisCount: 3, // Changed to 3 for desktop to spread out
+              crossAxisCount:
+                  2, // Changed to 2 for desktop to accommodate 4 items
+
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisSpacing: AppConstants.spacingL,
@@ -3370,5 +3379,318 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
       ),
     );
+  }
+
+  Future<void> _showStorageStatsDialog() async {
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.currentUser?.token;
+
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in again.'),
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
+      return;
+    }
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => const Center(
+            child: CircularProgressIndicator(color: AppConstants.primaryColor),
+          ),
+    );
+
+    try {
+      final stats = await AdminDashboardService.getStorageStats(token);
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      // Show stats bottom sheet or dialog
+      _buildStorageStatsBottomSheet(stats, token);
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
+    }
+  }
+
+  void _buildStorageStatsBottomSheet(Map<String, dynamic> stats, String token) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            decoration: const BoxDecoration(
+              color: AppConstants.surfaceColor,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppConstants.radiusXL),
+              ),
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppConstants.spacingL),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 48,
+                      height: 4,
+                      margin: const EdgeInsets.only(
+                        bottom: AppConstants.spacingL,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(AppConstants.spacingM),
+                        decoration: BoxDecoration(
+                          color: AppConstants.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.radiusM,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.storage,
+                          color: AppConstants.primaryColor,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: AppConstants.spacingM),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Storage Statistics',
+                              style: AppConstants.headingMedium,
+                            ),
+                            Text(
+                              'Database & Bucket Usage',
+                              style: AppConstants.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppConstants.spacingL),
+                  _buildStatsSection(
+                    title: 'MongoDB',
+                    icon: Icons.data_usage,
+                    color: Colors.green,
+                    data: stats['mongodb'] ?? {},
+                  ),
+                  const SizedBox(height: AppConstants.spacingM),
+                  _buildStatsSection(
+                    title: 'Supabase',
+                    icon: Icons.cloud,
+                    color: Colors.blue,
+                    data: stats['supabase'] ?? {},
+                  ),
+                  const SizedBox(height: AppConstants.spacingXL),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context); // close sheet
+                        _performStorageCleanup(token);
+                      },
+                      icon: const Icon(Icons.cleaning_services),
+                      label: const Text('Cleanup Completed & Cancelled Orders'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppConstants.errorColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppConstants.spacingM,
+                        ),
+                        textStyle: AppConstants.titleMedium,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.radiusM,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.spacingL),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  Widget _buildStatsSection({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required Map<String, dynamic> data,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.spacingM),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: AppConstants.spacingS),
+              Text(
+                title,
+                style: AppConstants.titleMedium.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.spacingM),
+          if (title == 'MongoDB') ...[
+            _buildStatRow('Database', data['database']?.toString()),
+            _buildStatRow('Collections', data['collections']?.toString()),
+            _buildStatRow('Total Objects', data['objects']?.toString()),
+            _buildStatRow(
+              'Total Size',
+              data['totalSizeMb']?.toString(),
+              isBold: true,
+            ),
+          ] else ...[
+            _buildStatRow('Bucket', data['bucket']?.toString()),
+            _buildStatRow(
+              'Used Size',
+              data['estimatedTotalSizeMb']?.toString(),
+              isBold: true,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, String? value, {bool isBold = false}) {
+    if (value == null) return const SizedBox();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppConstants.spacingS),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: AppConstants.bodyMedium),
+          Text(
+            value,
+            style: AppConstants.bodyMedium.copyWith(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              color:
+                  isBold
+                      ? AppConstants.textPrimaryColor
+                      : AppConstants.textSecondaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performStorageCleanup(String token) async {
+    // Show confirmation dialog first
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Confirm Cleanup'),
+            content: const Text(
+              'This will permanently delete all Delivered and Cancelled orders, along with their associated images to free up space. This action cannot be undone. Are you sure?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppConstants.errorColor,
+                ),
+                child: const Text('Proceed'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirm != true) return;
+
+    if (!mounted) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => const Center(
+            child: CircularProgressIndicator(color: AppConstants.primaryColor),
+          ),
+    );
+
+    try {
+      final response = await AdminDashboardService.cleanupStorage(token);
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      final title = 'Cleanup Successful';
+      final subtitle =
+          'Deleted ${response['deletedOrdersCount'] ?? 0} orders and ${response['deletedImagesCount'] ?? 0} images.';
+
+      // Refresh Dashboard data
+      await _loadDashboardData();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(subtitle),
+            ],
+          ),
+          backgroundColor: AppConstants.successColor,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
+    }
   }
 }

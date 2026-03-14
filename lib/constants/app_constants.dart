@@ -21,8 +21,12 @@ class AppConstants {
   static const Color darkSurfaceColor = Color(0xFF111827); // Gray 900
   static const Color darkTextPrimaryColor = Color(0xFFF3F4F6); // Gray 100
   static const Color darkTextSecondaryColor = Color(0xFF9CA3AF); // Gray 400
-  static const Color deliveredColor = Color(0xFF388E3C); // Green shade for delivered
-  static const Color commonColor = Color(0xFF607D8B); // Blue Grey for common use
+  static const Color deliveredColor = Color(
+    0xFF388E3C,
+  ); // Green shade for delivered
+  static const Color commonColor = Color(
+    0xFF607D8B,
+  ); // Blue Grey for common use
 
   // API Configuration
   static const String baseUrl = 'https://soloshine-backend.onrender.com';
@@ -39,6 +43,8 @@ class AppConstants {
   static const String categoriesEndpoint = '/category';
   static const String dashboardEndpoint = '/dashboard';
   static const String dashboardGraphEndpoint = '/dashboard/graph';
+  static const String storageStatsEndpoint = '/dashboard/storage';
+  static const String storageCleanupEndpoint = '/order/cleanup/completed';
 
   // Text Styles
   static TextStyle get headingLarge => GoogleFonts.inter(
@@ -68,7 +74,7 @@ class AppConstants {
   static TextStyle get bodyMedium => GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.w400,
-    color: textSecondaryColor,    
+    color: textSecondaryColor,
   );
 
   static TextStyle get bodySmall => GoogleFonts.inter(
