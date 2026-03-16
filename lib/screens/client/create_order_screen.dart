@@ -149,67 +149,67 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         if (token == null) throw Exception('User not authenticated');
 
         final detailsPayload =
-            _ornamentDetails
-                .map(
-                  (d) => {
-                    'name': d['categoryId'],
-                    // For bulk orders, pass empty strings for hidden fields
-                    'size':
-                        _isBulkOrderSimplifiedForm() ? '' : (d['size'] ?? ''),
-                    'unit':
-                        _isBulkOrderSimplifiedForm()
-                            ? ''
-                            : _getUnitForDetail(d),
-                    'weight': _isBulkOrderSimplifiedForm() ? 0 : d['weight'],
-                    'purity': d['purity'],
-                    'quantity': d['quantity'],
-                    'colorstone':
-                        _isBulkOrderSimplifiedForm()
-                            ? ''
-                            : (d['colorstone'] ?? 'Same as image'),
-                    'rhodium':
-                        _isBulkOrderSimplifiedForm()
-                            ? ''
-                            : (d['rhodium'] ?? 'Same as image'),
-                    'dull':
-                        _isBulkOrderSimplifiedForm()
-                            ? ''
-                            : (d['dull'] ?? 'Same as image'),
-                    if ((d['remarks'] as String).isNotEmpty)
-                      'remarks': d['remarks'],
-                    // Update delivery count to include new delivery qty
-                    if (_selectedStatus == OrderStatus.partialDelivery &&
-                        d['deliveryqty'] != null)
-                      'deliverycount':
-                          (d['deliverycount'] ?? 0) + (d['deliveryqty'] as int)
-                    else if (d['deliverycount'] != null)
-                      'deliverycount': d['deliverycount'],
-                    // Add partial delivery data when status is partial delivery
-                    if (_selectedStatus == OrderStatus.partialDelivery &&
-                        d['deliveryqty'] != null &&
-                        d['deliverydate'] != null)
-                      'partialdelivery': [
-                        ...List<Map<String, dynamic>>.from(
-                          d['partialdelivery'] ?? [],
-                        ),
-                        {
-                          'qty': d['deliveryqty'],
-                          'deliverydate':
-                              (d['deliverydate'] as DateTime).toIso8601String(),
-                          if ((d['deliverynote'] ?? '').toString().isNotEmpty)
-                            'deliverynote': d['deliverynote'],
-                        },
-                      ],
-                    // If not adding new partial delivery, preserve existing ones
-                    if (_selectedStatus == OrderStatus.partialDelivery &&
-                        (d['deliveryqty'] == null ||
-                            d['deliverydate'] == null) &&
-                        d['partialdelivery'] != null &&
-                        (d['partialdelivery'] as List).isNotEmpty)
-                      'partialdelivery': d['partialdelivery'],
-                  },
-                )
-                .toList();
+            _ornamentDetails.asMap().entries.map((entry) {
+              final int i = entry.key;
+              final d = entry.value;
+              return {
+                'name': d['categoryId'],
+                // For bulk orders, pass empty strings for hidden fields
+                'size': _isBulkOrderSimplifiedForm() ? '' : (d['size'] ?? ''),
+                'unit':
+                    _isBulkOrderSimplifiedForm() ? '' : _getUnitForDetail(d),
+                'weight': _isBulkOrderSimplifiedForm() ? 0 : d['weight'],
+                'purity': d['purity'],
+                'quantity': d['quantity'],
+                'colorstone':
+                    _isBulkOrderSimplifiedForm()
+                        ? ''
+                        : (d['colorstone'] ?? 'Same as image'),
+                'rhodium':
+                    _isBulkOrderSimplifiedForm()
+                        ? ''
+                        : (d['rhodium'] ?? 'Same as image'),
+                'dull':
+                    _isBulkOrderSimplifiedForm()
+                        ? ''
+                        : (d['dull'] ?? 'Same as image'),
+                if ((d['remarks'] as String).isNotEmpty)
+                  'remarks': d['remarks'],
+                // Include existing image URLs to prevent deletion on server
+                if (i < _existingOrnamentImageUrls.length &&
+                    _existingOrnamentImageUrls[i].isNotEmpty)
+                  'image': _existingOrnamentImageUrls[i],
+                // Update delivery count to include new delivery qty
+                if (_selectedStatus == OrderStatus.partialDelivery &&
+                    d['deliveryqty'] != null)
+                  'deliverycount':
+                      (d['deliverycount'] ?? 0) + (d['deliveryqty'] as int)
+                else if (d['deliverycount'] != null)
+                  'deliverycount': d['deliverycount'],
+                // Add partial delivery data when status is partial delivery
+                if (_selectedStatus == OrderStatus.partialDelivery &&
+                    d['deliveryqty'] != null &&
+                    d['deliverydate'] != null)
+                  'partialdelivery': [
+                    ...List<Map<String, dynamic>>.from(
+                      d['partialdelivery'] ?? [],
+                    ),
+                    {
+                      'qty': d['deliveryqty'],
+                      'deliverydate':
+                          (d['deliverydate'] as DateTime).toIso8601String(),
+                      if ((d['deliverynote'] ?? '').toString().isNotEmpty)
+                        'deliverynote': d['deliverynote'],
+                    },
+                  ],
+                // If not adding new partial delivery, preserve existing ones
+                if (_selectedStatus == OrderStatus.partialDelivery &&
+                    (d['deliveryqty'] == null || d['deliverydate'] == null) &&
+                    d['partialdelivery'] != null &&
+                    (d['partialdelivery'] as List).isNotEmpty)
+                  'partialdelivery': d['partialdelivery'],
+              };
+            }).toList();
 
         final currentUser = context.read<AuthProvider>().currentUser;
 
@@ -219,23 +219,18 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           'ornamentDetails': detailsPayload,
           'orderpriority': _selectedPriority,
           'updatedby': currentUser?.id,
-          if (_orderNo != null && _orderNo!.isNotEmpty)
-            'orderno': _orderNo, // <-- Pass orderNo to API
+          if (_orderNo != null && _orderNo!.isNotEmpty) 'orderno': _orderNo,
         };
-        // if (_selectedOrderType == 'Bulk' ||
-        //           (_orderNo != null && _orderNo!.isNotEmpty)) {
-        //         updateData['orderno'] = _orderNo;
-        //       }
+
         // Include status in update only for admin/employee users
         if (_selectedStatus != null && _shouldShowOrderTypeSelection()) {
           updateData['status'] = Order.statusToApiString(_selectedStatus!);
         }
-        print("ORDER PRIORTY=========>$_selectedPriority");
-        print("UPDATE DATA=========>$updateData");
-        print("ORNAMENT DETAILS=========>$detailsPayload");
+
         final updated = await OrderService.updateOrder(
           orderId: _existingOrder!.id,
           updateData: updateData,
+          ornamentImages: _ornamentImages,
           token: token,
         );
 

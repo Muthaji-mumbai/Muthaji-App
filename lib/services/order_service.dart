@@ -324,8 +324,8 @@ class OrderService {
   static Future<Order> updateOrder({
     required String orderId,
     required Map<String, dynamic> updateData,
+    List<List<PlatformFile>>? ornamentImages,
     String? token,
-    // required String userid,
   }) async {
     try {
       // Validate order ID
@@ -333,26 +333,63 @@ class OrderService {
         throw Exception('Order ID cannot be empty');
       }
 
-      // Include the order ID in the request body as the backend expects
+      // Prepare request data
       final requestBody = Map<String, dynamic>.from(updateData);
-
-      // Always send IDs as strings to avoid type mismatches across backends
       requestBody['_id'] = orderId;
       requestBody['id'] = orderId;
-
-      // Also try orderId field as some APIs expect this
       requestBody['orderId'] = orderId;
 
       developer.log('Sending update request for order: $orderId');
-      developer.log('Request body: $requestBody');
+
+      // Check if we need multipart (if new images are provided)
+      List<http.MultipartFile> multipartFiles = [];
+      if (ornamentImages != null && ornamentImages.isNotEmpty) {
+        for (int i = 0; i < ornamentImages.length; i++) {
+          final filesForItem = ornamentImages[i];
+          for (final file in filesForItem) {
+            if (file.bytes == null || file.bytes!.isEmpty) continue;
+            multipartFiles.add(
+              http.MultipartFile.fromBytes(
+                'image$i',
+                file.bytes!,
+                filename: file.name,
+              ),
+            );
+          }
+        }
+      }
+
+      final bool isMultipart = multipartFiles.isNotEmpty;
 
       // Try the specific endpoint first
       try {
-        final response = await ApiService.patch(
-          '${AppConstants.ordersEndpoint}/$orderId',
-          body: requestBody,
-          token: token,
-        );
+        final String endpoint = '${AppConstants.ordersEndpoint}/$orderId';
+        Map<String, dynamic> response;
+
+        if (isMultipart) {
+          // Convert all dynamic values to Strings for multipart fields
+          final Map<String, String> fields = {};
+          requestBody.forEach((key, value) {
+            if (value is Map || value is List) {
+              fields[key] = jsonEncode(value);
+            } else {
+              fields[key] = value?.toString() ?? '';
+            }
+          });
+
+          response = await ApiService.patchMultipart(
+            endpoint,
+            fields: fields,
+            files: multipartFiles,
+            token: token,
+          );
+        } else {
+          response = await ApiService.patch(
+            endpoint,
+            body: requestBody,
+            token: token,
+          );
+        }
 
         if (response['success'] == true && response['data'] != null) {
           return Order.fromJson(response['data']);
@@ -360,14 +397,32 @@ class OrderService {
           throw Exception(response['message'] ?? 'Failed to update order');
         }
       } catch (e) {
-        developer.log('Specific endpoint failed, trying root endpoint: $e');
+        developer.log('Update attempt failed, trying root endpoint: $e');
 
-        // If specific endpoint fails, try the root endpoint
-        final response = await ApiService.patch(
-          AppConstants.ordersEndpoint,
-          body: requestBody,
-          token: token,
-        );
+        Map<String, dynamic> response;
+        if (isMultipart) {
+          final Map<String, String> fields = {};
+          requestBody.forEach((key, value) {
+            if (value is Map || value is List) {
+              fields[key] = jsonEncode(value);
+            } else {
+              fields[key] = value?.toString() ?? '';
+            }
+          });
+
+          response = await ApiService.patchMultipart(
+            AppConstants.ordersEndpoint,
+            fields: fields,
+            files: multipartFiles,
+            token: token,
+          );
+        } else {
+          response = await ApiService.patch(
+            AppConstants.ordersEndpoint,
+            body: requestBody,
+            token: token,
+          );
+        }
 
         if (response['success'] == true && response['data'] != null) {
           return Order.fromJson(response['data']);

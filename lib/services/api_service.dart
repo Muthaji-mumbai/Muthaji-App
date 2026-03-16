@@ -383,6 +383,74 @@ class ApiService {
     }
   }
 
+  // New method for multipart PATCH
+  static Future<Map<String, dynamic>> patchMultipart(
+    String endpoint, {
+    required Map<String, String> fields,
+    List<http.MultipartFile>? files,
+    String? token,
+  }) async {
+    try {
+      // Validate endpoint
+      if (endpoint.isEmpty) {
+        throw Exception('Endpoint cannot be empty');
+      }
+
+      var request = http.MultipartRequest(
+        'PATCH',
+        Uri.parse('$_baseUrl$endpoint'),
+      );
+
+      // Add token to headers if provided
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      // Add fields to the multipart request
+      request.fields.addAll(fields);
+
+      // Add files to the multipart request if provided
+      if (files != null && files.isNotEmpty) {
+        request.files.addAll(files);
+      }
+
+      // Send the multipart request with timeout
+      final response = await request.send().timeout(
+        const Duration(seconds: 60), // Longer timeout for file uploads
+        onTimeout: () {
+          throw Exception(
+            'Upload timeout: Server did not respond within 60 seconds',
+          );
+        },
+      );
+
+      final responseBody = await http.Response.fromStream(response);
+
+      return _handleResponse(
+        http.Response(responseBody.body, response.statusCode),
+      );
+    } on FormatException catch (e) {
+      throw Exception('Invalid URL format: ${e.message}');
+    } on http.ClientException catch (e) {
+      throw Exception('Network connection failed: ${e.message}');
+    } on Exception catch (e) {
+      final errorMessage = e.toString();
+      if (errorMessage.contains('timeout')) {
+        throw Exception(
+          'Upload timed out. Please check your internet connection.',
+        );
+      } else if (errorMessage.contains('SocketException')) {
+        throw Exception(
+          'Network connection failed. Please check your internet connection.',
+        );
+      } else {
+        rethrow;
+      }
+    } catch (e) {
+      throw Exception('Unexpected network error during file upload: $e');
+    }
+  }
+
   // Handle HTTP response
   static Map<String, dynamic> _handleResponse(http.Response response) {
     try {
