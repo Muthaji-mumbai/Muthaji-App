@@ -3974,9 +3974,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
   }
 
   String _formatDate(DateTime date) {
+    final localDate = date.toLocal(); // Convert UTC to local time
     final dateFormat = DateFormat('dd/MM/yyyy');
     final timeFormat = DateFormat('h:mm:ss a'); // 12-hour format with AM/PM
-    return '${dateFormat.format(date)} ${timeFormat.format(date)}';
+    return '${dateFormat.format(localDate)} ${timeFormat.format(localDate)}';
   }
 
   Color _getStatusColor(OrderStatus status) {

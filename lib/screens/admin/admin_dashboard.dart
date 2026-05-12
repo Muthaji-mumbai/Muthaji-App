@@ -3516,7 +3516,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         _performStorageCleanup(token);
                       },
                       icon: const Icon(Icons.cleaning_services),
-                      label: const Text('Cleanup Completed & Cancelled Orders'),
+                      label: const Text('Cleanup Delivered & Cancelled Orders'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppConstants.errorColor,
                         foregroundColor: Colors.white,

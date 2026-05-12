@@ -214,7 +214,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         final currentUser = context.read<AuthProvider>().currentUser;
 
         final updateData = <String, dynamic>{
-          'orderdate': (_selectedOrderDate ?? DateTime.now()).toIso8601String(),
+          'orderdate': (_selectedOrderDate ?? DateTime.now()).toUtc().toIso8601String(),
           'ordertype': _selectedOrderType,
           'ornamentDetails': detailsPayload,
           'orderpriority': _selectedPriority,

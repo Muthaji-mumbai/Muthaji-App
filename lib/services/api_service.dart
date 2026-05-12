@@ -454,15 +454,29 @@ class ApiService {
   // Handle HTTP response
   static Map<String, dynamic> _handleResponse(http.Response response) {
     try {
-      // Handle unauthorized centrally
       if (response.statusCode == 401 || response.statusCode == 403) {
-        // Fire-and-forget the unauthorized handler
-        _onUnauthorized?.call();
-        return {
-          'success': false,
-          'message': 'Unauthorized access. Please log in again.',
-          'data': null,
-        };
+        // Try to parse the actual error message from the response body
+        String errorMessage = 'Unauthorized access. Please log in again.';
+        try {
+          if (response.body.isNotEmpty) {
+            final body = json.decode(response.body);
+            if (body is Map<String, dynamic> && body['message'] != null) {
+              errorMessage = body['message'];
+            }
+          }
+        } catch (_) {}
+
+        // Only trigger unauthorized handler if it's not a login-related error
+        // (login errors like "Invalid Password" should not force logout)
+        final isLoginError =
+            errorMessage == 'Invalid Password' ||
+            errorMessage == 'User not found' ||
+            errorMessage == 'Invalid credentials';
+        if (!isLoginError) {
+          _onUnauthorized?.call();
+        }
+
+        return {'success': false, 'message': errorMessage, 'data': null};
       }
 
       // Handle different HTTP status codes

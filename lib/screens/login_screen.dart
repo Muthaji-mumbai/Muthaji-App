@@ -59,14 +59,43 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
       if (!success && mounted) {
+        final errorMsg = authProvider.error ?? 'An unexpected error occurred';
+        // Map API messages to user-friendly text
+        String displayMessage;
+        if (errorMsg == 'Invalid Password') {
+          displayMessage = 'Incorrect password. Please try again.';
+        } else if (errorMsg == 'User not found') {
+          displayMessage = 'No account found with this email.';
+        } else if (errorMsg.contains('Network') ||
+            errorMsg.contains('timeout')) {
+          displayMessage = 'Connection failed. Check your internet.';
+        } else {
+          displayMessage = errorMsg;
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              authProvider.error == 'Invalid Password'
-                  ? 'Invalid Password'
-                  : authProvider.error ?? 'An unexpected error occurred',
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    displayMessage,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            backgroundColor: AppConstants.errorColor,
+            backgroundColor: const Color(0xFFE53935),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
               label: 'Dismiss',

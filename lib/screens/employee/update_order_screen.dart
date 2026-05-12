@@ -118,7 +118,7 @@ class _UpdateOrderScreenState extends State<UpdateOrderScreen> {
         'amount': double.parse(_amountController.text),
         'status': _selectedStatus.toString().split('.').last,
         'ordertype': _orderTypeController.text.trim(),
-        'orderdate': _selectedDate.toIso8601String(),
+        'orderdate': _selectedDate.toUtc().toIso8601String(),
         'image': _images,
         'ornamentdetails': _ornamentDetails,
       };
