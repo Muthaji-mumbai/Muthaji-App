@@ -18,6 +18,7 @@ import '../../models/category.dart';
 import '../../services/category_service.dart';
 import '../../services/user_service.dart';
 import '../../models/user.dart';
+import 'package:http/http.dart' as http;
 
 class CreateOrderScreen extends StatefulWidget {
   final Order? orderToEdit;
@@ -746,6 +747,36 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         final currentUser = context.read<AuthProvider>().currentUser;
         final token = AuthService.currentToken;
         if (currentUser != null && token != null) {
+          // If cloning and new files are added, the backend will drop existing network images.
+          // Convert existing network images into new files to preserve them.
+          if (widget.cloneFromOrder) {
+            bool hasNewImages = _ornamentImages.any((list) => list.isNotEmpty);
+            if (hasNewImages) {
+              for (int i = 0; i < _existingOrnamentImageUrls.length; i++) {
+                if (i >= _ornamentImages.length) continue;
+                for (final url in _existingOrnamentImageUrls[i]) {
+                  try {
+                    final response = await http.get(Uri.parse(url));
+                    if (response.statusCode == 200) {
+                      final bytes = response.bodyBytes;
+                      _ornamentImages[i].insert(
+                        0,
+                        PlatformFile(
+                          name: 'cloned_${DateTime.now().millisecondsSinceEpoch}.jpg',
+                          size: bytes.length,
+                          bytes: bytes,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    print('Error downloading image: $e');
+                  }
+                }
+                _existingOrnamentImageUrls[i].clear();
+              }
+            }
+          }
+
           // Format the payload to match the required structure
           final detailsPayload = <Map<String, dynamic>>[];
           for (int i = 0; i < _ornamentDetails.length; i++) {
@@ -800,7 +831,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             orderpriority: _selectedPriority,
             ornamentDetails: detailsPayload,
 
-            ornamentImages: widget.cloneFromOrder ? null : _ornamentImages,
+            ornamentImages: _ornamentImages,
             // Include party ID for bulk orders
             partyname:
                 (_selectedOrderType == 'Bulk' ||
@@ -2255,24 +2286,51 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     (_, __) => const SizedBox(width: AppConstants.spacingS),
                 itemBuilder: (context, imgIdx) {
                   final url = _existingOrnamentImageUrls[index][imgIdx];
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusS),
-                    child: Image.network(
-                      url,
-                      width: 90,
-                      height: 90,
-                      fit: BoxFit.cover,
-                      errorBuilder:
-                          (c, e, s) => Container(
-                            width: 90,
-                            height: 90,
-                            color: Colors.grey.shade100,
-                            child: Icon(
-                              Icons.broken_image,
-                              color: Colors.grey.shade400,
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                        child: Image.network(
+                          url,
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (c, e, s) => Container(
+                                width: 90,
+                                height: 90,
+                                color: Colors.grey.shade100,
+                                child: Icon(
+                                  Icons.broken_image,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
+                        ),
+                      ),
+                      Positioned(
+                        right: -6,
+                        top: -6,
+                        child: InkWell(
+                          onTap:
+                              () => setState(
+                                () => _existingOrnamentImageUrls[index].removeAt(imgIdx),
+                              ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppConstants.errorColor,
+                              shape: BoxShape.circle,
+                            ),
+                            padding: const EdgeInsets.all(2),
+                            child: const Icon(
+                              Icons.close,
+                              size: 14,
+                              color: Colors.white,
                             ),
                           ),
-                    ),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
