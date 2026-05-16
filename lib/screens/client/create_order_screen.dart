@@ -215,7 +215,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         final currentUser = context.read<AuthProvider>().currentUser;
 
         final updateData = <String, dynamic>{
-          'orderdate': (_selectedOrderDate ?? DateTime.now()).toUtc().toIso8601String(),
+          'orderdate':
+              (_selectedOrderDate ?? DateTime.now()).toUtc().toIso8601String(),
           'ordertype': _selectedOrderType,
           'ornamentDetails': detailsPayload,
           'orderpriority': _selectedPriority,
@@ -390,7 +391,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
   void _prefillFromExistingOrder() {
     final order = _existingOrder!;
-    _selectedOrderDate = order.orderDate ?? order.createdAt;
+    // For clones, use current date. For edits, use original order date.
+    _selectedOrderDate =
+        widget.cloneFromOrder
+            ? DateTime.now()
+            : (order.orderDate ?? order.createdAt);
     _orderDateController.text = _formatDateDDMMYYYY(_selectedOrderDate!);
     _selectedOrderType = order.orderType ?? 'Single';
     _selectedStatus = order.status;
@@ -718,9 +723,22 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   }
 
   bool _hasRequiredFiles() {
-    return _ornamentImages.asMap().entries.every(
-      (entry) => !_areFilesRequiredForItem(entry.key) || entry.value.isNotEmpty,
-    );
+    return _ornamentImages.asMap().entries.every((entry) {
+      final index = entry.key;
+      if (!_areFilesRequiredForItem(index)) return true;
+
+      // Check if we have new files for this item
+      if (entry.value.isNotEmpty) return true;
+
+      // If it's a clone, check if we have existing images from the original order
+      if (widget.cloneFromOrder &&
+          index < _existingOrnamentImageUrls.length &&
+          _existingOrnamentImageUrls[index].isNotEmpty) {
+        return true;
+      }
+
+      return false;
+    });
   }
 
   Future<void> _createOrder() async {
@@ -762,7 +780,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       _ornamentImages[i].insert(
                         0,
                         PlatformFile(
-                          name: 'cloned_${DateTime.now().millisecondsSinceEpoch}.jpg',
+                          name:
+                              'cloned_${DateTime.now().millisecondsSinceEpoch}.jpg',
                           size: bytes.length,
                           bytes: bytes,
                         ),
@@ -2290,7 +2309,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     clipBehavior: Clip.none,
                     children: [
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusS,
+                        ),
                         child: Image.network(
                           url,
                           width: 90,
@@ -2314,7 +2335,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         child: InkWell(
                           onTap:
                               () => setState(
-                                () => _existingOrnamentImageUrls[index].removeAt(imgIdx),
+                                () => _existingOrnamentImageUrls[index]
+                                    .removeAt(imgIdx),
                               ),
                           child: Container(
                             decoration: BoxDecoration(
