@@ -6,6 +6,7 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:soloshine/screens/admin/categorycreatescreen.dart';
 import 'package:soloshine/screens/employee/manage_orders_screen.dart';
 import 'package:soloshine/services/dashboard_service.dart';
+import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
@@ -3734,29 +3735,128 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _performCloudinaryCleanup(String token) async {
-    // Show confirmation dialog first
+    DateTime? startDate;
+    DateTime? endDate;
+
+    // Show confirmation dialog with Date Range Pickers
     final confirm = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Confirm Cloudinary Cleanup'),
-            content: const Text(
-              'This will scan your Cloudinary storage for images that are not associated with any active order and permanently delete them to free up space. Are you sure you want to proceed?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.orange,
+              title: const Row(
+                children: [
+                  Icon(Icons.cleaning_services_rounded, color: Colors.orange),
+                  SizedBox(width: 10),
+                  Text('Cloudinary Cleanup'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'This will scan your Cloudinary storage for images that are not associated with any active order and permanently delete them to free up space.',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Optional: Filter by Date Created',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            final DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate: startDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime.now(),
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                startDate = picked;
+                              });
+                            }
+                          },
+                          child: Text(
+                            startDate == null
+                                ? 'Start Date'
+                                : DateFormat('dd/MM/yyyy').format(startDate!),
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            final DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate: endDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime.now(),
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                endDate = picked;
+                              });
+                            }
+                          },
+                          child: Text(
+                            endDate == null
+                                ? 'End Date'
+                                : DateFormat('dd/MM/yyyy').format(endDate!),
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (startDate != null || endDate != null)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          setDialogState(() {
+                            startDate = null;
+                            endDate = null;
+                          });
+                        },
+                        child: const Text(
+                          'Clear Filters',
+                          style: TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
                 ),
-                child: const Text('Proceed'),
-              ),
-            ],
-          ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.orange,
+                  ),
+                  child: const Text('Proceed'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
 
     if (confirm != true) return;
@@ -3774,7 +3874,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
 
     try {
-      final response = await AdminDashboardService.cleanupCloudinary(token);
+      final response = await AdminDashboardService.cleanupCloudinary(
+        token,
+        startDate: startDate,
+        endDate: endDate,
+      );
       if (!mounted) return;
       Navigator.pop(context); // Close loading dialog
 
