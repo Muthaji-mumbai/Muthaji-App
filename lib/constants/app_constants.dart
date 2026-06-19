@@ -29,7 +29,7 @@ class AppConstants {
   ); // Blue Grey for common use
 
   // API Configuration
-  static const String baseUrl = 'https://soloshine-backend-kra4.onrender.com';
+  static const String baseUrl = 'https://soloshine-backend-l3rf.onrender.com';
   static const String loginEndpoint = '/auth/login';
   static const String loginUrl = '$baseUrl$loginEndpoint';
   // Web push (FCM) VAPID public key

@@ -5,6 +5,7 @@ import 'package:soloshine/screens/common/pdf_viewer_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/fallback_image.dart';
 import '../../services/order_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/order.dart';
@@ -520,20 +521,20 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                     borderRadius: BorderRadius.circular(10),
                     child:
                         order.images.isNotEmpty
-                            ? Image.network(
-                              order.images.first,
+                            ? FallbackNetworkImage(
+                              primaryUrl: order.images.first,
+                              backupUrl: order.backupImages.isNotEmpty ? order.backupImages.first : null,
                               fit: BoxFit.cover,
-                              errorBuilder:
-                                  (context, error, stackTrace) => Container(
-                                    color: _getStatusColor(
-                                      order.status,
-                                    ).withOpacity(0.1),
-                                    child: Icon(
-                                      Icons.image_not_supported_rounded,
-                                      color: _getStatusColor(order.status),
-                                      size: 24,
-                                    ),
-                                  ),
+                              errorWidget: Container(
+                                color: _getStatusColor(
+                                  order.status,
+                                ).withOpacity(0.1),
+                                child: Icon(
+                                  Icons.image_not_supported_rounded,
+                                  color: _getStatusColor(order.status),
+                                  size: 24,
+                                ),
+                              ),
                             )
                             : Container(
                               color: _getStatusColor(
@@ -969,6 +970,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               final detail = entry.value;
               final images =
                   detail.images.isNotEmpty ? detail.images : order.images;
+              final backupImages =
+                  detail.backupImages.isNotEmpty ? detail.backupImages : order.backupImages;
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(16),
@@ -1181,7 +1184,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                             final isPdf = imageUrl.toLowerCase().endsWith('.pdf');
                             
                             return GestureDetector(
-                              onTap: () => _showFullScreenImage(images, index),
+                              onTap: () => _showFullScreenImage(images, backupImages, index),
                               child: Container(
                                 margin: const EdgeInsets.only(right: 12),
                                 width: 100,
@@ -1214,34 +1217,35 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                                             ],
                                           ),
                                         )
-                                      : Image.network(
-                                          imageUrl,
+                                      : FallbackNetworkImage(
+                                          primaryUrl: imageUrl,
+                                          backupUrl: (backupImages.length > index)
+                                              ? backupImages[index]
+                                              : null,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Container(
-                                              color: Colors.grey.shade100,
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons.broken_image_outlined,
+                                          errorWidget: Container(
+                                            color: Colors.grey.shade100,
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.broken_image_outlined,
+                                                  color: Colors.grey.shade400,
+                                                  size: 32,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'Error',
+                                                  style: TextStyle(
                                                     color: Colors.grey.shade400,
-                                                    size: 32,
+                                                    fontSize: 10,
                                                   ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    'Error',
-                                                    style: TextStyle(
-                                                      color: Colors.grey.shade400,
-                                                      fontSize: 10,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
                                 ),
                               ),
                             );
@@ -1268,7 +1272,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                   final isPdf = imageUrl.toLowerCase().endsWith('.pdf');
                   
                   return GestureDetector(
-                    onTap: () => _showFullScreenImage(order.images, index),
+                    onTap: () => _showFullScreenImage(order.images, order.backupImages, index),
                     child: Container(
                       margin: const EdgeInsets.only(right: 12),
                       width: 100,
@@ -1301,32 +1305,33 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                                   ],
                                 ),
                               )
-                            : Image.network(
-                                imageUrl,
+                            : FallbackNetworkImage(
+                                primaryUrl: imageUrl,
+                                backupUrl: (order.backupImages.length > index)
+                                    ? order.backupImages[index]
+                                    : null,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: Colors.grey.shade100,
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.broken_image_outlined,
+                                errorWidget: Container(
+                                  color: Colors.grey.shade100,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.broken_image_outlined,
+                                        color: Colors.grey.shade400,
+                                        size: 32,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Error',
+                                        style: TextStyle(
                                           color: Colors.grey.shade400,
-                                          size: 32,
+                                          fontSize: 10,
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Error',
-                                          style: TextStyle(
-                                            color: Colors.grey.shade400,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                       ),
                     ),
@@ -1387,7 +1392,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
     );
   }
 
-  void _showFullScreenImage(List<String> images, int initialIndex) {
+  void _showFullScreenImage(List<String> images, List<String> backupImages, int initialIndex) {
     final imageUrl = images[initialIndex];
     
     // Check if the URL is a PDF
@@ -1410,6 +1415,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
           builder:
               (context) => FullScreenImageViewer(
                 images: images,
+                backupImages: backupImages,
                 initialIndex: initialIndex,
               ),
         ),

@@ -10,6 +10,7 @@ import 'dart:async';
 import '../../providers/auth_provider.dart';
 import '../../models/order.dart';
 import '../../constants/app_constants.dart';
+import '../../widgets/fallback_image.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../services/order_service.dart';
@@ -69,6 +70,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   List<List<PlatformFile>> _ornamentImages = [[]];
   // For edit mode: store existing image URLs per ornament item (display only)
   List<List<String>> _existingOrnamentImageUrls = [[]];
+  List<List<String>> _existingOrnamentBackupImageUrls = [[]];
   File? _currentEditingImage;
   final ImagePicker _picker = ImagePicker();
   List<Datum> _categories = [];
@@ -180,6 +182,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 if (i < _existingOrnamentImageUrls.length &&
                     _existingOrnamentImageUrls[i].isNotEmpty)
                   'image': _existingOrnamentImageUrls[i],
+                if (i < _existingOrnamentBackupImageUrls.length &&
+                    _existingOrnamentBackupImageUrls[i].isNotEmpty)
+                  'backupimage': _existingOrnamentBackupImageUrls[i],
                 // Update delivery count to include new delivery qty
                 if (_selectedStatus == OrderStatus.partialDelivery &&
                     d['deliveryqty'] != null)
@@ -436,10 +441,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           order.ornamentDetails
               .map((d) => List<String>.from(d.images))
               .toList();
+      _existingOrnamentBackupImageUrls =
+          order.ornamentDetails
+              .map((d) => List<String>.from(d.backupImages))
+              .toList();
       _ornamentImages = List.generate(_ornamentDetails.length, (_) => []);
     } else {
       // Fallback to order-level images if any
       _existingOrnamentImageUrls = [List<String>.from(order.images)];
+      _existingOrnamentBackupImageUrls = [List<String>.from(order.backupImages)];
       _ornamentImages = [[]];
     }
   }
@@ -540,6 +550,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         'partialdelivery': [],
       });
       _ornamentImages.add([]);
+      _existingOrnamentImageUrls.add([]);
+      _existingOrnamentBackupImageUrls.add([]);
     });
   }
 
@@ -547,6 +559,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     setState(() {
       _ornamentDetails.removeAt(index);
       _ornamentImages.removeAt(index);
+      if (_existingOrnamentImageUrls.length > index) {
+        _existingOrnamentImageUrls.removeAt(index);
+      }
+      if (_existingOrnamentBackupImageUrls.length > index) {
+        _existingOrnamentBackupImageUrls.removeAt(index);
+      }
     });
   }
 
@@ -792,6 +810,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   }
                 }
                 _existingOrnamentImageUrls[i].clear();
+                if (_existingOrnamentBackupImageUrls.length > i) {
+                  _existingOrnamentBackupImageUrls[i].clear();
+                }
               }
             }
           }
@@ -832,6 +853,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               if (_existingOrnamentImageUrls.length > i &&
                   _existingOrnamentImageUrls[i].isNotEmpty) {
                 map['image'] = List<String>.from(_existingOrnamentImageUrls[i]);
+              }
+              if (_existingOrnamentBackupImageUrls.length > i &&
+                  _existingOrnamentBackupImageUrls[i].isNotEmpty) {
+                map['backupimage'] = List<String>.from(_existingOrnamentBackupImageUrls[i]);
               }
             }
             detailsPayload.add(map);
@@ -1645,7 +1670,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               ),
             ],
             // Party Selection (always show for Bulk orders, optional for Single)
-            // Party Selection (always show for Bulk orders, optional for Single)
             if ((_selectedOrderType == 'Bulk' ||
                     (_selectedOrderType == 'Single' &&
                         _shouldShowOrderTypeSelection())) &&
@@ -2239,32 +2263,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               ),
             ),
             const SizedBox(height: AppConstants.spacingM),
-            // // Remarks field for partial delivery
-            // TextFormField(
-            //   initialValue: detail['remarks'],
-            //   decoration: InputDecoration(
-            //     labelText: 'Remarks',
-            //     hintText: 'Add any remarks for this delivery',
-            //     border: OutlineInputBorder(
-            //       borderRadius: BorderRadius.circular(AppConstants.radiusS),
-            //     ),
-            //     contentPadding: const EdgeInsets.symmetric(
-            //       horizontal: AppConstants.spacingS,
-            //       vertical: AppConstants.spacingS,
-            //     ),
-            //     suffixIcon: Icon(
-            //       Icons.edit_note,
-            //       color: AppConstants.primaryColor,
-            //     ),
-            //   ),
-            //   maxLines: 2,
-            //   minLines: 1,
-            //   onChanged:
-            //       (value) => setState(() {
-            //         _ornamentDetails[index]['remarks'] = value;
-            //       }),
-            // ),
-            // const SizedBox(height: AppConstants.spacingM),
           ],
           Align(
             alignment: Alignment.centerLeft,
@@ -2305,6 +2303,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     (_, __) => const SizedBox(width: AppConstants.spacingS),
                 itemBuilder: (context, imgIdx) {
                   final url = _existingOrnamentImageUrls[index][imgIdx];
+                  final backupUrl = (index < _existingOrnamentBackupImageUrls.length &&
+                          _existingOrnamentBackupImageUrls[index].length > imgIdx)
+                      ? _existingOrnamentBackupImageUrls[index][imgIdx]
+                      : null;
                   return Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -2312,32 +2314,25 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         borderRadius: BorderRadius.circular(
                           AppConstants.radiusS,
                         ),
-                        child: Image.network(
-                          url,
+                        child: FallbackNetworkImage(
+                          primaryUrl: url,
+                          backupUrl: backupUrl,
                           width: 90,
                           height: 90,
                           fit: BoxFit.cover,
-                          errorBuilder:
-                              (c, e, s) => Container(
-                                width: 90,
-                                height: 90,
-                                color: Colors.grey.shade100,
-                                child: Icon(
-                                  Icons.broken_image,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
                         ),
                       ),
                       Positioned(
                         right: -6,
                         top: -6,
                         child: InkWell(
-                          onTap:
-                              () => setState(
-                                () => _existingOrnamentImageUrls[index]
-                                    .removeAt(imgIdx),
-                              ),
+                          onTap: () => setState(() {
+                            _existingOrnamentImageUrls[index].removeAt(imgIdx);
+                            if (_existingOrnamentBackupImageUrls.length > index &&
+                                _existingOrnamentBackupImageUrls[index].length > imgIdx) {
+                              _existingOrnamentBackupImageUrls[index].removeAt(imgIdx);
+                            }
+                          }),
                           child: Container(
                             decoration: BoxDecoration(
                               color: AppConstants.errorColor,

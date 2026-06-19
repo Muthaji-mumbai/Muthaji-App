@@ -3507,6 +3507,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     color: Colors.blue,
                     data: stats['supabase'] ?? {},
                   ),
+                  const SizedBox(height: AppConstants.spacingM),
+                  _buildStatsSection(
+                    title: 'Cloudinary',
+                    icon: Icons.image,
+                    color: Colors.orange,
+                    data: stats['cloudinary'] ?? {},
+                  ),
                   const SizedBox(height: AppConstants.spacingXL),
                   SizedBox(
                     width: double.infinity,
@@ -3519,6 +3526,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       label: const Text('Cleanup Delivered & Cancelled Orders'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppConstants.errorColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppConstants.spacingM,
+                        ),
+                        textStyle: AppConstants.titleMedium,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.radiusM,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.spacingM),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context); // close sheet
+                        _performCloudinaryCleanup(token);
+                      },
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('Clean Unused Cloudinary Images'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           vertical: AppConstants.spacingM,
@@ -3577,6 +3609,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
             _buildStatRow(
               'Total Size',
               data['totalSizeMb']?.toString(),
+              isBold: true,
+            ),
+          ] else if (title == 'Cloudinary') ...[
+            _buildStatRow('Cloud Name', data['cloud_name']?.toString()),
+            _buildStatRow(
+              'Used Size',
+              data['estimatedTotalSizeMb']?.toString(),
               isBold: true,
             ),
           ] else ...[
@@ -3663,6 +3702,85 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final title = 'Cleanup Successful';
       final subtitle =
           'Deleted ${response['deletedOrdersCount'] ?? 0} orders and ${response['deletedImagesCount'] ?? 0} images.';
+
+      // Refresh Dashboard data
+      await _loadDashboardData();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(subtitle),
+            ],
+          ),
+          backgroundColor: AppConstants.successColor,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
+    }
+  }
+
+  Future<void> _performCloudinaryCleanup(String token) async {
+    // Show confirmation dialog first
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Confirm Cloudinary Cleanup'),
+            content: const Text(
+              'This will scan your Cloudinary storage for images that are not associated with any active order and permanently delete them to free up space. Are you sure you want to proceed?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                ),
+                child: const Text('Proceed'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirm != true) return;
+
+    if (!mounted) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => const Center(
+            child: CircularProgressIndicator(color: AppConstants.primaryColor),
+          ),
+    );
+
+    try {
+      final response = await AdminDashboardService.cleanupCloudinary(token);
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      final title = 'Cloudinary Cleanup Successful';
+      final subtitle =
+          'Scanned ${response['totalChecked'] ?? 0} images. Deleted ${response['deletedCount'] ?? 0} unused images.';
 
       // Refresh Dashboard data
       await _loadDashboardData();

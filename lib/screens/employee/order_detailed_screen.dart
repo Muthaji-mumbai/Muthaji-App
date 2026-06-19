@@ -13,6 +13,7 @@ import 'package:soloshine/screens/client/order_image_generator.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:intl/intl.dart';
+import 'package:soloshine/widgets/fallback_image.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
   final Order order;
@@ -92,6 +93,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         builder:
             (context) => FullScreenImageViewer(
               images: widget.order.images,
+              backupImages: widget.order.backupImages,
               initialIndex: index,
             ),
       ),
@@ -463,22 +465,17 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                                 itemCount: detail.images.length,
                                 itemBuilder: (context, index) {
                                   final imageUrl = detail.images[index];
+                                  final backupUrl = detail.backupImages.length > index
+                                      ? detail.backupImages[index]
+                                      : null;
                                   return GestureDetector(
                                     onTap: () => _showFullScreenImage(index),
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        imageUrl,
+                                      child: FallbackNetworkImage(
+                                        primaryUrl: imageUrl,
+                                        backupUrl: backupUrl,
                                         fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                Container(
-                                                  color: Colors.grey.shade100,
-                                                  child: Icon(
-                                                    Icons.broken_image_outlined,
-                                                    color: Colors.grey.shade400,
-                                                  ),
-                                                ),
                                       ),
                                     ),
                                   );
@@ -627,11 +624,13 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 
 class FullScreenImageViewer extends StatelessWidget {
   final List<String> images;
+  final List<String>? backupImages;
   final int initialIndex;
 
   const FullScreenImageViewer({
     super.key,
     required this.images,
+    this.backupImages,
     required this.initialIndex,
   });
 
@@ -647,10 +646,18 @@ class FullScreenImageViewer extends StatelessWidget {
       body: PhotoViewGallery.builder(
         scrollPhysics: const BouncingScrollPhysics(),
         builder: (BuildContext context, int index) {
-          return PhotoViewGalleryPageOptions(
-            imageProvider: NetworkImage(images[index]),
+          final imageUrl = images[index];
+          final backupUrl = (backupImages != null && backupImages!.length > index)
+              ? backupImages![index]
+              : null;
+          return PhotoViewGalleryPageOptions.customChild(
+            child: FallbackNetworkImage(
+              primaryUrl: imageUrl,
+              backupUrl: backupUrl,
+              fit: BoxFit.contain,
+            ),
             initialScale: PhotoViewComputedScale.contained,
-            heroAttributes: PhotoViewHeroAttributes(tag: images[index]),
+            heroAttributes: PhotoViewHeroAttributes(tag: imageUrl),
           );
         },
         itemCount: images.length,
