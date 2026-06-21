@@ -39,8 +39,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success && mounted) {
-        try {
-          final fcmToken = await FirebaseMessaging.instance.getToken();
+        // Asynchronously update FCM token in the background so it doesn't block UI transition
+        FirebaseMessaging.instance.getToken().timeout(const Duration(seconds: 2)).then((fcmToken) async {
           if (fcmToken != null && AuthService.currentUser != null) {
             await UserService.updateFcmToken(
               userId: AuthService.currentUser!.id,
@@ -48,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
               token: AuthService.currentToken,
             );
           }
-        } catch (_) {}
+        }).catchError((_) {});
 
         // On successful login, navigate to Dashboard and clear back stack
         if (!mounted) return;
@@ -251,6 +251,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
 
                       const SizedBox(height: AppConstants.spacingXL),
+                      Text(
+                        'Version ${AppConstants.appVersion}',
+                        style: AppConstants.bodySmall.copyWith(
+                          color: AppConstants.textSecondaryColor,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
 
                       // Demo Credentials Section
                       // Container(

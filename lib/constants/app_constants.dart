@@ -28,8 +28,11 @@ class AppConstants {
     0xFF607D8B,
   ); // Blue Grey for common use
 
+  // App Version
+  static const String appVersion = '1.0.1+2';
+
   // API Configuration
-  static const String baseUrl = 'https://soloshine-backend-l3rf.onrender.com';
+  static const String baseUrl = 'http://localhost:3000';
   static const String loginEndpoint = '/auth/login';
   static const String loginUrl = '$baseUrl$loginEndpoint';
   // Web push (FCM) VAPID public key

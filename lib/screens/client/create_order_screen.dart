@@ -178,13 +178,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         : (d['dull'] ?? 'Same as image'),
                 if ((d['remarks'] as String).isNotEmpty)
                   'remarks': d['remarks'],
-                // Include existing image URLs to prevent deletion on server
-                if (i < _existingOrnamentImageUrls.length &&
-                    _existingOrnamentImageUrls[i].isNotEmpty)
-                  'image': _existingOrnamentImageUrls[i],
-                if (i < _existingOrnamentBackupImageUrls.length &&
-                    _existingOrnamentBackupImageUrls[i].isNotEmpty)
-                  'backupimage': _existingOrnamentBackupImageUrls[i],
+                'image': i < _existingOrnamentImageUrls.length
+                    ? _existingOrnamentImageUrls[i]
+                    : const <String>[],
+                'backupimage': i < _existingOrnamentBackupImageUrls.length
+                    ? _existingOrnamentBackupImageUrls[i]
+                    : const <String>[],
                 // Update delivery count to include new delivery qty
                 if (_selectedStatus == OrderStatus.partialDelivery &&
                     d['deliveryqty'] != null)
@@ -850,14 +849,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             }
             // If cloning, include existing image URLs per item so backend saves them without multipart
             if (widget.cloneFromOrder) {
-              if (_existingOrnamentImageUrls.length > i &&
-                  _existingOrnamentImageUrls[i].isNotEmpty) {
-                map['image'] = List<String>.from(_existingOrnamentImageUrls[i]);
-              }
-              if (_existingOrnamentBackupImageUrls.length > i &&
-                  _existingOrnamentBackupImageUrls[i].isNotEmpty) {
-                map['backupimage'] = List<String>.from(_existingOrnamentBackupImageUrls[i]);
-              }
+              map['image'] = _existingOrnamentImageUrls.length > i
+                  ? List<String>.from(_existingOrnamentImageUrls[i])
+                  : const <String>[];
+              map['backupimage'] = _existingOrnamentBackupImageUrls.length > i
+                  ? List<String>.from(_existingOrnamentBackupImageUrls[i])
+                  : const <String>[];
             }
             detailsPayload.add(map);
           }
