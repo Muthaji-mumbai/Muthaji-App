@@ -32,7 +32,7 @@ class AppConstants {
   static const String appVersion = '1.0.1+2';
 
   // API Configuration
-  static const String baseUrl = 'http://localhost:3000';
+  static const String baseUrl = 'https://soloshine-backend-kra4.onrender.com';
   static const String loginEndpoint = '/auth/login';
   static const String loginUrl = '$baseUrl$loginEndpoint';
   // Web push (FCM) VAPID public key
