@@ -86,37 +86,39 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _initializeAuth();
     _checkForSharedIntent();
   }
-  
+
   @override
   void dispose() {
     _intentDataStreamSubscription?.cancel();
     super.dispose();
   }
-  
+
   // Check if app was opened with shared images
   void _checkForSharedIntent() {
     // Check for initial sharing when app was closed
-    ReceiveSharingIntent.instance.getInitialMedia().then((List<dynamic> sharedFiles) {
+    ReceiveSharingIntent.instance.getInitialMedia().then((
+      List<dynamic> sharedFiles,
+    ) {
       if (sharedFiles.isNotEmpty && mounted) {
         setState(() {
           _hasSharedIntent = true;
         });
       }
     });
-    
+
     // Listen to media sharing while app is running
-    _intentDataStreamSubscription = ReceiveSharingIntent.instance.getMediaStream().listen(
-      (List<dynamic> sharedFiles) {
-        if (sharedFiles.isNotEmpty && mounted) {
-          setState(() {
-            _hasSharedIntent = true;
-          });
-          _navigateToCreateOrder();
-        }
-      },
-    );
-  } 
-  
+    _intentDataStreamSubscription = ReceiveSharingIntent.instance
+        .getMediaStream()
+        .listen((List<dynamic> sharedFiles) {
+          if (sharedFiles.isNotEmpty && mounted) {
+            setState(() {
+              _hasSharedIntent = true;
+            });
+            _navigateToCreateOrder();
+          }
+        });
+  }
+
   void _navigateToCreateOrder() {
     // Wait for auth to complete, then navigate
     Future.delayed(const Duration(milliseconds: 500), () {
@@ -124,9 +126,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         final authProvider = context.read<AuthProvider>();
         if (authProvider.isLoggedIn) {
           Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const CreateOrderScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const CreateOrderScreen()),
           );
         }
       }

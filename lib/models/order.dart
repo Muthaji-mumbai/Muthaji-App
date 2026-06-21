@@ -95,6 +95,7 @@ class OrnamentDetail {
   final int quantity;
   final String? remarks; // new
   final List<String> images; // per-ornament images (new API)
+  final List<String> backupImages; // fallback images
   final String? size; // size from category
   final String? unit; // unit from category
   final String? colorstone; // colorstone option
@@ -114,6 +115,7 @@ class OrnamentDetail {
     required this.quantity,
     this.remarks,
     this.images = const [],
+    this.backupImages = const [],
     this.size,
     this.unit,
     this.colorstone,
@@ -143,6 +145,11 @@ class OrnamentDetail {
       itemImages = List<String>.from(json['image']);
     }
 
+    List<String> itemBackupImages = [];
+    if (json['backupimage'] is List) {
+      itemBackupImages = List<String>.from(json['backupimage']);
+    }
+
     // Partial delivery list (if provided by API)
     List<PartialDeliveryEntry> entries = [];
     if (json['partialdelivery'] is List) {
@@ -169,6 +176,7 @@ class OrnamentDetail {
               : int.tryParse((json['quantity'] ?? '0').toString()) ?? 0,
       remarks: json['remarks'],
       images: itemImages,
+      backupImages: itemBackupImages,
       size: json['size']?.toString(),
       unit: json['unit']?.toString(),
       colorstone: json['colorstone']?.toString(),
@@ -192,6 +200,7 @@ class OrnamentDetail {
       'quantity': quantity,
       if (remarks != null) 'remarks': remarks,
       if (images.isNotEmpty) 'image': images,
+      if (backupImages.isNotEmpty) 'backupimage': backupImages,
       if (size != null) 'size': size,
       if (unit != null) 'unit': unit,
       if (colorstone != null) 'colorstone': colorstone,
@@ -199,7 +208,7 @@ class OrnamentDetail {
       if (dull != null) 'dull': dull,
       if (deliverycount != null) 'deliverycount': deliverycount,
       if (partialDelivery != null && partialDelivery!.isNotEmpty)
-        'partialdelivery': partialDelivery!.map((e) => e.toJson()).toList(),
+          'partialdelivery': partialDelivery!.map((e) => e.toJson()).toList(),
     };
   }
 }
@@ -228,6 +237,7 @@ class Order {
 
   final List<String>
   images; // kept for backward compatibility if order-level images exist
+  final List<String> backupImages; // fallback images
   final List<String> pdfs;
   final List<StatusHistoryEntry> statusHistory;
 
@@ -251,6 +261,7 @@ class Order {
     this.partynameDisplay,
     this.ornamentDetails = const [],
     this.images = const [],
+    this.backupImages = const [],
     this.pdfs = const [],
     this.statusHistory = const [],
   });
@@ -299,6 +310,21 @@ class Order {
       images = agg;
     }
 
+    List<String> backupImages = [];
+    if (json['backupimage'] != null && json['backupimage'] is List) {
+      backupImages = List<String>.from(json['backupimage']);
+    }
+    // Aggregate per-ornament backup images if order-level backup images are empty
+    if (backupImages.isEmpty && ornamentDetails.isNotEmpty) {
+      final agg = <String>[];
+      for (final d in ornamentDetails) {
+        if (d.backupImages.isNotEmpty) {
+          agg.addAll(d.backupImages);
+        }
+      }
+      backupImages = agg;
+    }
+
     List<String> pdfs = [];
     if (json['pdf'] != null && json['pdf'] is List) {
       pdfs = List<String>.from(json['pdf']);
@@ -341,6 +367,7 @@ class Order {
       partynameDisplay: _parsePartyName(json['partyname']),
       ornamentDetails: ornamentDetails,
       images: images,
+      backupImages: backupImages,
       pdfs: pdfs,
       statusHistory: statusHistory,
     );
@@ -462,6 +489,7 @@ class Order {
       if (partynameDisplay != null) 'partynameDisplay': partynameDisplay,
       'ornamentDetails': ornamentDetails.map((d) => d.toJson()).toList(),
       'images': images,
+      'backupImages': backupImages,
       'pdfs': pdfs,
       if (statusHistory.isNotEmpty)
         'statushistory': statusHistory.map((h) => h.toJson()).toList(),
@@ -488,6 +516,7 @@ class Order {
     String? partynameDisplay,
     List<OrnamentDetail>? ornamentDetails,
     List<String>? images,
+    List<String>? backupImages,
     List<String>? pdfs,
     List<StatusHistoryEntry>? statusHistory,
   }) {
@@ -511,6 +540,7 @@ class Order {
       partynameDisplay: partynameDisplay ?? this.partynameDisplay,
       ornamentDetails: ornamentDetails ?? this.ornamentDetails,
       images: images ?? this.images,
+      backupImages: backupImages ?? this.backupImages,
       pdfs: pdfs ?? this.pdfs,
       statusHistory: statusHistory ?? this.statusHistory,
     );

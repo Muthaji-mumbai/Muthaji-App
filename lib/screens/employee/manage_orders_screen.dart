@@ -19,6 +19,7 @@ import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import '../../models/user.dart';
 import '../../constants/app_constants.dart';
+import '../../widgets/fallback_image.dart';
 
 class ManageOrdersScreen extends StatefulWidget {
   final OrderStatus? initialStatus;
@@ -2426,20 +2427,12 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                     size: 32,
                                   ),
                                 )
-                                : Image.network(
-                                  order.images.first,
+                                : FallbackNetworkImage(
+                                  primaryUrl: order.images.first,
+                                  backupUrl: order.backupImages.isNotEmpty
+                                      ? order.backupImages.first
+                                      : null,
                                   fit: BoxFit.cover,
-                                  errorBuilder:
-                                      (context, error, stackTrace) => Container(
-                                        color: _getStatusColor(
-                                          order.status,
-                                        ).withOpacity(0.1),
-                                        child: Icon(
-                                          Icons.image_not_supported_rounded,
-                                          color: _getStatusColor(order.status),
-                                          size: 24,
-                                        ),
-                                      ),
                                 ))
                             : Container(
                               color: _getStatusColor(
@@ -3418,6 +3411,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                           itemCount: detail.images.length,
                           itemBuilder: (context, index) {
                             final imageUrl = detail.images[index];
+                            final backupUrl = detail.backupImages.length > index
+                                ? detail.backupImages[index]
+                                : null;
                             final isPdf = imageUrl.toLowerCase().endsWith(
                               '.pdf',
                             );
@@ -3426,7 +3422,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                               onTap:
                                   () => _showImagePreview(
                                     imageUrl,
+                                    backupUrl: backupUrl,
                                     galleryImages: detail.images,
+                                    galleryBackupImages: detail.backupImages,
                                   ),
                               child: Container(
                                 margin: const EdgeInsets.only(right: 12),
@@ -3464,42 +3462,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                                               ],
                                             ),
                                           )
-                                          : Image.network(
-                                            imageUrl,
+                                          : FallbackNetworkImage(
+                                            primaryUrl: imageUrl,
+                                            backupUrl: backupUrl,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (
-                                              context,
-                                              error,
-                                              stackTrace,
-                                            ) {
-                                              return Container(
-                                                color: Colors.grey.shade100,
-                                                child: Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    Icon(
-                                                      Icons
-                                                          .broken_image_outlined,
-                                                      color:
-                                                          Colors.grey.shade400,
-                                                      size: 32,
-                                                    ),
-                                                    const SizedBox(height: 4),
-                                                    Text(
-                                                      'Error',
-                                                      style: TextStyle(
-                                                        color:
-                                                            Colors
-                                                                .grey
-                                                                .shade400,
-                                                        fontSize: 10,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            },
                                           ),
                                 ),
                               ),
@@ -3634,7 +3600,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
     );
   }
 
-  void _showImagePreview(String url, {List<String>? galleryImages}) async {
+  void _showImagePreview(String url, {String? backupUrl, List<String>? galleryImages, List<String>? galleryBackupImages}) async {
     // If single image or no gallery context, show single image
     if (galleryImages == null || galleryImages.length == 1) {
       if (url.toLowerCase().endsWith('.pdf')) {
@@ -3659,23 +3625,10 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
                       maxScale: 4,
                       child: AspectRatio(
                         aspectRatio: 1,
-                        child: Image.network(
-                          url,
+                        child: FallbackNetworkImage(
+                          primaryUrl: url,
+                          backupUrl: backupUrl,
                           fit: BoxFit.contain,
-                          errorBuilder:
-                              (context, error, stack) => SizedBox(
-                                height: 300,
-                                child: Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Icon(Icons.broken_image, size: 40),
-                                      SizedBox(height: 8),
-                                      Text('Failed to load image'),
-                                    ],
-                                  ),
-                                ),
-                              ),
                         ),
                       ),
                     ),
@@ -3717,6 +3670,7 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
           builder:
               (context) => FullScreenImageViewer(
                 images: galleryImages,
+                backupImages: galleryBackupImages,
                 initialIndex: initialIndex,
               ),
         ),
@@ -4037,11 +3991,13 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen>
 
 class FullScreenImageViewer extends StatefulWidget {
   final List<String> images;
+  final List<String>? backupImages;
   final int initialIndex;
 
   const FullScreenImageViewer({
     super.key,
     required this.images,
+    this.backupImages,
     required this.initialIndex,
   });
 
@@ -4221,9 +4177,17 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
           builder: (BuildContext context, int index) {
             final scaleCtrl = _getScaleController(index);
             final controller = _getController(index);
+            final imageUrl = widget.images[index];
+            final backupUrl = (widget.backupImages != null && widget.backupImages!.length > index)
+                ? widget.backupImages![index]
+                : null;
 
-            return PhotoViewGalleryPageOptions(
-              imageProvider: NetworkImage(widget.images[index]),
+            return PhotoViewGalleryPageOptions.customChild(
+              child: FallbackNetworkImage(
+                primaryUrl: imageUrl,
+                backupUrl: backupUrl,
+                fit: BoxFit.contain,
+              ),
               initialScale: PhotoViewComputedScale.contained,
               heroAttributes: PhotoViewHeroAttributes(tag: index),
               minScale: PhotoViewComputedScale.contained * 0.5,

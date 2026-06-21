@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:soloshine/constants/app_constants.dart';
 import '../../models/order.dart';
+import '../../widgets/fallback_image.dart';
 
 class OrderImageGenerator extends StatefulWidget {
   final Order order;
@@ -181,6 +182,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           quantity: '-',
           remarks: widget.order.notes ?? '',
           images: widget.order.images,
+          backupImages: widget.order.backupImages,
           width: constraints.maxWidth,
         );
       },
@@ -207,6 +209,10 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                       ornament.images.isNotEmpty
                           ? ornament.images
                           : widget.order.images;
+                  final backupImages =
+                      ornament.backupImages.isNotEmpty
+                          ? ornament.backupImages
+                          : widget.order.backupImages;
                   final key = _ensureOrnamentKey(index);
                   return _buildOrderPage(
                     pageKey: key,
@@ -221,6 +227,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                     quantity: '${ornament.quantity}',
                     remarks: ornament.remarks ?? '',
                     images: images,
+                    backupImages: backupImages,
                     width: constraints.maxWidth,
                   );
                 },
@@ -242,6 +249,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     required String quantity,
     required String remarks,
     required List<String> images,
+    required List<String> backupImages,
     required String unit,
     required String size,
     required String colorstone,
@@ -280,6 +288,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                 rhodium,
                 dull,
                 images,
+                backupImages,
                 constraints.maxWidth,
               );
             } else {
@@ -295,6 +304,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
                 rhodium,
                 dull,
                 images,
+                backupImages,
                 constraints.maxWidth,
               );
             }
@@ -316,6 +326,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     String rhodium,
     String dull,
     List<String> images,
+    List<String> backupImages,
     double width,
   ) {
     return Column(
@@ -411,7 +422,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: _buildImagesGrid(images, width),
+            child: _buildImagesGrid(images, backupImages, width),
           ),
         ] else
           const Expanded(child: Center(child: _NoImagesWidget())),
@@ -431,6 +442,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     String rhodium,
     String dull,
     List<String> images,
+    List<String> backupImages,
     double width,
   ) {
     return Row(
@@ -492,7 +504,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
               images.isNotEmpty
                   ? Padding(
                     padding: const EdgeInsets.all(16),
-                    child: _buildImagesGrid(images, width),
+                    child: _buildImagesGrid(images, backupImages, width),
                   )
                   : const Center(child: _NoImagesWidget()),
         ),
@@ -626,7 +638,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     );
   }
 
-  Widget _buildImagesGrid(List<String> images, double width) {
+  Widget _buildImagesGrid(List<String> images, List<String>? backupImages, double width) {
     if (images.isEmpty) return const _NoImagesWidget();
 
     const int gridCount = 6; // Fixed 2x3 grid (6 slots)
@@ -644,7 +656,8 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
       itemCount: gridCount,
       itemBuilder: (context, index) {
         if (index < images.length) {
-          return _buildImageCard(images[index]);
+          final backupUrl = (backupImages != null && backupImages.length > index) ? backupImages[index] : null;
+          return _buildImageCard(images[index], backupUrl);
         } else {
           return Container(
             decoration: BoxDecoration(
@@ -662,7 +675,7 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
     return 3; // Always 3 columns for 2x3 grid
   }
 
-  Widget _buildImageCard(String imageUrl) {
+  Widget _buildImageCard(String imageUrl, String? backupUrl) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
@@ -671,54 +684,31 @@ class _OrderImageGeneratorState extends State<OrderImageGenerator> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          imageUrl,
+        child: FallbackNetworkImage(
+          primaryUrl: imageUrl,
+          backupUrl: backupUrl,
           fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Center(
+          errorWidget: Container(
+            color: Colors.red[50],
+            child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.blue,
-                    ),
+                  Icon(
+                    Icons.broken_image,
+                    color: Colors.red[300],
+                    size: 24,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Text(
-                    'Loading...',
-                    style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                    'Failed to load',
+                    style: TextStyle(fontSize: 10, color: Colors.red[600]),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
-            );
-          },
-          errorBuilder:
-              (context, error, stackTrace) => Container(
-                color: Colors.red[50],
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.broken_image,
-                        color: Colors.red[300],
-                        size: 24,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Failed to load',
-                        style: TextStyle(fontSize: 10, color: Colors.red[600]),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            ),
+          ),
         ),
       ),
     );

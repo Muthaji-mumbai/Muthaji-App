@@ -14,6 +14,7 @@ import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/fallback_image.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -1091,20 +1092,23 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                     size: 32,
                                   ),
                                 )
-                                : Image.network(
-                                  order.images.first,
+                                : FallbackNetworkImage(
+                                  primaryUrl: order.images.first,
+                                  backupUrl:
+                                      order.backupImages.isNotEmpty
+                                          ? order.backupImages.first
+                                          : null,
                                   fit: BoxFit.cover,
-                                  errorBuilder:
-                                      (context, error, stackTrace) => Container(
-                                        color: _getStatusColor(
-                                          order.status,
-                                        ).withOpacity(0.1),
-                                        child: Icon(
-                                          Icons.image_not_supported_rounded,
-                                          color: _getStatusColor(order.status),
-                                          size: 24,
-                                        ),
-                                      ),
+                                  errorWidget: Container(
+                                    color: _getStatusColor(
+                                      order.status,
+                                    ).withOpacity(0.1),
+                                    child: Icon(
+                                      Icons.image_not_supported_rounded,
+                                      color: _getStatusColor(order.status),
+                                      size: 24,
+                                    ),
+                                  ),
                                 ))
                             : Container(
                               color: _getStatusColor(
@@ -1901,6 +1905,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                   () => _showImagePreview(
                                     imageUrl,
                                     galleryImages: detail.images,
+                                    backupImages: detail.backupImages,
                                   ),
                               child: Container(
                                 margin: const EdgeInsets.only(right: 12),
@@ -1938,31 +1943,28 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                               ],
                                             ),
                                           )
-                                          : Image.network(
-                                            imageUrl,
+                                          : FallbackNetworkImage(
+                                            primaryUrl: imageUrl,
+                                            backupUrl:
+                                                (detail.backupImages.length >
+                                                        index)
+                                                    ? detail.backupImages[index]
+                                                    : null,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (
-                                              context,
-                                              error,
-                                              stackTrace,
-                                            ) {
-                                              return Container(
-                                                color: Colors.grey.shade100,
-                                                child: Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    Icon(
-                                                      Icons
-                                                          .broken_image_outlined,
-                                                      color:
-                                                          Colors.grey.shade400,
-                                                      size: 32,
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            },
+                                            errorWidget: Container(
+                                              color: Colors.grey.shade100,
+                                              child: Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.broken_image_outlined,
+                                                    color: Colors.grey.shade400,
+                                                    size: 32,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                           ),
                                 ),
                               ),
@@ -2037,7 +2039,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     );
   }
 
-  void _showImagePreview(String url, {List<String>? galleryImages}) async {
+  void _showImagePreview(
+    String url, {
+    List<String>? galleryImages,
+    List<String>? backupImages,
+  }) async {
     if (galleryImages == null || galleryImages.length == 1) {
       if (url.toLowerCase().endsWith('.pdf')) {
         Navigator.push(
@@ -2049,6 +2055,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           ),
         );
       } else {
+        final singleBackupUrl =
+            (backupImages != null && backupImages.isNotEmpty)
+                ? backupImages.first
+                : null;
         showDialog(
           context: context,
           builder:
@@ -2061,16 +2071,16 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                       maxScale: 4,
                       child: AspectRatio(
                         aspectRatio: 1,
-                        child: Image.network(
-                          url,
+                        child: FallbackNetworkImage(
+                          primaryUrl: url,
+                          backupUrl: singleBackupUrl,
                           fit: BoxFit.contain,
-                          errorBuilder:
-                              (context, error, stack) => const SizedBox(
-                                height: 300,
-                                child: Center(
-                                  child: Icon(Icons.broken_image, size: 40),
-                                ),
-                              ),
+                          errorWidget: const SizedBox(
+                            height: 300,
+                            child: Center(
+                              child: Icon(Icons.broken_image, size: 40),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -2109,6 +2119,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           builder:
               (context) => FullScreenImageViewer(
                 images: galleryImages,
+                backupImages: backupImages,
                 initialIndex: initialIndex,
               ),
         ),

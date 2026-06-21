@@ -6,6 +6,7 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:soloshine/screens/admin/categorycreatescreen.dart';
 import 'package:soloshine/screens/employee/manage_orders_screen.dart';
 import 'package:soloshine/services/dashboard_service.dart';
+import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/app_constants.dart';
 import '../../services/order_service.dart';
@@ -3507,6 +3508,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     color: Colors.blue,
                     data: stats['supabase'] ?? {},
                   ),
+                  const SizedBox(height: AppConstants.spacingM),
+                  _buildStatsSection(
+                    title: 'Cloudinary',
+                    icon: Icons.image,
+                    color: Colors.orange,
+                    data: stats['cloudinary'] ?? {},
+                  ),
                   const SizedBox(height: AppConstants.spacingXL),
                   SizedBox(
                     width: double.infinity,
@@ -3519,6 +3527,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       label: const Text('Cleanup Delivered & Cancelled Orders'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppConstants.errorColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppConstants.spacingM,
+                        ),
+                        textStyle: AppConstants.titleMedium,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.radiusM,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.spacingM),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context); // close sheet
+                        _performCloudinaryCleanup(token);
+                      },
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('Clean Unused Cloudinary Images'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           vertical: AppConstants.spacingM,
@@ -3577,6 +3610,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
             _buildStatRow(
               'Total Size',
               data['totalSizeMb']?.toString(),
+              isBold: true,
+            ),
+          ] else if (title == 'Cloudinary') ...[
+            _buildStatRow('Cloud Name', data['cloud_name']?.toString()),
+            _buildStatRow(
+              'Used Size',
+              data['estimatedTotalSizeMb']?.toString(),
               isBold: true,
             ),
           ] else ...[
@@ -3663,6 +3703,188 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final title = 'Cleanup Successful';
       final subtitle =
           'Deleted ${response['deletedOrdersCount'] ?? 0} orders and ${response['deletedImagesCount'] ?? 0} images.';
+
+      // Refresh Dashboard data
+      await _loadDashboardData();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(subtitle),
+            ],
+          ),
+          backgroundColor: AppConstants.successColor,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
+    }
+  }
+
+  Future<void> _performCloudinaryCleanup(String token) async {
+    DateTime? startDate;
+    DateTime? endDate;
+
+    // Show confirmation dialog with Date Range Pickers
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.cleaning_services_rounded, color: Colors.orange),
+                  SizedBox(width: 10),
+                  Text('Cloudinary Cleanup'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'This will scan your Cloudinary storage for images that are not associated with any active order and permanently delete them to free up space.',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Optional: Filter by Date Created',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            final DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate: startDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime.now(),
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                startDate = picked;
+                              });
+                            }
+                          },
+                          child: Text(
+                            startDate == null
+                                ? 'Start Date'
+                                : DateFormat('dd/MM/yyyy').format(startDate!),
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            final DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate: endDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime.now(),
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                endDate = picked;
+                              });
+                            }
+                          },
+                          child: Text(
+                            endDate == null
+                                ? 'End Date'
+                                : DateFormat('dd/MM/yyyy').format(endDate!),
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (startDate != null || endDate != null)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          setDialogState(() {
+                            startDate = null;
+                            endDate = null;
+                          });
+                        },
+                        child: const Text(
+                          'Clear Filters',
+                          style: TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.orange,
+                  ),
+                  child: const Text('Proceed'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    if (!mounted) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => const Center(
+            child: CircularProgressIndicator(color: AppConstants.primaryColor),
+          ),
+    );
+
+    try {
+      final response = await AdminDashboardService.cleanupCloudinary(
+        token,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      final title = 'Cloudinary Cleanup Successful';
+      final subtitle =
+          'Scanned ${response['totalChecked'] ?? 0} images. Deleted ${response['deletedCount'] ?? 0} unused images.';
 
       // Refresh Dashboard data
       await _loadDashboardData();

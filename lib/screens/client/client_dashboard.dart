@@ -12,6 +12,7 @@ import '../../constants/app_constants.dart';
 import '../../widgets/custom_button.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
+import '../../widgets/fallback_image.dart';
 import '../../models/user.dart';
 import '../dashboard_screen.dart';
 import 'create_order_screen.dart';
@@ -512,6 +513,16 @@ class _ClientDashboardState extends State<ClientDashboard>
     return null;
   }
 
+  String? _getFirstBackupImageUrl(Order order) {
+    // Prefer per-ornament backup images
+    for (final d in order.ornamentDetails) {
+      if (d.backupImages.isNotEmpty) return d.backupImages.first;
+    }
+    // Fallback to order-level backup images
+    if (order.backupImages.isNotEmpty) return order.backupImages.first;
+    return null;
+  }
+
   String _formatFriendlyDate(DateTime date) {
     final now = DateTime.now();
     final d = DateTime(date.year, date.month, date.day);
@@ -547,6 +558,7 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
                     child: Builder(
                       builder: (context) {
                         final url = _getFirstImageUrl(order);
+                        final backupUrl = _getFirstBackupImageUrl(order);
                         if (url == null || url.isEmpty) {
                           return Container(
                             decoration: BoxDecoration(
@@ -572,12 +584,13 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
                                     size: 24,
                                   ),
                                 )
-                              : Image.network(
-                                  url,
+                              : FallbackNetworkImage(
+                                  primaryUrl: url,
+                                  backupUrl: backupUrl,
                                   width: 48,
                                   height: 48,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (c, e, s) => Container(
+                                  errorWidget: Container(
                                     decoration: BoxDecoration(
                                       color: Colors.grey.shade100,
                                       borderRadius: BorderRadius.circular(8),
@@ -901,7 +914,7 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
                       padding: const EdgeInsets.only(
                         top: AppConstants.spacingXS,
                       ),
-                      child: _buildImageThumbnails(d.images),
+                      child: _buildImageThumbnails(d.images, d.backupImages),
                     ),
                 ],
               ),
@@ -1627,7 +1640,7 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
                                 padding: const EdgeInsets.only(
                                   top: AppConstants.spacingXS,
                                 ),
-                                child: _buildImageThumbnails(d.images),
+                                child: _buildImageThumbnails(d.images, d.backupImages),
                               ),
                           ],
                         ),
@@ -1688,7 +1701,7 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
     );
   }
 
-  Widget _buildImageThumbnails(List<String> images) {
+  Widget _buildImageThumbnails(List<String> images, List<String>? backupImages) {
     return SizedBox(
       height: 90,
       child: ListView.separated(
@@ -1697,10 +1710,13 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final url = images[index];
+          final backupUrl = (backupImages != null && backupImages.length > index)
+              ? backupImages[index]
+              : null;
           final isPdf = url.toLowerCase().endsWith('.pdf');
           
           return GestureDetector(
-            onTap: () => _showImagePreview(url),
+            onTap: () => _showImagePreview(url, backupUrl: backupUrl),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppConstants.radiusS),
               child: AspectRatio(
@@ -1729,15 +1745,15 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
                           ],
                         ),
                       )
-                    : Image.network(
-                        url,
+                    : FallbackNetworkImage(
+                        primaryUrl: url,
+                        backupUrl: backupUrl,
                         fit: BoxFit.cover,
-                        errorBuilder:
-                            (context, error, stack) => Container(
-                              color: AppConstants.backgroundColor,
-                              alignment: Alignment.center,
-                              child: const Icon(Icons.broken_image),
-                            ),
+                        errorWidget: Container(
+                          color: AppConstants.backgroundColor,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.broken_image),
+                        ),
                       ),
               ),
             ),
@@ -1747,7 +1763,7 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
     );
   }
 
-  void _showImagePreview(String url) async {
+  void _showImagePreview(String url, {String? backupUrl}) async {
     // Check if the URL is a PDF
     if (url.toLowerCase().endsWith('.pdf')) {
       // Open PDF in external viewer
@@ -1775,23 +1791,23 @@ Widget _buildRecentOrderRow(Order order, bool isExpanded) {
                     maxScale: 4,
                     child: AspectRatio(
                       aspectRatio: 1,
-                      child: Image.network(
-                        url,
+                      child: FallbackNetworkImage(
+                        primaryUrl: url,
+                        backupUrl: backupUrl,
                         fit: BoxFit.contain,
-                        errorBuilder:
-                            (context, error, stack) => SizedBox(
-                              height: 300,
-                              child: Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.broken_image, size: 40),
-                                    SizedBox(height: 8),
-                                    Text('Failed to load image'),
-                                  ],
-                                ),
-                              ),
+                        errorWidget: SizedBox(
+                          height: 300,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.broken_image, size: 40),
+                                SizedBox(height: 8),
+                                Text('Failed to load image'),
+                              ],
                             ),
+                          ),
+                        ),
                       ),
                     ),
                   ),

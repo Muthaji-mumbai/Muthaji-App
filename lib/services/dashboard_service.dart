@@ -184,4 +184,38 @@ class AdminDashboardService {
       throw Exception('Error cleaning up storage: ${e.toString()}');
     }
   }
+
+  static Future<Map<String, dynamic>> cleanupCloudinary(
+    String token, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      if (token.isEmpty) {
+        throw Exception('Authentication token is required');
+      }
+
+      final Map<String, dynamic> body = {};
+      if (startDate != null) {
+        body['startDate'] = startDate.toIso8601String();
+      }
+      if (endDate != null) {
+        body['endDate'] = endDate.toIso8601String();
+      }
+
+      final response = await ApiService.post(
+        '/dashboard/storage/clean-cloudinary',
+        token: token,
+        body: body.isNotEmpty ? body : null,
+      );
+
+      if (response['success'] == true) {
+        return response['data'] as Map<String, dynamic>;
+      } else {
+        throw Exception(response['message'] ?? 'Failed to clean up Cloudinary');
+      }
+    } catch (e) {
+      throw Exception('Error cleaning up Cloudinary: ${e.toString()}');
+    }
+  }
 }
