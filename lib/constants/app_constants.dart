@@ -29,10 +29,11 @@ class AppConstants {
   ); // Blue Grey for common use
 
   // App Version
-  static const String appVersion = '1.0.1+2';
+  static const String appVersion = '2.0.0';
 
-  // API Configuration
-  static const String baseUrl = 'https://soloshine-backend-l3rf.onrender.com';
+// NEW (Your Hostinger VPS Dokploy URL):
+  static const String baseUrl = 'https://api.muthaji.tech';
+
   static const String loginEndpoint = '/auth/login';
   static const String loginUrl = '$baseUrl$loginEndpoint';
   // Web push (FCM) VAPID public key
